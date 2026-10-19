@@ -147,7 +147,11 @@ need sha256sum
 if [ -n "$tarball" ]; then
     [ -r "$tarball" ] || die "cannot read $tarball"
     cp "$tarball" "$work/$ASSET"
-    [ ! -r "$tarball.sha256" ] || cp "$tarball.sha256" "$work/$ASSET.sha256"
+    if [ -r "$tarball.sha256" ]; then
+        cp "$tarball.sha256" "$work/$ASSET.sha256"
+        ( cd "$work" && sha256sum -c "$ASSET.sha256" >/dev/null 2>&1 ) || die "checksum mismatch - refusing to install"
+        log "Checksum OK"
+    fi
 else
     need curl
     if [ -n "${SHAREX_BASE_URL:-}" ]; then
@@ -155,23 +159,52 @@ else
     elif [ -n "$version" ]; then
         base="https://github.com/$REPO/releases/download/$version"
     else
-        base="https://github.com/$REPO/releases/latest/download"
+        # Resolve "latest" to a concrete tag once, so the archive and its checksum always come from the same release.
+        tag="$(curl -fsSLI -o /dev/null -w '%{url_effective}' "https://github.com/$REPO/releases/latest" 2>/dev/null | sed -n 's#.*/releases/tag/##p')"
+        if [ -n "$tag" ]; then
+            base="https://github.com/$REPO/releases/download/$tag"
+        else
+            base="https://github.com/$REPO/releases/latest/download"
+        fi
     fi
-    log "Downloading $base/$ASSET"
-    if ! curl -fL --retry 3 --progress-bar -o "$work/$ASSET" "$base/$ASSET"; then
-        [ -z "$version" ] && [ -z "${SHAREX_BASE_URL:-}" ] || die "download failed: $base/$ASSET"
-        log "No prebuilt release is published yet - building from source instead."
-        build_from_source
-        exit 0
-    fi
-    curl -fsSL -o "$work/$ASSET.sha256" "$base/$ASSET.sha256" || rm -f "$work/$ASSET.sha256"
-fi
 
-if [ -r "$work/$ASSET.sha256" ]; then
-    ( cd "$work" && sha256sum -c "$ASSET.sha256" >/dev/null ) || die "checksum mismatch - refusing to install"
-    log "Checksum OK"
-else
-    log "Warning: no checksum file available, skipping verification"
+    fetch_and_verify() {
+        # Returns 0 when the archive was downloaded and matches its checksum (or no checksum is published).
+        rm -f "$work/$ASSET" "$work/$ASSET.sha256"
+        log "Downloading $base/$ASSET"
+        curl -fL --retry 3 --progress-bar -o "$work/$ASSET" "$base/$ASSET" || return 2
+        curl -fsSL -o "$work/$ASSET.sha256" "$base/$ASSET.sha256" || rm -f "$work/$ASSET.sha256"
+        if [ -r "$work/$ASSET.sha256" ]; then
+            ( cd "$work" && sha256sum -c "$ASSET.sha256" >/dev/null 2>&1 ) || return 3
+            log "Checksum OK"
+        else
+            log "Warning: no checksum file available, skipping verification"
+        fi
+        return 0
+    }
+
+    status=0
+    fetch_and_verify || status=$?
+    if [ "$status" -eq 3 ]; then
+        log "Checksum mismatch (corrupted download?) - trying once more ..."
+        status=0
+        fetch_and_verify || status=$?
+    fi
+    case "$status" in
+        0) ;;
+        2)
+            [ -z "$version" ] && [ -z "${SHAREX_BASE_URL:-}" ] || die "download failed: $base/$ASSET"
+            log "No prebuilt release is published yet - building from source instead."
+            build_from_source
+            exit 0 ;;
+        *)
+            got="$(sha256sum "$work/$ASSET" | cut -d' ' -f1)"
+            die "checksum mismatch twice - refusing to install.
+  expected: $(cut -d' ' -f1 "$work/$ASSET.sha256")
+  got:      $got  ($(stat -c %s "$work/$ASSET") bytes)
+  from:     $base/$ASSET
+Check your network/proxy, or build from source instead: install.sh --from-source" ;;
+    esac
 fi
 
 tar -C "$work" -xzf "$work/$ASSET"
