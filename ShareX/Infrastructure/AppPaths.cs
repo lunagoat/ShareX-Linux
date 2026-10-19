@@ -39,7 +39,8 @@ internal static class AppPaths
 
     internal static readonly string DefaultPersonalFolder =
         LinuxPaths.ConfigDirectory;
-    internal static readonly string PortablePersonalFolder = FileHelpers.GetAbsolutePath(ApplicationInfo.Name);
+    // On Linux the executable itself is named "ShareX", so the portable data folder cannot use that name.
+    internal static readonly string PortablePersonalFolder = FileHelpers.GetAbsolutePath(ApplicationInfo.Name + "-Data");
     internal static readonly string PortableCheckFilePath = FileHelpers.GetAbsolutePath("Portable");
     internal static readonly string SteamInAppFilePath = FileHelpers.GetAbsolutePath("Steam");
 
