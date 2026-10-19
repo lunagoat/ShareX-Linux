@@ -116,7 +116,16 @@ public class SingleInstanceManager : IDisposable
 
     private async Task ForwardAsync(string[] args)
     {
-        byte[] message = JsonSerializer.SerializeToUtf8Bytes(args ?? Array.Empty<string>());
+        string[] resolvedArgs = args == null ? Array.Empty<string>() : (string[])args.Clone();
+        for (int i = 0; i < resolvedArgs.Length; i++)
+        {
+            string arg = resolvedArgs[i];
+            if (!string.IsNullOrEmpty(arg) && !arg.StartsWith('-') && (File.Exists(arg) || Directory.Exists(arg)))
+            {
+                try { resolvedArgs[i] = Path.GetFullPath(arg); } catch { }
+            }
+        }
+        byte[] message = JsonSerializer.SerializeToUtf8Bytes(resolvedArgs);
         if (message.Length > MaxMessageBytes || args?.Length > 100) throw new ArgumentException("Too many command-line arguments.");
         using CancellationTokenSource deadline = new(5000);
         while (true)

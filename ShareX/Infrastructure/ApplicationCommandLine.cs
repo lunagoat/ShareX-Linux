@@ -44,6 +44,8 @@ internal static class ApplicationCommandLine
         StartupOptions.AutoClose = _initial.IsCommandExist("AutoClose");
     }
 
+    internal static bool HasActionCommands => Initial.HasActionCommands;
+
     internal static bool IsCommandPresent(params string[] commands) => Initial.IsCommandExist(commands);
 
     internal static bool TryHandleUninstall()
@@ -74,7 +76,24 @@ internal static class ApplicationCommandLine
     {
         args ??= [];
 
-        if (args.Length == 0)
+        ShareXCLIManager commandLine = new(args);
+        commandLine.ParseCommands();
+
+        if (commandLine.IsCommandExist("exit", "quit"))
+        {
+            ApplicationLifecycle.Exit();
+            return;
+        }
+
+        bool isSilent = commandLine.IsCommandExist("silent", "s");
+        if (isSilent)
+        {
+            if (ApplicationState.Settings.ShowTray)
+            {
+                MainWindowIntegration.Hide();
+            }
+        }
+        else if (args.Length == 0)
         {
             if (ApplicationState.Settings.ShowTray)
             {
@@ -85,14 +104,21 @@ internal static class ApplicationCommandLine
 
             MainWindowIntegration.Activate();
         }
-        else if (MainWindowIntegration.IsVisible)
+        else if (!commandLine.HasActionCommands && MainWindowIntegration.IsVisible)
         {
             MainWindowIntegration.Activate();
         }
 
-        ShareXCLIManager commandLine = new(args);
-        commandLine.ParseCommands();
-        if (commandLine.IsCommandExist("exit", "quit")) { ApplicationLifecycle.Exit(); return; }
+        if (commandLine.IsCommandExist("NoHotkeys"))
+        {
+            StartupOptions.IgnoreHotkeyWarning = true;
+        }
+
+        if (commandLine.IsCommandExist("AutoClose"))
+        {
+            StartupOptions.AutoClose = true;
+        }
+
         await commandLine.UseCommandLineArgs();
     }
 }
