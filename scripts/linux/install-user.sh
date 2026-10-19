@@ -69,8 +69,7 @@ uninstall_all() {
     # Refresh the caches we may have created, ignoring missing tools.
     command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$appsdir" 2>/dev/null || true
     command -v update-mime-database >/dev/null 2>&1 && update-mime-database "$datadir/mime" 2>/dev/null || true
-    command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -qtf "$iconsdir" 2>/dev/null || true
-    log "Uninstalled. (Configuration in ShareX's personal folder was left untouched.)"
+        log "Uninstalled. (Configuration in ShareX's personal folder was left untouched.)"
 }
 
 if [ "$uninstall" -eq 1 ]; then
@@ -118,6 +117,8 @@ chmod 755 "$libdir/ShareX"
 printf '%s\n' "$version" > "$libdir/version"
 
 install -m755 "$packaging_linux/sharex" "$bindir/sharex"
+# Keep a copy of this script so the installation can be removed without the source tree.
+install -m755 "${BASH_SOURCE[0]}" "$libdir/uninstall.sh"
 install -m644 "$packaging_linux/$desktop_id" "$appsdir/$desktop_id"
 install -m644 "$packaging_linux/sharex.xml" "$mimedir/sharex.xml"
 install -m644 "$packaging_linux/$metainfo_id" "$metainfodir/$metainfo_id"
@@ -131,7 +132,7 @@ install -Dm644 "$packaging_linux/icons/hicolor/scalable/apps/sharex.svg" \
 
 command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database -q "$appsdir" || true
 command -v update-mime-database >/dev/null 2>&1 && update-mime-database "$datadir/mime" || true
-command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -qtf "$iconsdir" || true
+# No gtk-update-icon-cache here: a user-level hicolor directory has no index.theme, so GTK would reject the cache.
 
 log "Installed."
 case ":$PATH:" in
@@ -143,4 +144,4 @@ case ":$PATH:" in
         ;;
 esac
 log "Start ShareX with: sharex -OpenMainWindow"
-log "Remove it again with: scripts/linux/install-user.sh --uninstall"
+log "Remove it again with: $libdir/uninstall.sh --uninstall"

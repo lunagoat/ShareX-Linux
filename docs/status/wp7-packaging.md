@@ -76,7 +76,7 @@ the lead can route them).
      how a stray `ShareX/Logs/` + `ShareX/History.db` appeared in the repo root; they were
      removed before committing).
    * Verified with a tiny .NET program: `HOME=/tmp/x dotnet t.dll` prints
-     `MyDocuments=/home/luna/Documents`, `LocalApplicationData=/home/luna/.local/share`.
+     `MyDocuments=~/Documents`, `LocalApplicationData=~/.local/share`.
    * Workaround used for WP7 verification: run a copy of the binary named something other
      than `ShareX` with `-portable` (personal folder lands next to the executable) — that
      keeps the real home untouched.

@@ -1,0 +1,25 @@
+name: CI
+
+on:
+  push:
+    branches: [main, linux-port]
+  pull_request:
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: System libraries used by Skia
+        run: sudo apt-get update && sudo apt-get install -y libfontconfig1 tesseract-ocr
+      - name: Build
+        run: dotnet build ShareX/ShareX.csproj -c Release -nologo -v q
+      - name: Image effects (all effects run on Linux)
+        run: dotnet run -c Release --project tests/ShareX.Effects.Tests
+      - name: Image editor core (tools, undo/redo, exports)
+        run: dotnet run -c Release --project tests/ShareX.Editor.Tests
+      - name: Installer scripts parse
+        run: bash -n install.sh && bash -n scripts/linux/install-user.sh && bash -n scripts/linux/make-release.sh
