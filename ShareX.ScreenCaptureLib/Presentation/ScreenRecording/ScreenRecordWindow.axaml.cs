@@ -172,11 +172,8 @@ public partial class ScreenRecordWindow : Window, IDisposable
         }
     }
 
-    public DrawingRectangle RecordingRegion => new(
-        Position.X + _frameLeftPixels + BorderPixels,
-        Position.Y + BorderPixels,
-        _captureWidth,
-        _captureHeight);
+    private DrawingRectangle _recordingRegion;
+    public DrawingRectangle RecordingRegion => _recordingRegion;
 
     public ScreenRecordWindow()
         : this(new DrawingRectangle(0, 0, 640, 360))
@@ -185,6 +182,7 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
     public ScreenRecordWindow(DrawingRectangle regionRectangle)
     {
+        _recordingRegion = regionRectangle;
         _captureWidth = regionRectangle.Width;
         _captureHeight = regionRectangle.Height;
         _initialPosition = new PixelPoint(regionRectangle.X - BorderPixels, regionRectangle.Y - BorderPixels);
@@ -395,6 +393,7 @@ public partial class ScreenRecordWindow : Window, IDisposable
                     UpdateUI();
                     break;
                 case ScreenRecordState.RecordingEnd:
+                    if (Status is ScreenRecordingStatus.Recording or ScreenRecordingStatus.Working) Status = ScreenRecordingStatus.Stopped;
                     StopRecordingTimer();
                     UpdateUI();
                     break;
@@ -602,7 +601,8 @@ public partial class ScreenRecordWindow : Window, IDisposable
         double scaling = GetScreenScaling(_initialPosition);
         ConfigureGeometry(scaling);
         Helpers.EnsureWindowPosition(this, _initialPosition.X - _frameLeftPixels, _initialPosition.Y);
-        ApplyToolWindowStyle();
+        RecordingWindowPlatform.Place(this, _initialPosition.X - _frameLeftPixels, _initialPosition.Y,
+            (int)Math.Ceiling(Width * _windowScaling), (int)Math.Ceiling(Height * _windowScaling));
         ApplyNativeWindowRegion();
         Dispatcher.UIThread.Post(ApplyNativeWindowRegion, DispatcherPriority.Loaded);
 
@@ -684,65 +684,19 @@ public partial class ScreenRecordWindow : Window, IDisposable
         return Screens.ScreenFromPoint(point)?.Scaling ?? Screens.Primary?.Scaling ?? 1;
     }
 
-    private void ApplyToolWindowStyle()
-    {
-        IntPtr handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero)
-        {
-            return;
-        }
-
-        WindowInfo info = new(handle);
-        info.ExStyle |= WindowStyles.WS_EX_TOOLWINDOW;
-        if (ExcludeFromCapture && !NativeMethods.SetWindowDisplayAffinity(handle, 0x11)) // WDA_EXCLUDEFROMCAPTURE
-        {
-            DebugHelper.WriteLine("Could not exclude the recording controls from capture. Win32 error: {0}", Marshal.GetLastWin32Error());
-        }
-    }
-
     private void ApplyNativeWindowRegion()
     {
-        IntPtr handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (handle == IntPtr.Zero)
-        {
-            return;
-        }
-
-        int frameWidth = _captureWidth + BorderPixels * 2;
-        int frameHeight = _captureHeight + BorderPixels * 2;
-        int toolbarTop = frameHeight + ToolbarGapPixels;
-        int toolbarWidth = (int)Math.Ceiling(DisplayedToolbarWidth * _windowScaling);
-        int toolbarHeight = (int)Math.Ceiling(ToolbarHeight * _windowScaling);
-
-        IntPtr windowRegion = CreateRectRgn(_frameLeftPixels, 0, _frameLeftPixels + frameWidth, frameHeight);
-        IntPtr apertureRegion = CreateRectRgn(
-            _frameLeftPixels + BorderPixels,
-            BorderPixels,
-            _frameLeftPixels + frameWidth - BorderPixels,
-            frameHeight - BorderPixels);
-        IntPtr toolbarRegion = CreateRectRgn(
-            _toolbarLeftPixels,
-            toolbarTop,
-            _toolbarLeftPixels + toolbarWidth,
-            toolbarTop + toolbarHeight);
-
-        if (windowRegion == IntPtr.Zero || apertureRegion == IntPtr.Zero || toolbarRegion == IntPtr.Zero)
-        {
-            DeleteRegion(windowRegion);
-            DeleteRegion(apertureRegion);
-            DeleteRegion(toolbarRegion);
-            return;
-        }
-
-        CombineRgn(windowRegion, windowRegion, apertureRegion, RegionDiff);
-        CombineRgn(windowRegion, windowRegion, toolbarRegion, RegionOr);
-        DeleteObject(apertureRegion);
-        DeleteObject(toolbarRegion);
-
-        if (SetWindowRgn(handle, windowRegion, true) == 0)
-        {
-            DeleteObject(windowRegion);
-        }
+        int width = _captureWidth + BorderPixels * 2;
+        int height = _captureHeight + BorderPixels * 2;
+        RecordingWindowPlatform.Shape(this,
+        [
+            new(_frameLeftPixels, 0, width, BorderPixels),
+            new(_frameLeftPixels, height - BorderPixels, width, BorderPixels),
+            new(_frameLeftPixels, BorderPixels, BorderPixels, height - BorderPixels * 2),
+            new(_frameLeftPixels + width - BorderPixels, BorderPixels, BorderPixels, height - BorderPixels * 2),
+            new(_toolbarLeftPixels, height + ToolbarGapPixels,
+                (int)Math.Ceiling(DisplayedToolbarWidth * _windowScaling), (int)Math.Ceiling(ToolbarHeight * _windowScaling))
+        ]);
     }
 
     private void OnTimerPointerPressed(object? sender, PointerPressedEventArgs e)
@@ -779,6 +733,7 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
         if (CaptureHelpers.GetScreenBounds().Contains(recordingRegion))
         {
+            _recordingRegion = recordingRegion;
             Position = candidate;
         }
         else
@@ -874,23 +829,4 @@ public partial class ScreenRecordWindow : Window, IDisposable
         Dispatcher.UIThread.Post(action);
     }
 
-    private static void DeleteRegion(IntPtr region)
-    {
-        if (region != IntPtr.Zero)
-        {
-            DeleteObject(region);
-        }
-    }
-
-    [DllImport("gdi32.dll")]
-    private static extern IntPtr CreateRectRgn(int left, int top, int right, int bottom);
-
-    [DllImport("gdi32.dll")]
-    private static extern int CombineRgn(IntPtr destination, IntPtr source1, IntPtr source2, int combineMode);
-
-    [DllImport("gdi32.dll")]
-    private static extern bool DeleteObject(IntPtr handle);
-
-    [DllImport("user32.dll")]
-    private static extern int SetWindowRgn(IntPtr windowHandle, IntPtr regionHandle, bool redraw);
 }

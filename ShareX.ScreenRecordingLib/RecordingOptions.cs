@@ -27,12 +27,12 @@ using System.Drawing;
 
 namespace ShareX.ScreenRecordingLib;
 
-/// <summary>Native H.264/AAC MP4 recording. Coordinates are physical desktop pixels.</summary>
+/// <summary>Linux screen recording. Wayland coordinates use compositor logical desktop pixels.</summary>
 public sealed record RecordingOptions
 {
     public required string OutputPath { get; init; }
     public Rectangle Region { get; init; }
-    /// <summary>When nonzero, capture this window (including when occluded) instead of Region.</summary>
+    /// <summary>When nonzero, capture this window (visible desktop geometry on Wayland) instead of Region.</summary>
     public nint WindowHandle { get; init; }
     public int FramesPerSecond { get; init; } = 30;
     public int VideoBitrate { get; init; } = 8_000_000;
@@ -40,12 +40,12 @@ public sealed record RecordingOptions
     public bool IncludeCursor { get; init; } = true;
     public bool CaptureSystemAudio { get; init; } = true;
     public bool CaptureMicrophone { get; init; }
-    /// <summary>WASAPI endpoint ID; null selects the default multimedia render endpoint.</summary>
+    /// <summary>PulseAudio source name; null selects the default multimedia render endpoint.</summary>
     public string? SystemAudioDeviceId { get; init; }
-    /// <summary>WASAPI endpoint ID; null selects the default communications capture endpoint.</summary>
+    /// <summary>PulseAudio source name; null selects the default communications capture endpoint.</summary>
     public string? MicrophoneDeviceId { get; init; }
     public bool CaptureCamera { get; init; }
-    /// <summary>Camera symbolic link; null selects the first available camera.</summary>
+    /// <summary>V4L2 device path; null selects the first available camera.</summary>
     public string? CameraDeviceId { get; init; }
     /// <summary>Preferred camera mode; the closest supported resolution/rate is negotiated.</summary>
     public CameraCaptureResolution CameraResolution { get; init; } = CameraCaptureResolution.Size1280x720;
@@ -60,16 +60,22 @@ public sealed record RecordingOptions
     public float SystemAudioGain { get; init; } = 1;
     public float MicrophoneGain { get; init; } = 1;
     /// <summary>Reject a software video encoder rather than silently increasing CPU usage.</summary>
-    public bool RequireHardwareEncoder { get; init; } = true;
+    public bool RequireHardwareEncoder { get; init; } = false;
     public TimeSpan Duration { get; init; }
+
+    public string FFmpegPath { get; init; } = "ffmpeg";
+    /// <summary>Additional FFmpeg output arguments, parsed without a shell.</summary>
+    public string ExtraArguments { get; init; } = "";
+    /// <summary>Complete FFmpeg command; Wayland screen input is PNG at pipe:0. Supports ShareX $...$ placeholders.</summary>
+    public string CustomCommands { get; init; } = "";
 
     internal bool HasAudio => CaptureSystemAudio || CaptureMicrophone;
 
     internal void Validate()
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(OutputPath);
-        if (!Path.GetExtension(OutputPath).Equals(".mp4", StringComparison.OrdinalIgnoreCase))
-            throw new ArgumentException("Native recording writes H.264/AAC MP4 files.", nameof(OutputPath));
+        if (!new[] { ".mp4", ".mkv", ".webm", ".gif", ".webp", ".apng", ".avi", ".m4a", ".ogg", ".opus", ".mp3", ".wav" }.Contains(Path.GetExtension(OutputPath).ToLowerInvariant()))
+            throw new ArgumentException("Unsupported recording output extension.", nameof(OutputPath));
         if (WindowHandle == 0 && (Region.Width < 2 || Region.Height < 2))
             throw new ArgumentException("Select a window or a region of at least 2 × 2 pixels.", nameof(Region));
         if (FramesPerSecond is < 1 or > 240) throw new ArgumentOutOfRangeException(nameof(FramesPerSecond));
