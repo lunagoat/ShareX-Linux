@@ -36,7 +36,7 @@ namespace ShareX
 {
     public class HotkeyManager
     {
-        public List<HotkeySettings> Hotkeys { get; private set; }
+        public List<HotkeySettings> Hotkeys { get; private set; } = new();
         public bool IgnoreHotkeys { get; set; }
 
         public delegate void HotkeyTriggerEventHandler(HotkeySettings hotkeySetting);
@@ -133,17 +133,23 @@ namespace ShareX
 
         public void RegisterAllHotkeys()
         {
-            foreach (HotkeySettings hotkeySetting in Hotkeys.ToArray())
+            if (Hotkeys != null)
             {
-                RegisterHotkey(hotkeySetting);
+                foreach (HotkeySettings hotkeySetting in Hotkeys.ToArray())
+                {
+                    RegisterHotkey(hotkeySetting);
+                }
             }
         }
 
         public void RegisterFailedHotkeys()
         {
-            foreach (HotkeySettings hotkeySetting in Hotkeys.Where(x => x.HotkeyInfo.Status == HotkeyStatus.Failed))
+            if (Hotkeys != null)
             {
-                RegisterHotkey(hotkeySetting);
+                foreach (HotkeySettings hotkeySetting in Hotkeys.Where(x => x.HotkeyInfo.Status == HotkeyStatus.Failed))
+                {
+                    RegisterHotkey(hotkeySetting);
+                }
             }
         }
 

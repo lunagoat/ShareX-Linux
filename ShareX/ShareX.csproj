@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ShareX.Integration.Tests" />
+    <InternalsVisibleTo Include="ShareX.Startup.Tests" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia" />

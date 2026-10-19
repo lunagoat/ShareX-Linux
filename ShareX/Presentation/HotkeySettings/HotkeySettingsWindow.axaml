@@ -278,7 +278,7 @@
             </Grid>
 
             <Border ZIndex="10"
-                    IsVisible="{Binding IsResetConfirmationVisible}"
+                    IsVisible="{Binding IsResetConfirmationVisible, FallbackValue=False}"
                     Background="{DynamicResource ShareX.Brush.Overlay.Modal}">
                 <Border Classes="tool-panel"
                         Width="390"

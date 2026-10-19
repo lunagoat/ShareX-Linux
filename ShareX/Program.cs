@@ -129,14 +129,6 @@ internal static class Program
     {
         ImageEditorIntegration.Initialize();
 
-        if (ApplicationState.Settings.ShowStartScreen)
-        {
-            DebugHelper.WriteLine("Start screen opening.");
-            StartScreenWindow startScreen = new();
-            await startScreen.ShowAsync();
-            DebugHelper.WriteLine("Start screen closed.");
-        }
-
         DebugHelper.WriteLine("Hotkey host init started.");
         MainForm hotkeyHost = new();
         ApplicationLifecycle.AttachHost(hotkeyHost);
@@ -144,8 +136,13 @@ internal static class Program
 
         await ApplicationSettingsRuntime.InitializeAsync(hotkeyHost);
 
-        bool showMainWindow = !(StartupOptions.SilentRun || ApplicationState.Settings.SilentRun) ||
-            !ApplicationState.Settings.ShowTray;
+        bool isSilent = StartupOptions.SilentRun || ApplicationState.Settings.SilentRun;
+        bool hasActionCommands = ApplicationCommandLine.HasActionCommands;
+
+        bool showStartScreen = ApplicationState.Settings.ShowStartScreen && !isSilent && !hasActionCommands;
+        bool showMainWindow = !isSilent && !showStartScreen &&
+            (!ApplicationState.Settings.ShowTray || !hasActionCommands);
+
         MainWindowIntegration.Initialize(hotkeyHost.TrayIconService, showMainWindow);
         SingleInstanceCommandRouter.MarkReady();
 
@@ -166,5 +163,20 @@ internal static class Program
         }
 
         DebugHelper.WriteLine("Hotkey host init finished.");
+
+        if (showStartScreen)
+        {
+            DebugHelper.WriteLine("Start screen opening.");
+            StartScreenWindow startScreen = new();
+            startScreen.Closed += (_, _) =>
+            {
+                if (!isSilent)
+                {
+                    MainWindowIntegration.Activate();
+                }
+            };
+            startScreen.Show();
+            DebugHelper.WriteLine("Start screen shown.");
+        }
     }
 }

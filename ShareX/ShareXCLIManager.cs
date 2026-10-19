@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -36,6 +36,34 @@ namespace ShareX
     {
         public ShareXCLIManager(string[] arguments) : base(arguments)
         {
+        }
+
+        public bool HasActionCommands
+        {
+            get
+            {
+                if (Commands == null || Commands.Count == 0) return false;
+                return Commands.Any(IsActionCommand);
+            }
+        }
+
+        public static bool IsActionCommand(CLICommand command)
+        {
+            if (command == null) return false;
+            if (!command.IsCommand) return true;
+            string cmd = command.Command;
+            if (string.Equals(cmd, "silent", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "s", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "nohotkeys", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "multi", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "m", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "autoclose", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "sandbox", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(cmd, "portable", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+            return true;
         }
 
         public async Task UseCommandLineArgs()
