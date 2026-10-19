@@ -1263,7 +1263,7 @@ namespace ShareX
             {
                 IntPtr handle = NativeMethods.GetForegroundWindow();
 
-                if (handle.ToInt32() > 0)
+                if (handle != IntPtr.Zero)
                 {
                     BorderlessWindowManager.ToggleBorderlessWindow(handle, taskSettings.ToolsSettings.BorderlessWindowSettings.ExcludeTaskbarArea);
 
@@ -1284,12 +1284,28 @@ namespace ShareX
             {
                 IntPtr handle = NativeMethods.GetForegroundWindow();
 
-                if (handle.ToInt32() > 0)
+                if (handle != IntPtr.Zero)
                 {
-                    WindowInfo windowInfo = new WindowInfo(handle);
-                    windowInfo.TopMost = !windowInfo.TopMost;
+                    if (OperatingSystem.IsLinux())
+                    {
+                        if (LinuxWindowSystem.Backend == "Hyprland")
+                        {
+                            string addr = $"0x{handle.ToInt64():x}";
+                            LinuxCommand.Run("hyprctl", "dispatch", "pin", $"address:{addr}");
+                            PlayNotificationSoundAsync(NotificationSound.ActionCompleted, taskSettings);
+                        }
+                        else
+                        {
+                            ShowNotificationTip("Pin/Topmost requires compositor rules or Hyprland pin dispatcher.", "ShareX");
+                        }
+                    }
+                    else
+                    {
+                        WindowInfo windowInfo = new WindowInfo(handle);
+                        windowInfo.TopMost = !windowInfo.TopMost;
 
-                    PlayNotificationSoundAsync(NotificationSound.ActionCompleted, taskSettings);
+                        PlayNotificationSoundAsync(NotificationSound.ActionCompleted, taskSettings);
+                    }
                 }
             }
             catch (Exception e)
