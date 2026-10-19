@@ -57,8 +57,9 @@ public class WatchFolder : IDisposable
             IncludeSubdirectories = Settings.IncludeSubdirectories
         };
         CancellationToken token = lifetime.Token;
-        // Linux writers often publish a file by renaming it into the watched directory.
+        // Linux writers often publish a file by creating, writing/modifying, or renaming it into the watched directory.
         watcher.Created += (_, e) => Queue(e.FullPath, token);
+        watcher.Changed += (_, e) => Queue(e.FullPath, token);
         watcher.Renamed += (_, e) => Queue(e.FullPath, token);
         watcher.Error += (_, e) => DebugHelper.WriteException(e.GetException());
         watcher.EnableRaisingEvents = true;
