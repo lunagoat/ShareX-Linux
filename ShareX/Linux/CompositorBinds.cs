@@ -69,10 +69,10 @@ internal static class CompositorBinds
     private static HashSet<string> BoundKeys(string[] lines, BindDialect dialect) => new(FindBinds(lines, dialect).Keys);
 
     /// <summary>Normalized key combination -> the config line that binds it (outside ShareX's own block).</summary>
-    internal static Dictionary<string, string> FindBinds(string[] lines, BindDialect dialect)
+    internal static Dictionary<string, string> FindBinds(string[] lines, BindDialect dialect, bool includeShareXBlock = false)
     {
         Dictionary<string, string> keys = new();
-        (int start, int end) = FindBlock(lines, dialect);
+        (int start, int end) = includeShareXBlock ? (-1, -1) : FindBlock(lines, dialect);
 
         for (int i = 0; i < lines.Length; i++)
         {
@@ -146,7 +146,9 @@ internal static class CompositorBinds
 
         int skipped = blockLines.Count(x => x.Contains("skipped, key already bound"));
         int added = blockLines.Count(x => !x.TrimStart().StartsWith(c));
-        string message = $"Added {added} ShareX key bind(s) to {path}" + (skipped > 0 ? $" ({skipped} skipped because you already use those keys; they are listed as comments in the block)" : "") + ".";
+        int unbindable = blockLines.Count(x => x.Contains("cannot bind"));
+        string message = $"Added {added} ShareX key bind(s) to {path}" + (skipped > 0 ? $" ({skipped} skipped because you already use those keys; they are listed as comments in the block)" : "") +
+            (unbindable > 0 ? $" {unbindable} hotkey(s) use a key that has no compositor name; change them in ShareX's hotkey settings." : "") + ".";
         return message + " " + Reload(dialect, reload);
     }
 

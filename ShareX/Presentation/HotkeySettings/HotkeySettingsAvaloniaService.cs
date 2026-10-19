@@ -245,7 +245,8 @@ internal sealed class HotkeySettingsAvaloniaService : IHotkeySettingsService
             nameof(Avalonia.Input.Key.CapsLock) => InputKey.CapsLock,
             nameof(Avalonia.Input.Key.PageUp) => InputKey.PageUp,
             nameof(Avalonia.Input.Key.PageDown) => InputKey.PageDown,
-            nameof(Avalonia.Input.Key.PrintScreen) => InputKey.PrintScreen,
+            // On X11 the Print Screen key produces the keysym "Print", which Avalonia reports as Key.Print (not Key.PrintScreen).
+            nameof(Avalonia.Input.Key.PrintScreen) or nameof(Avalonia.Input.Key.Print) => InputKey.PrintScreen,
             _ when Enum.TryParse(gesture.KeyName, true, out InputKey parsed) => parsed,
             _ => InputKey.None
         };

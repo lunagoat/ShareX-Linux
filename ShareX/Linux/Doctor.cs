@@ -120,7 +120,7 @@ internal static class Doctor
             else
             {
                 string[] lines = File.ReadAllLines(config);
-                Dictionary<string, string> bound = CompositorBinds.FindBinds(lines, dialect.Value);
+                Dictionary<string, string> bound = CompositorBinds.FindBinds(lines, dialect.Value, includeShareXBlock: true);
                 bool block = lines.Any(x => x.Contains(">>> ShareX binds"));
                 Info("config: " + config + (block ? "  (has a ShareX block)" : "  (no ShareX block)"));
                 int missing = 0;
@@ -135,6 +135,8 @@ internal static class Doctor
                     string combo = HotkeyBindText.Normalize(mods, key);
                     string name = h.HotkeyInfo + " (" + h.TaskSettings.Job + ")";
                     if (!bound.TryGetValue(combo, out string line)) { Info("not bound in the config: " + name); missing++; }
+                    else if (line.Contains("sharex", StringComparison.OrdinalIgnoreCase) && !line.Contains(h.TaskSettings.Job.ToString(), StringComparison.OrdinalIgnoreCase))
+                        Problem(name + " is bound to a different ShareX action: " + (line.Length > 90 ? line[..90] + "..." : line), "run: sharex --install-binds (it rewrites ShareX's block), or edit that line");
                     else if (line.Contains("sharex", StringComparison.OrdinalIgnoreCase)) Ok(name + " is bound to ShareX");
                     else Problem(name + " is bound to something else: " + (line.Length > 90 ? line[..90] + "..." : line),
                         "remove that line, or change the ShareX hotkey; ShareX skips keys that are already taken");

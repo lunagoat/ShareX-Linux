@@ -204,7 +204,7 @@ public partial class HotkeySettingsWindow : Window
     {
         if (sender is Control { DataContext: HotkeySettingsItem item }
             && item.IsCapturing
-            && e.Key == Key.PrintScreen)
+            && e.Key is Key.PrintScreen or Key.Print)
         {
             e.Handled = true;
             OnHotkeyKeyDown(sender, e);

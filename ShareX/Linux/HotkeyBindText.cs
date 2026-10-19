@@ -56,8 +56,14 @@ internal static class HotkeyBindText
         {
             HotkeyInfo info = hotkey.HotkeyInfo;
 
-            if (hotkey.TaskSettings.Job == HotkeyType.None || !info.IsValidHotkey || LinuxKeyNames.KeySym(info.KeyCode) is not string key)
+            if (hotkey.TaskSettings.Job == HotkeyType.None || !info.IsValidHotkey)
             {
+                continue;
+            }
+
+            if (LinuxKeyNames.KeySym(info.KeyCode) is not string key)
+            {
+                text.AppendLine($"{comment} cannot bind \"{info}\" ({hotkey.TaskSettings.Job}): no compositor key name for {info.KeyCode}; pick a different key in ShareX's hotkey settings");
                 continue;
             }
 

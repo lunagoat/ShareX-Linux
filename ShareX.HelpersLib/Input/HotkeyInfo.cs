@@ -46,7 +46,8 @@ namespace ShareX.HelpersLib
         [JsonIgnore]
         public string Description { get; set; }
 
-        public InputKey KeyCode => Hotkey & InputKey.KeyCode;
+        // Earlier builds stored the Print Screen key as InputKey.Print (VK_PRINT, a legacy printer key nobody has) because X11 calls it "Print".
+        public InputKey KeyCode => (Hotkey & InputKey.KeyCode) == InputKey.Print ? InputKey.PrintScreen : Hotkey & InputKey.KeyCode;
 
         public InputKey ModifiersKeys => Hotkey & InputKey.Modifiers;
 

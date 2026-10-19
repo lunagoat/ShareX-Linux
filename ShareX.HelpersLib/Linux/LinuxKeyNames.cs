@@ -15,7 +15,7 @@ public static class LinuxKeyNames
         if (key >= InputKey.NumPad0 && key <= InputKey.NumPad9) return "KP_" + ((int)key - (int)InputKey.NumPad0);
         return key switch
         {
-            InputKey.PrintScreen => "Print", InputKey.Back => "BackSpace", InputKey.Return => "Return", InputKey.Escape => "Escape",
+            InputKey.PrintScreen or InputKey.Print => "Print", InputKey.Back => "BackSpace", InputKey.Return => "Return", InputKey.Escape => "Escape",
             InputKey.Tab => "Tab", InputKey.Space => "space", InputKey.Prior => "Page_Up", InputKey.Next => "Page_Down",
             InputKey.Home => "Home", InputKey.End => "End", InputKey.Left => "Left", InputKey.Right => "Right", InputKey.Up => "Up", InputKey.Down => "Down",
             InputKey.Insert => "Insert", InputKey.Delete => "Delete", InputKey.Pause => "Pause", InputKey.Scroll => "Scroll_Lock", InputKey.Capital => "Caps_Lock",
