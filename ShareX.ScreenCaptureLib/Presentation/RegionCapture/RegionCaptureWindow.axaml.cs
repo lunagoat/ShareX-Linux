@@ -911,7 +911,9 @@ public partial class RegionCaptureWindow : Window
 
         double scale = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
         double monitorCenterX = screen.Bounds.X - _request.ScreenBounds.X + screen.Bounds.Width / 2d;
-        double monitorTop = screen.Bounds.Y - _request.ScreenBounds.Y;
+        // Keep the toolbar out from under a top bar (waybar & co. are drawn above this window and would eat the clicks).
+        double monitorTop = screen.Bounds.Y - _request.ScreenBounds.Y +
+            (OperatingSystem.IsLinux() ? ShareX.AvaloniaUI.Linux.LayerShellInsets.TopInset(new System.Drawing.Rectangle(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height)) : 0);
         _captureToolbarCenterX = monitorCenterX / (OperatingSystem.IsLinux() ? (double)_request.ScreenBounds.Width / Bounds.Width : scale);
         _captureToolbarTop = monitorTop / (OperatingSystem.IsLinux() ? (double)_request.ScreenBounds.Width / Bounds.Width : scale);
         _positionedCaptureToolbarWidth = double.NaN;

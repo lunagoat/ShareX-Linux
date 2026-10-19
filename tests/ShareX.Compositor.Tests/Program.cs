@@ -56,5 +56,16 @@ Check(kde.Length == 2, "kde: disabled output ignored");
 Check(kde[0].Bounds == new System.Drawing.Rectangle(0, 0, 2560, 1440) && kde[0].Primary, "kde: physical size divided by the scale");
 Check(kde[1].Bounds == new System.Drawing.Rectangle(2560, 0, 1920, 1080), "kde: rotated output swaps width and height");
 
+// ---- layer-shell bars (hyprctl layers -j)
+const string layers = """
+{ "DP-3": { "levels": { "0": [ { "x": 0, "y": 0, "w": 2560, "h": 1440, "namespace": "awww-daemon" } ], "1": [],
+    "2": [ { "x": 8, "y": 6, "w": 2544, "h": 30, "namespace": "waybar" } ],
+    "3": [ { "x": 2060, "y": 0, "w": 500, "h": 1440, "namespace": "swaync-notification-window" } ] } },
+  "DP-2": { "levels": { "0": [], "1": [], "2": [ { "x": 2560, "y": 1400, "w": 2560, "h": 40, "namespace": "bottom-bar" } ], "3": [] } } }
+""";
+Check(LayerShellInsets.ParseHyprlandTopInset(layers, new System.Drawing.Rectangle(0, 0, 2560, 1440)) == 36, "bars: waybar (incl. its margin) is the top inset; the tall notification column is ignored");
+Check(LayerShellInsets.ParseHyprlandTopInset(layers, new System.Drawing.Rectangle(2560, 0, 2560, 1440)) == 0, "bars: a bottom bar does not move the toolbar");
+Check(LayerShellInsets.ParseHyprlandTopInset("{}", new System.Drawing.Rectangle(0, 0, 100, 100)) == 0, "bars: nothing reported");
+
 Console.WriteLine($"RESULT: {failures} failures");
 return failures == 0 ? 0 : 1;
