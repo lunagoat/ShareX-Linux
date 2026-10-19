@@ -54,6 +54,8 @@ public static class ScrollingCaptureWindowIntegration
                     _window = new ScrollingCaptureWindow(options, uploadRequested, playNotificationSound);
                     _window.Closed += (_, _) => _window = null;
                     _window.Show();
+                    _window.Activate();
+                    _window.Focus();
                 }
                 else
                 {

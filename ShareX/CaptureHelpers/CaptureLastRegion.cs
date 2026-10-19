@@ -35,6 +35,12 @@ namespace ShareX
         {
             if (RegionCaptureIntegration.LastRegionRectangle.IsEmpty)
             {
+                if (taskSettings?.CaptureSettings?.CaptureCustomRegion.Width > 0 &&
+                    taskSettings.CaptureSettings.CaptureCustomRegion.Height > 0)
+                {
+                    return Execute(taskSettings);
+                }
+
                 return await ExecuteRegionCaptureAvaloniaAsync(taskSettings);
             }
 
@@ -43,11 +49,14 @@ namespace ShareX
 
         protected override TaskMetadata Execute(TaskSettings taskSettings)
         {
-            if (!RegionCaptureIntegration.LastRegionRectangle.IsEmpty)
+            System.Drawing.Rectangle rect = !RegionCaptureIntegration.LastRegionRectangle.IsEmpty
+                ? RegionCaptureIntegration.LastRegionRectangle
+                : (taskSettings?.CaptureSettings?.CaptureCustomRegion ?? System.Drawing.Rectangle.Empty);
+
+            if (!rect.IsEmpty && rect.Width > 0 && rect.Height > 0)
             {
-                TaskMetadata metadata = CreateMetadata(RegionCaptureIntegration.LastRegionRectangle);
-                metadata.Image = TaskHelpers.GetScreenshot(taskSettings).CaptureRectangle(
-                    RegionCaptureIntegration.LastRegionRectangle);
+                TaskMetadata metadata = CreateMetadata(rect);
+                metadata.Image = TaskHelpers.GetScreenshot(taskSettings).CaptureRectangle(rect);
                 return metadata;
             }
 

@@ -85,6 +85,8 @@ public partial class AutoCaptureWindow : Window
 
         PropertyChanged += OnWindowPropertyChanged;
         Closed += OnClosed;
+        Opened += (_, _) => { Activate(); Focus(); };
+        KeyDown += (_, e) => { if (e.Key == Avalonia.Input.Key.Escape) { e.Handled = true; Close(); } };
         _isLoaded = true;
     }
 

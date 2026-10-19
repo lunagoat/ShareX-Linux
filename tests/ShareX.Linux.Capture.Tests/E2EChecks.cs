@@ -91,19 +91,30 @@ internal static class E2EChecks
         Directory.CreateDirectory(Sandbox);
         Directory.CreateDirectory(Path.Combine(Sandbox, "evidence"));
 
-        // 1. Verify running instance or start one
-        string pgrep = "";
-        try { pgrep = LinuxCaptureProcess.Text("pgrep", "-f", "/tmp/sx-b-capture"); } catch { }
-        if (string.IsNullOrWhiteSpace(pgrep))
+        // 1. Ensure clean sandbox configuration and start daemon
+        try { LinuxCaptureProcess.Run("pkill", "-f", "/tmp/sx-b-capture"); } catch { }
+        await Task.Delay(500);
+
+        string configDir = Path.Combine(Sandbox, "config/ShareX");
+        Directory.CreateDirectory(configDir);
+        string configPath = Path.Combine(configDir, "ApplicationConfig.json");
+        if (File.Exists(configPath))
         {
-            ProcessStartInfo psi = new("bash", ["scripts/linux/run.sh", "-silent", "-NoHotkeys"])
-            {
-                UseShellExecute = false
-            };
-            psi.Environment["SX_SANDBOX"] = Sandbox;
-            Process.Start(psi);
-            await Task.Delay(1500);
+            string json = File.ReadAllText(configPath);
+            json = json.Replace("\"CaptureCustomRegion\": \"0, 0, 0, 0\"", "\"CaptureCustomRegion\": \"100, 100, 320, 240\"");
+            json = json.Replace("\"AutoCaptureRegion\": \"0, 0, 0, 0\"", "\"AutoCaptureRegion\": \"100, 100, 320, 240\"");
+            json = json.Replace("\"AutoCaptureRepeatTime\": 60.0", "\"AutoCaptureRepeatTime\": 1.0");
+            json = json.Replace("\"AutoCaptureMinimizeToTray\": true", "\"AutoCaptureMinimizeToTray\": false");
+            File.WriteAllText(configPath, json);
         }
+
+        ProcessStartInfo psi = new("bash", ["scripts/linux/run.sh", "-silent", "-NoHotkeys"])
+        {
+            UseShellExecute = false
+        };
+        psi.Environment["SX_SANDBOX"] = Sandbox;
+        Process.Start(psi);
+        await Task.Delay(2500);
 
         var monitors = LinuxScreenCapture.GetMonitors();
         Assert(monitors.Length > 0, "Discovered active monitors: " + monitors.Length);
@@ -237,28 +248,95 @@ internal static class E2EChecks
         catch { }
         await Task.Delay(200);
 
-        // 8. Test -LastRegion
-        RegionCaptureIntegration.LastRegionRectangle = new Rectangle(100, 100, 320, 240);
+        // 8. Test -CustomRegion CLI
+        filesBefore = GetScreenshotFiles();
+        RunCli("-CustomRegion");
+        string customRegionFile = await WaitForNewScreenshotAsync(filesBefore, TimeSpan.FromSeconds(8));
+        using (SKBitmap customBmp = SKBitmap.Decode(customRegionFile))
+        {
+            Assert(customBmp != null, "CustomRegion captured: " + Path.GetFileName(customRegionFile));
+            var regionMon = monitors.FirstOrDefault(m => m.Bounds.IntersectsWith(new Rectangle(100, 100, 320, 240))) ?? monitors[0];
+            int expectedW = (int)Math.Round(320 * regionMon.Scale);
+            int expectedH = (int)Math.Round(240 * regionMon.Scale);
+            Assert(customBmp!.Width == expectedW && customBmp.Height == expectedH,
+                $"CustomRegion dimensions ({customBmp.Width}x{customBmp.Height}) match expected scaled rectangle ({expectedW}x{expectedH})");
+        }
+
+        // 9. Test -LastRegion CLI (falls back to configured region when no interactive region was saved)
         filesBefore = GetScreenshotFiles();
         RunCli("-LastRegion");
         string lastRegionFile = await WaitForNewScreenshotAsync(filesBefore, TimeSpan.FromSeconds(8));
         using (SKBitmap lastBmp = SKBitmap.Decode(lastRegionFile))
         {
             Assert(lastBmp != null, "LastRegion captured: " + Path.GetFileName(lastRegionFile));
-            var regionMon = monitors.FirstOrDefault(m => m.Bounds.IntersectsWith(RegionCaptureIntegration.LastRegionRectangle)) ?? monitors[0];
+            var regionMon = monitors.FirstOrDefault(m => m.Bounds.IntersectsWith(new Rectangle(100, 100, 320, 240))) ?? monitors[0];
             int expectedW = (int)Math.Round(320 * regionMon.Scale);
             int expectedH = (int)Math.Round(240 * regionMon.Scale);
             Assert(lastBmp!.Width == expectedW && lastBmp.Height == expectedH,
                 $"LastRegion dimensions ({lastBmp.Width}x{lastBmp.Height}) match expected scaled rectangle");
         }
 
-        // 9. Test Cursor inclusion
+        // 10. Test -AutoCapture window lifecycle (open, grim screenshot, Esc cancel)
+        RunCli("-AutoCapture");
+        bool autoCapFound = false;
+        for (int i = 0; i < 20; i++)
+        {
+            await Task.Delay(200);
+            var client = FindClientByClassOrTitle("Auto capture");
+            if (client.HasValue)
+            {
+                autoCapFound = true;
+                LinuxCaptureProcess.Run("grim", "-g", "0,0 100x100", Path.Combine(Sandbox, "evidence/autocapture-e2e.png"));
+                Assert(File.Exists(Path.Combine(Sandbox, "evidence/autocapture-e2e.png")), "AutoCapture screenshotted with grim while active");
+                break;
+            }
+        }
+        Assert(autoCapFound, "AutoCapture window appeared on live desktop");
+        SendEscape();
+        await Task.Delay(400);
+        if (FindClientByClassOrTitle("Auto capture").HasValue)
+        {
+            try { HyprlandCaptureIpc.Dispatch("closewindow", "class:ShareX", "hl.dsp.window.close({window='title:ShareX - Auto capture'})"); } catch { }
+            await Task.Delay(200);
+        }
+        Assert(!FindClientByClassOrTitle("Auto capture").HasValue, "AutoCapture window closed cleanly after Esc");
+
+        // 11. Test -StartAutoCapture and -StopAutoCapture
+        filesBefore = GetScreenshotFiles();
+        RunCli("-StartAutoCapture");
+        string autoCaptureFile = await WaitForNewScreenshotAsync(filesBefore, TimeSpan.FromSeconds(10));
+        using (SKBitmap autoBmp = SKBitmap.Decode(autoCaptureFile))
+        {
+            Assert(autoBmp != null && autoBmp.Width > 0 && autoBmp.Height > 0,
+                $"AutoCapture triggered and produced screenshot: {Path.GetFileName(autoCaptureFile)} ({autoBmp?.Width}x{autoBmp?.Height})");
+        }
+        RunCli("-StopAutoCapture");
+        await Task.Delay(500);
+
+        // 12. Test Cursor inclusion
         Point cur = LinuxScreenCapture.CursorPosition;
         Rectangle curRect = new(Math.Max(0, cur.X - 16), Math.Max(0, cur.Y - 16), 32, 32);
         using SKBitmap withCursor = new Screenshot { CaptureCursor = true }.CaptureRectangle(curRect);
         using SKBitmap withoutCursor = new Screenshot { CaptureCursor = false }.CaptureRectangle(curRect);
         Assert(withCursor.Width > 0 && withCursor.Height > 0, "Cursor-enabled rectangle capture succeeded");
         Assert(withoutCursor.Width > 0 && withoutCursor.Height > 0, "Cursor-disabled rectangle capture succeeded");
+
+        // 13. Test Window Capture Geometry & Multi-monitor Offsets
+        var allWindows = LinuxCaptureWindows.GetWindows();
+        Assert(allWindows.Length > 0, $"Discovered {allWindows.Length} windows across compositor");
+        foreach (var win in allWindows.Take(3))
+        {
+            Console.WriteLine($"  Window {win.Handle:X} ({win.ClassName}): {win.Rectangle}");
+            if (win.Rectangle.Width > 10 && win.Rectangle.Height > 10)
+            {
+                using SKBitmap winCapture = new Screenshot().CaptureRectangle(win.Rectangle);
+                Assert(winCapture.Width > 0 && winCapture.Height > 0,
+                    $"Compositor window capture succeeded for {win.ClassName} ({winCapture.Width}x{winCapture.Height})");
+            }
+        }
+
+        // Cleanup daemon
+        try { LinuxCaptureProcess.Run("pkill", "-f", "/tmp/sx-b-capture"); } catch { }
 
         Console.WriteLine("\n=== ALL E2E SCREEN CAPTURE CHECKS PASSED SUCCESSFULLY ===");
     }
