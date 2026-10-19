@@ -64,6 +64,7 @@ public partial class FFmpegOptionsWindow : Window
         InitializeComponent();
         RequestedThemeVariant = ThemeManager.GetCurrentTheme();
         PopulateLists();
+        DownloadRecorderDevicesButton.IsVisible = false;
         WireEvents();
 
 #if MicrosoftStore
@@ -361,69 +362,17 @@ public partial class FFmpegOptionsWindow : Window
         RefreshDevicesButton.IsEnabled = false;
         DeviceStatusTextBlock.Text = Localization.Strings.FFmpegOptionsWindow_Looking_for_devices;
 
-        DirectShowDevices? devices = null;
-        Exception? discoveryError = null;
         string ffmpegPath = Options.FFmpeg.FFmpegPath;
-
-        if (File.Exists(ffmpegPath))
-        {
-            await Task.Run(() =>
-            {
-                try
-                {
-                    using FFmpegCLIManager ffmpeg = new(ffmpegPath);
-                    devices = ffmpeg.GetDirectShowDevices();
-                }
-                catch (Exception ex)
-                {
-                    discoveryError = ex;
-                }
-            });
-        }
-
-        if (_closed)
-        {
-            return;
-        }
-
-        FFmpegCaptureDevice noSource = new(FFmpegCaptureDevice.None.Value, Localization.Strings.FFmpegOptionsWindow_None);
-        List<FFmpegCaptureDevice> videoSources =
-        [
-            noSource,
-            new(FFmpegCaptureDevice.GDIGrab.Value, Localization.Strings.FFmpegOptionsWindow_Source_GDI)
-        ];
-
-        if (Helpers.IsWindows10OrGreater())
-        {
-            videoSources.Add(new(FFmpegCaptureDevice.DDAGrab.Value, Localization.Strings.FFmpegOptionsWindow_Source_DDA));
-        }
-
+        var audio = await Task.Run(() => ShareX.ScreenRecordingLib.AudioCaptureDevices.GetSystemAudioDevices()
+            .Concat(ShareX.ScreenRecordingLib.AudioCaptureDevices.GetMicrophones()).ToArray());
+        if (_closed) return;
+        FFmpegCaptureDevice noSource = new("", Localization.Strings.FFmpegOptionsWindow_None);
+        List<FFmpegCaptureDevice> videoSources = [noSource, new("desktop", "Linux desktop (Wayland / X11)")];
         List<FFmpegCaptureDevice> audioSources = [noSource];
-
-        if (devices != null)
-        {
-            videoSources.AddRange(devices.VideoDevices.Select(x => new FFmpegCaptureDevice(x, $"dshow ({x})")));
-            audioSources.AddRange(devices.AudioDevices.Select(x => new FFmpegCaptureDevice(x, $"dshow ({x})")));
-        }
-
+        audioSources.AddRange(audio.Select(device => new FFmpegCaptureDevice(device.Id, device.Name)));
         FFmpegOptions options = Options.FFmpeg;
-        if (selectRecorderDevices && videoSources.Any(x => EqualsSource(x, FFmpegCaptureDevice.ScreenCaptureRecorder.Value)))
-        {
-            options.VideoSource = FFmpegCaptureDevice.ScreenCaptureRecorder.Value;
-        }
-        else if (!videoSources.Any(x => EqualsSource(x, options.VideoSource)))
-        {
-            options.VideoSource = FFmpegCaptureDevice.GDIGrab.Value;
-        }
-
-        if (selectRecorderDevices && audioSources.Any(x => EqualsSource(x, FFmpegCaptureDevice.VirtualAudioCapturer.Value)))
-        {
-            options.AudioSource = FFmpegCaptureDevice.VirtualAudioCapturer.Value;
-        }
-        else if (!audioSources.Any(x => EqualsSource(x, options.AudioSource)))
-        {
-            options.AudioSource = FFmpegCaptureDevice.None.Value;
-        }
+        if (!videoSources.Any(source => EqualsSource(source, options.VideoSource))) options.VideoSource = "desktop";
+        if (!audioSources.Any(source => EqualsSource(source, options.AudioSource))) options.AudioSource = "";
 
         bool wasLoaded = _settingsLoaded;
         _settingsLoaded = false;
@@ -437,21 +386,9 @@ public partial class FFmpegOptionsWindow : Window
         {
             DeviceStatusTextBlock.Text = string.Format(Localization.Strings.FFmpegOptionsWindow_FFmpeg_not_found, ffmpegPath);
         }
-        else if (discoveryError != null)
-        {
-            DebugHelper.WriteException(discoveryError);
-            DeviceStatusTextBlock.Text = Localization.Strings.FFmpegOptionsWindow_Device_enumeration_failed;
-        }
         else
         {
-            int deviceCount = Math.Max(0, videoSources.Count - (Helpers.IsWindows10OrGreater() ? 3 : 2)) +
-                              Math.Max(0, audioSources.Count - 1);
-            DeviceStatusTextBlock.Text = deviceCount switch
-            {
-                0 => Localization.Strings.FFmpegOptionsWindow_No_devices_found,
-                1 => string.Format(Localization.Strings.FFmpegOptionsWindow_One_device_found, deviceCount),
-                _ => string.Format(Localization.Strings.FFmpegOptionsWindow_Multiple_devices_found, deviceCount)
-            };
+            DeviceStatusTextBlock.Text = $"Linux desktop and {audio.Length} PulseAudio/PipeWire audio sources";
         }
 
         RefreshDevicesButton.IsEnabled = true;

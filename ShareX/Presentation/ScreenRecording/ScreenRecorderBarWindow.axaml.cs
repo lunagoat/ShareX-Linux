@@ -53,7 +53,7 @@ internal partial class ScreenRecorderBarWindow : Window
     private readonly TaskCompletionSource<bool> _completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private readonly Button _recordButton;
     private ToggleButton _startDelayToggle = null!;
-    private ScrollingCaptureRegionWindow? _regionWindow;
+    private RecordingOutlineWindow? _regionWindow;
     private string? _activePanel;
     private bool _closed;
 
@@ -103,12 +103,6 @@ internal partial class ScreenRecorderBarWindow : Window
         Deactivated += (_, _) => ClosePanel();
         Opened += (_, _) =>
         {
-            IntPtr handle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-            if (handle != IntPtr.Zero)
-            {
-                WindowInfo info = new(handle);
-                info.ExStyle |= WindowStyles.WS_EX_TOOLWINDOW;
-            }
             ShowRegion();
             Dispatcher.UIThread.Post(PositionNearRegion, DispatcherPriority.Loaded);
         };
@@ -137,14 +131,15 @@ internal partial class ScreenRecorderBarWindow : Window
         if (!ValidateSources()) return;
         if (CaptureWindow != IntPtr.Zero)
         {
-            WindowInfo target = new(CaptureWindow);
-            if (!target.IsVisible || target.IsMinimized || !target.Rectangle.IsValid())
+            try
             {
-                ShowError(Strings.ScreenRecorderBar_TargetUnavailable);
+                RecordingRegion = CaptureHelpers.EvenRectangleSize(RecordingTargets.Window(CaptureWindow));
+            }
+            catch (Exception ex)
+            {
+                ShowError(ex.Message);
                 return;
             }
-            // The window may have moved or resized while its settings were being edited.
-            RecordingRegion = CaptureHelpers.EvenRectangleSize(target.Rectangle);
         }
         _completion.TrySetResult(true);
         Close();
@@ -430,17 +425,10 @@ internal partial class ScreenRecorderBarWindow : Window
     private void ShowRegion()
     {
         if (_closed) return;
-        _regionWindow ??= new ScrollingCaptureRegionWindow(RecordingRegion) { Title = Title };
-        _regionWindow.FindControl<RecordingRegionBorder>("RegionBorder")!.AccentBrush = Brushes.Goldenrod;
+        _regionWindow ??= new RecordingOutlineWindow(RecordingRegion) { Title = Title };
+        _regionWindow.AccentBrush = Brushes.Goldenrod;
         _regionWindow.Show();
-        // Keep the outline behind the interactive bar when the windows overlap.
-        IntPtr barHandle = TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        IntPtr regionHandle = _regionWindow.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero;
-        if (barHandle != IntPtr.Zero && regionHandle != IntPtr.Zero)
-        {
-            NativeMethods.SetWindowPos(regionHandle, barHandle, 0, 0, 0, 0,
-                SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_NOACTIVATE);
-        }
+
     }
 
     private void ShowPanel(string id, string title, Func<Control> build)
@@ -485,6 +473,7 @@ internal partial class ScreenRecorderBarWindow : Window
         if (right <= left) { left = work.X; right = work.Right; }
         Position = new PixelPoint(left + (right - left - width) / 2, top);
         ClampToScreen();
+        RecordingWindowPlatform.Place(this, Position.X, Position.Y, width, height);
     }
 
     private void ClampToScreen()

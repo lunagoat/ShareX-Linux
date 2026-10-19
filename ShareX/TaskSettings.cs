@@ -416,7 +416,7 @@ namespace ShareX
         public ShareX.ScreenRecordingLib.CameraOverlayShape ScreenRecordCameraShape = ShareX.ScreenRecordingLib.CameraOverlayShape.Rectangle;
         public int ScreenRecordCameraWidthPercent = 20;
         public int ScreenRecordCameraMargin = 20;
-        public bool ScreenRecordRequireHardwareEncoder = true;
+        public bool ScreenRecordRequireHardwareEncoder = false;
         public int ScreenRecordVideoBitrate = 10000; // kbps
         public int ScreenRecordFPS = 30;
         public int GIFFPS = 15;

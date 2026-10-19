@@ -25,6 +25,7 @@
 
 using ShareX.HelpersLib;
 using System;
+using System.Linq;
 
 namespace ShareX.ScreenCaptureLib
 {
@@ -33,7 +34,7 @@ namespace ShareX.ScreenCaptureLib
         // General
         public bool OverrideCLIPath { get; set; } = false;
         public string CLIPath { get; set; } = "";
-        public string VideoSource { get; set; } = FFmpegCaptureDevice.GDIGrab.Value;
+        public string VideoSource { get; set; } = "desktop";
         public string AudioSource { get; set; } = FFmpegCaptureDevice.None.Value;
         public FFmpegVideoCodec VideoCodec { get; set; } = FFmpegVideoCodec.libx264;
         public FFmpegAudioCodec AudioCodec { get; set; } = FFmpegAudioCodec.libvoaacenc;
@@ -75,7 +76,8 @@ namespace ShareX.ScreenCaptureLib
                     return FileHelpers.GetAbsolutePath(CLIPath);
                 }
 
-                return FileHelpers.GetAbsolutePath("ffmpeg.exe");
+                return (Environment.GetEnvironmentVariable("PATH") ?? "/usr/bin:/bin").Split(':')
+                    .Select(directory => System.IO.Path.Combine(directory, "ffmpeg")).FirstOrDefault(System.IO.File.Exists) ?? "/usr/bin/ffmpeg";
             }
         }
 
@@ -147,7 +149,7 @@ namespace ShareX.ScreenCaptureLib
             }
             else if (VideoSource.Equals("GDI grab", StringComparison.OrdinalIgnoreCase))
             {
-                VideoSource = FFmpegCaptureDevice.GDIGrab.Value;
+                VideoSource = "desktop";
             }
 
             if (AudioSource.Equals("None", StringComparison.OrdinalIgnoreCase))
