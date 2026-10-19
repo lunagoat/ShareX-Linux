@@ -90,6 +90,10 @@ namespace ShareX.HelpersLib
 
         public static Point GetCursorPosition()
         {
+            if (OperatingSystem.IsLinux())
+            {
+                return ShareX.AvaloniaUI.Linux.LinuxScreenCapture.CursorPosition;
+            }
             if (NativeMethods.GetCursorPos(out POINT point))
             {
                 return (Point)point;
@@ -100,7 +104,8 @@ namespace ShareX.HelpersLib
 
         public static void SetCursorPosition(int x, int y)
         {
-            NativeMethods.SetCursorPos(x, y);
+            if (OperatingSystem.IsLinux()) ShareX.AvaloniaUI.Linux.LinuxScreenCapture.MoveCursor(new Point(x, y));
+            else NativeMethods.SetCursorPos(x, y);
         }
 
         public static void SetCursorPosition(Point position)
@@ -115,6 +120,12 @@ namespace ShareX.HelpersLib
 
         public static Color GetPixelColor(int x, int y)
         {
+            if (OperatingSystem.IsLinux())
+            {
+                using var bitmap = ShareX.AvaloniaUI.Linux.LinuxScreenCapture.Capture(new Rectangle(x, y, 1, 1));
+                var color = bitmap.GetPixel(0, 0);
+                return Color.FromArgb(color.Alpha, color.Red, color.Green, color.Blue);
+            }
             IntPtr hdc = NativeMethods.GetDC(IntPtr.Zero);
             uint pixel = NativeMethods.GetPixel(hdc, x, y);
             NativeMethods.ReleaseDC(IntPtr.Zero, hdc);

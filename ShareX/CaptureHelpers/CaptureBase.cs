@@ -25,6 +25,7 @@
 
 using ShareX.HelpersLib;
 using System;
+using System.Linq;
 using System.Drawing;
 using System.Threading.Tasks;
 
@@ -164,6 +165,16 @@ namespace ShareX
         {
             TaskMetadata metadata = new TaskMetadata();
 
+            if (OperatingSystem.IsLinux())
+            {
+                var window = ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows().FirstOrDefault(w => w.Active);
+                if (window != null && (insideRect.IsEmpty || window.Rectangle.Contains(insideRect)))
+                {
+                    metadata.WindowTitle = window.Title;
+                    metadata.ProcessName = window.ClassName;
+                }
+                return metadata;
+            }
             IntPtr handle = NativeMethods.GetForegroundWindow();
             WindowInfo windowInfo = new WindowInfo(handle);
 

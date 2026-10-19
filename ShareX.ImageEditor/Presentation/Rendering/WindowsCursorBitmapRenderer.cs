@@ -78,11 +78,6 @@ namespace ShareX.ImageEditor.Presentation.Rendering
 
         public static SKBitmap? CreateAnnotationBitmap(CursorType cursorType)
         {
-            if (!OperatingSystem.IsWindows() && !BundledCursors.ContainsKey(cursorType))
-            {
-                return null;
-            }
-
             lock (SyncRoot)
             {
                 if (!AnnotationBitmapCache.TryGetValue(cursorType, out SKBitmap? cachedBitmap))
@@ -97,11 +92,6 @@ namespace ShareX.ImageEditor.Presentation.Rendering
 
         public static Bitmap? GetPreviewBitmap(CursorType cursorType, int previewSize = 28)
         {
-            if (!OperatingSystem.IsWindows() && !BundledCursors.ContainsKey(cursorType))
-            {
-                return null;
-            }
-
             lock (SyncRoot)
             {
                 var cacheKey = (cursorType, previewSize);
@@ -154,6 +144,10 @@ namespace ShareX.ImageEditor.Presentation.Rendering
 
         private static SKBitmap? RenderCursorBitmap(CursorType cursorType)
         {
+            if (OperatingSystem.IsLinux() && !BundledCursors.ContainsKey(cursorType))
+            {
+                return ShareX.AvaloniaUI.Linux.LinuxCursorImage.Load(cursorType.ToString());
+            }
             if (BundledCursors.TryGetValue(cursorType, out string? asset))
             {
                 using Stream? source = typeof(WindowsCursorBitmapRenderer).Assembly.GetManifestResourceStream(

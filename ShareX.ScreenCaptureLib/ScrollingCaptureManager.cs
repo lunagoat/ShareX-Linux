@@ -28,7 +28,7 @@ using SkiaSharp;
 using System;
 using System.Diagnostics;
 using System.Drawing;
-using System.Runtime.InteropServices;
+using System.Linq;
 using System.Threading.Tasks;
 using Bitmap = SkiaSharp.SKBitmap;
 
@@ -45,7 +45,7 @@ namespace ShareX.ScreenCaptureLib
         private bool stopRequested;
         private ScrollingCaptureStatus status;
         private int bestMatchCount, bestMatchIndex, bestIgnoreBottomOffset;
-        private WindowInfo selectedWindow;
+        private IntPtr selectedHandle;
         private Rectangle selectedRectangle;
 
         public ScrollingCaptureManager(ScrollingCaptureOptions options)
@@ -81,8 +81,9 @@ namespace ShareX.ScreenCaptureLib
 
         public async Task<ScrollingCaptureStatus> StartCapture()
         {
-            if (!IsCapturing && selectedWindow != null && !selectedRectangle.IsEmpty)
+            if (!IsCapturing && selectedHandle != IntPtr.Zero && !selectedRectangle.IsEmpty)
             {
+                LinuxScrollInput.EnsureSupported();
                 IsCapturing = true;
                 stopRequested = false;
                 status = ScrollingCaptureStatus.Failed;
@@ -93,7 +94,7 @@ namespace ShareX.ScreenCaptureLib
 
                 ScrollingCaptureRegionWindow regionWindow = null;
 
-                if (Options.ShowRegion)
+                if (Options.ShowRegion && !ShareX.AvaloniaUI.Linux.LinuxScreenCapture.IsWayland)
                 {
                     regionWindow = new ScrollingCaptureRegionWindow(selectedRectangle);
                     regionWindow.Show();
@@ -101,14 +102,13 @@ namespace ShareX.ScreenCaptureLib
 
                 try
                 {
-                    selectedWindow.Activate();
+                    ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.Activate(selectedHandle);
 
                     await Task.Delay(Options.StartDelay);
 
                     if (Options.AutoScrollTop)
                     {
-                        InputHelpers.SendKeyPress(VirtualKeyCode.HOME);
-                        NativeMethods.SendMessage(selectedWindow.Handle, (int)WindowsMessages.VSCROLL, (int)ScrollBarCommands.SB_TOP, 0);
+                        LinuxScrollInput.Key(selectedHandle, "Home", true);
 
                         await Task.Delay(Options.ScrollDelay);
                     }
@@ -127,27 +127,7 @@ namespace ShareX.ScreenCaptureLib
                             break;
                         }
 
-                        switch (Options.ScrollMethod)
-                        {
-                            case ScrollMethod.MouseWheel:
-                                InputHelpers.SendMouseWheel(-120 * Options.ScrollAmount);
-                                break;
-                            case ScrollMethod.DownArrow:
-                                for (int i = 0; i < Options.ScrollAmount; i++)
-                                {
-                                    InputHelpers.SendKeyPress(VirtualKeyCode.DOWN);
-                                }
-                                break;
-                            case ScrollMethod.PageDown:
-                                InputHelpers.SendKeyPress(VirtualKeyCode.NEXT);
-                                break;
-                            case ScrollMethod.ScrollMessage:
-                                for (int i = 0; i < Options.ScrollAmount; i++)
-                                {
-                                    NativeMethods.SendMessage(selectedWindow.Handle, (int)WindowsMessages.VSCROLL, (int)ScrollBarCommands.SB_LINEDOWN, 0);
-                                }
-                                break;
-                        }
+                        LinuxScrollInput.Scroll(selectedHandle, Options.ScrollMethod, Options.ScrollAmount);
 
                         Stopwatch timer = Stopwatch.StartNew();
 
@@ -219,22 +199,11 @@ namespace ShareX.ScreenCaptureLib
             }
 
             selectedRectangle = selection.Value.Rectangle;
-            selectedWindow = selection.Value.WindowInfo;
-            return selectedWindow != null;
-        }
-
-        private bool IsScrollReachedBottom(IntPtr handle)
-        {
-            SCROLLINFO scrollInfo = new SCROLLINFO();
-            scrollInfo.cbSize = (uint)Marshal.SizeOf(scrollInfo);
-            scrollInfo.fMask = (uint)(ScrollInfoMask.SIF_RANGE | ScrollInfoMask.SIF_PAGE | ScrollInfoMask.SIF_TRACKPOS);
-
-            if (NativeMethods.GetScrollInfo(handle, (int)SBOrientation.SB_VERT, ref scrollInfo))
-            {
-                return scrollInfo.nMax == scrollInfo.nTrackPos + scrollInfo.nPage - 1;
-            }
-
-            return CompareLastTwoImages();
+            var rectangle = selectedRectangle;
+            var center = new Point(rectangle.X + rectangle.Width / 2, rectangle.Y + rectangle.Height / 2);
+            selectedHandle = ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows()
+                .FirstOrDefault(w => w.Rectangle.Contains(center))?.Handle ?? IntPtr.Zero;
+            return selectedHandle != IntPtr.Zero;
         }
 
         private bool CompareLastTwoImages()
