@@ -1,0 +1,120 @@
+#!/usr/bin/env bash
+# sharex - launcher for the Linux port of ShareX.
+#
+# Layouts this wrapper understands (it is installed as <prefix>/bin/sharex):
+#   system   : /usr/bin/sharex            -> /usr/lib/sharex/ShareX
+#   user     : ~/.local/bin/sharex        -> ~/.local/lib/sharex/ShareX
+#   flatpak  : /app/bin/sharex            -> /app/lib/sharex/ShareX
+#
+# Environment overrides:
+#   SHAREX_BIN   full path of the ShareX executable
+#   SHAREX_LIB   directory that contains ShareX
+#
+# Files passed on the command line are handed to ShareX as upload inputs, except
+# for .sxcu and .sxie files, which ShareX imports as a custom uploader or image
+# effect (that is what the desktop file and the MIME associations expect).
+
+set -euo pipefail
+
+self_path="$(readlink -f -- "${BASH_SOURCE[0]}")"
+bindir="$(dirname -- "$self_path")"
+libdir="$(dirname -- "$bindir")/lib/sharex"
+version_file="$libdir/version"
+
+print_version() {
+    if [ -r "$version_file" ]; then
+        printf 'ShareX %s (Linux port)\n' "$(cat "$version_file")"
+    else
+        printf 'ShareX (Linux port)\n'
+    fi
+}
+
+print_help() {
+    print_version
+    cat <<'EOF'
+
+Usage: sharex [action] [file|URL ...]
+
+ShareX runs in the background (tray). An "action" is a single-dash command that
+the running instance performs; without one, file paths and URLs are uploaded.
+
+Most useful actions:
+  -RectangleRegion      capture a region          -PrintScreen       capture the whole screen
+  -ActiveWindow         capture the active window -ActiveMonitor    capture the active monitor
+  -LastRegion           capture the last region   -ScrollingCapture  start/stop scrolling capture
+  -ScreenRecorder       start/stop recording      -ScreenRecorderGIF start/stop GIF recording
+  -StopScreenRecording  stop recording            -PauseScreenRecording  pause/resume recording
+  -ClipboardUpload      upload the clipboard      -UploadText        upload text
+  -OCR                  extract text (OCR)        -QRCode            create a QR code
+  -ColorPicker          pick a colour             -ScreenColorPicker pick a colour from screen
+  -ImageEditor          open the image editor     -ImageViewer       open the image viewer
+  -OpenMainWindow       open the main window      -OpenHistory       open the history window
+  -ExitShareX           exit ShareX
+
+Wrapper options:
+  -h, --help            show this help
+      --version         show the ShareX version
+
+Anything else is passed to ShareX unchanged. The complete reference of every
+action is in docs/CLI.md in the ShareX source tree.
+EOF
+}
+
+find_binary() {
+    local d
+    if [ -n "${SHAREX_BIN:-}" ] && [ -x "${SHAREX_BIN}" ]; then
+        printf '%s\n' "${SHAREX_BIN}"
+        return 0
+    fi
+
+    for d in "${SHAREX_LIB:-}" "$libdir" "$(dirname -- "$bindir")/lib/ShareX" "$bindir"; do
+        [ -n "$d" ] || continue
+        if [ -x "$d/ShareX" ]; then
+            printf '%s\n' "$d/ShareX"
+            return 0
+        fi
+    done
+
+    return 1
+}
+
+if [ "$#" -gt 0 ]; then
+    case "$1" in
+        -h|--help)
+            print_help
+            exit 0
+            ;;
+        --version)
+            print_version
+            exit 0
+            ;;
+    esac
+fi
+
+binary="$(find_binary)" || {
+    cat >&2 <<EOF
+sharex: could not find the ShareX executable.
+Looked in \${SHAREX_LIB:-} and "$libdir".
+Set SHAREX_BIN=/path/to/ShareX if you built ShareX somewhere else.
+EOF
+    exit 127
+}
+
+# Translate MIME associations into ShareX commands. A bare argument that follows
+# another argument starting with '-' is treated as that command's parameter and
+# is left alone.
+args=()
+previous=""
+for arg in "$@"; do
+    if [ "${arg#-}" = "$arg" ] && [ "${previous#-}" = "$previous" ]; then
+        case "${arg,,}" in
+            *.sxcu) args+=("-CustomUploader" "$arg"); previous="$arg"; continue ;;
+            *.sxie) args+=("-ImageEffect" "$arg"); previous="$arg"; continue ;;
+        esac
+    fi
+
+    args+=("$arg")
+    previous="$arg"
+done
+
+exec "$binary" ${args[@]+"${args[@]}"}

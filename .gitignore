@@ -332,3 +332,14 @@ ASALocalRun/
 Output/
 APIKeysLocal.cs
 ResXManager.config.xml.cache/
+ResXManager.config.xml
+
+# Linux port: self-contained publish output and makepkg build leftovers
+/dist/
+/packaging/arch/pkg/
+/packaging/arch/src/
+*.pkg.tar.zst
+
+# The Linux publish profile is part of the port and must be committed, even though
+# the Visual Studio template above ignores *.pubxml.
+!ShareX/Properties/PublishProfiles/linux-x64.pubxml

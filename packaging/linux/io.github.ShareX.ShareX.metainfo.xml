@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  AppStream metadata for the Linux port of ShareX.
+  Installed to /usr/share/metainfo (or ~/.local/share/metainfo) as
+  io.github.ShareX.ShareX.metainfo.xml. The Flatpak manifest rewrites the
+  launchable id to the Flatpak application id (see packaging/flatpak/).
+-->
+<component type="desktop-application">
+  <id>io.github.ShareX.ShareX</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>GPL-3.0-only</project_license>
+
+  <name>ShareX</name>
+  <summary>Screen capture, file sharing and productivity tool</summary>
+
+  <description>
+    <p>
+      ShareX is a free and open source program that lets you capture or record any area of your
+      screen and share it with a single keypress. It also allows uploading images, text or other
+      types of files to many supported destinations and can be used as a productivity tool.
+    </p>
+    <p>Features:</p>
+    <ul>
+      <li>Fullscreen, active window, active monitor, region and scrolling screen capture</li>
+      <li>Screen recording to MP4, WebM, MKV or animated GIF, with system audio, microphone and camera</li>
+      <li>Annotation editor with shapes, arrows, text, blur, pixelate, highlight and image insert</li>
+      <li>Upload to file hosts, FTP/SFTP/WebDAV, S3, Azure, custom uploaders (.sxcu) and URL shorteners</li>
+      <li>Workflows and hotkeys, watch folders, image effects (.sxie) and after-capture/after-upload tasks</li>
+      <li>History, QR codes, OCR, colour picker, ruler, hash checker, image and video tools</li>
+    </ul>
+    <p>
+      This build runs natively on Linux (Wayland and X11) and uses the desktop's own facilities for
+      screen capture, recording, clipboard access, notifications and global hotkeys.
+    </p>
+  </description>
+
+  <launchable type="desktop-id">sharex.desktop</launchable>
+
+  <url type="homepage">https://getsharex.com</url>
+  <url type="bugtracker">https://github.com/ShareX/ShareX/issues</url>
+  <url type="vcs-browser">https://github.com/ShareX/ShareX</url>
+
+  <developer id="getsharex.com">
+    <name>ShareX Team</name>
+  </developer>
+
+  <!-- Screenshots are the upstream ones for now; replace with screenshots of the
+       Linux build once the port has release-quality images to host. -->
+  <screenshots>
+    <screenshot type="default">
+      <image type="source">https://getsharex.com/img/ShareX_Screenshot.png</image>
+      <caption>Capture, annotate and share screenshots</caption>
+    </screenshot>
+  </screenshots>
+
+  <releases>
+    <release version="21.0.0" date="2026-10-19">
+      <description>
+        <p>First natively packaged Linux build: Wayland/X11 screen capture and recording, Linux
+           clipboard, notifications, hotkeys, uploaders and history.</p>
+      </description>
+    </release>
+  </releases>
+
+  <categories>
+    <category>Graphics</category>
+    <category>Utility</category>
+  </categories>
+
+  <keywords>
+    <keyword>screenshot</keyword>
+    <keyword>screen capture</keyword>
+    <keyword>screen recorder</keyword>
+    <keyword>gif</keyword>
+    <keyword>upload</keyword>
+    <keyword>share</keyword>
+    <keyword>annotate</keyword>
+    <keyword>ocr</keyword>
+    <keyword>qr code</keyword>
+    <keyword>color picker</keyword>
+  </keywords>
+
+  <content_rating type="oars-1.1"/>
+
+  <provides>
+    <binary>sharex</binary>
+  </provides>
+</component>

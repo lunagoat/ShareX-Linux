@@ -1,0 +1,94 @@
+# Flatpak manifest draft for ShareX (native Linux port).
+#
+# Status: DRAFT, not build-tested. `flatpak-builder` is not available in the
+# development environment used for the port and the .NET SDK archive below still
+# needs a pinned checksum. Everything else (the build commands, installed file
+# names and finish-args) matches what packaging/linux/ and packaging/arch/PKGBUILD
+# install, and the desktop/metainfo/icon names are rewritten to the Flatpak
+# application id as Flatpak requires.
+#
+# Build with (from the repository root):
+#     flatpak-builder --user --install --force-clean build-dir \
+#         packaging/flatpak/io.github.ShareX.ShareX.yml
+#     flatpak run io.github.ShareX.ShareX
+#
+# TODO(flatpak): pin the sha256 of the .NET SDK archive (and add the aarch64
+# archive with only-arches: [aarch64]) before publishing this manifest.
+# TODO(flatpak): replace `type: dir` with a pinned git/archive source when the
+# port has a release tag.
+
+app-id: io.github.ShareX.ShareX
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: sharex
+separate-locales: false
+
+finish-args:
+  - --share=ipc
+  - --share=network
+  - --socket=wayland
+  # The port currently renders through Avalonia's X11 backend (XWayland), so X11
+  # must stay available on Wayland sessions too. Switch this to fallback-x11 once
+  # the Wayland backend is enabled.
+  - --socket=x11
+  - --socket=pulseaudio
+  - --device=dri
+  - --filesystem=xdg-pictures
+  - --filesystem=xdg-download
+  - --filesystem=xdg-documents
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.FileManager1
+  - --talk-name=org.freedesktop.secrets
+  - --env=DOTNET_CLI_TELEMETRY_OPTOUT=1
+
+modules:
+  # The freedesktop SDK has no .NET extension, so the SDK is vendored under /app
+  # and used only at build time (the published application is self-contained).
+  - name: dotnet-sdk
+    buildsystem: simple
+    build-commands:
+      - mkdir -p /app/lib/dotnet
+      - cp -a . /app/lib/dotnet
+    sources:
+      - type: archive
+        url: https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.402/dotnet-sdk-10.0.402-linux-x64.tar.gz
+        sha256: 0000000000000000000000000000000000000000000000000000000000000000
+        only-arches: [x86_64]
+
+  - name: sharex
+    buildsystem: simple
+    build-commands:
+      - |
+        export HOME=/run/build/dotnet-home
+        export DOTNET_CLI_HOME="$HOME"
+        export DOTNET_ROOT=/app/lib/dotnet
+        mkdir -p "$HOME"
+        /app/lib/dotnet/dotnet publish ShareX/ShareX.csproj \
+            -c Release -r linux-x64 \
+            -p:PublishProfile=linux-x64 \
+            -p:PublishDir=/app/lib/sharex/ \
+            -p:DebugType=none -p:DebugSymbols=false -nologo
+      - install -Dm755 packaging/linux/sharex /app/bin/sharex
+      - printf '21.0.0\n' > /app/lib/sharex/version
+      - install -d /app/share/applications /app/share/metainfo
+      - |
+        sed -e 's/^Icon=sharex$/Icon=io.github.ShareX.ShareX/' \
+            packaging/linux/sharex.desktop \
+            > /app/share/applications/io.github.ShareX.ShareX.desktop
+      - |
+        sed 's#<launchable type="desktop-id">sharex.desktop</launchable>#<launchable type="desktop-id">io.github.ShareX.ShareX.desktop</launchable>#' \
+            packaging/linux/io.github.ShareX.ShareX.metainfo.xml \
+            > /app/share/metainfo/io.github.ShareX.ShareX.metainfo.xml
+      - install -Dm644 packaging/linux/sharex.xml /app/share/mime/packages/io.github.ShareX.ShareX.xml
+      - |
+        for size in 16 24 32 48 64 128 256; do
+            install -Dm644 "packaging/linux/icons/hicolor/${size}x${size}/apps/sharex.png" \
+                "/app/share/icons/hicolor/${size}x${size}/apps/io.github.ShareX.ShareX.png"
+        done
+        install -Dm644 packaging/linux/icons/hicolor/scalable/apps/sharex.svg \
+            /app/share/icons/hicolor/scalable/apps/io.github.ShareX.ShareX.svg
+    sources:
+      - type: dir
+        path: ../..
