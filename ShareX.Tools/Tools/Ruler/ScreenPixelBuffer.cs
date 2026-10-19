@@ -51,7 +51,7 @@ internal sealed class ScreenPixelBuffer
             throw new ArgumentOutOfRangeException(nameof(bounds));
         }
 
-        using SKBitmap bitmap = WindowsImageInterop.Capture(new DrawingRectangle(bounds.X, bounds.Y, bounds.Width, bounds.Height));
+        using SKBitmap bitmap = Linux.DesktopTools.Capture(bounds);
         int[] pixels = new int[bitmap.Width * bitmap.Height];
         for (int y = 0; y < bitmap.Height; y++)
             Marshal.Copy(IntPtr.Add(bitmap.GetPixels(), y * bitmap.RowBytes), pixels, y * bitmap.Width, bitmap.Width);

@@ -25,6 +25,7 @@
 
 using ShareX.HelpersLib;
 using System;
+using System.IO;
 
 namespace ShareX.ScreenCaptureLib
 {
@@ -75,7 +76,12 @@ namespace ShareX.ScreenCaptureLib
                     return FileHelpers.GetAbsolutePath(CLIPath);
                 }
 
-                return FileHelpers.GetAbsolutePath("ffmpeg.exe");
+                foreach (string directory in (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator))
+                {
+                    string candidate = Path.Combine(directory, "ffmpeg");
+                    if (File.Exists(candidate)) return candidate;
+                }
+                return "ffmpeg";
             }
         }
 

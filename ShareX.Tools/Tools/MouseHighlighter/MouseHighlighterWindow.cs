@@ -53,6 +53,13 @@ public sealed class MouseHighlighterWindow : Window
         _toggle.Click += (_, _) => Toggle();
         panel.Children.Add(_toggle);
         panel.Children.Add(CreateRecordingTip());
+        panel.Children.Add(new TextBlock
+        {
+            Text = Linux.DesktopTools.Wayland
+                ? "Hyprland supports a persistent cursor halo (Circle + Always color). Wayland does not expose global clicks; ripple and click colors require X11. On other compositors use the desktop cursor highlight effect."
+                : "X11 uses XInput2 for global motion and button events. The overlay is click-through.",
+            TextWrapping = TextWrapping.Wrap
+        });
         panel.Children.Add(new MouseHighlighterSettingsControl(options, settingsChanged));
         Content = new ScrollViewer { Content = panel };
         MouseHighlighterManager.StateChanged += RefreshState;

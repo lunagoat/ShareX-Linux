@@ -27,7 +27,7 @@ using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using SkiaSharp;
 using System.Diagnostics;
-using Vortice.DXGI;
+
 
 namespace ShareX.Tools;
 
@@ -77,7 +77,6 @@ public sealed class BackgroundRemovalService : IDisposable
 {
     private static readonly float[] Mean = [0.485f, 0.456f, 0.406f];
     private static readonly float[] StandardDeviation = [0.229f, 0.224f, 0.225f];
-    private static readonly Lazy<DirectMLAdapter> PreferredDirectMLAdapter = new(FindPreferredDirectMLAdapter);
     private readonly Lock _sessionLock = new();
     private SessionCacheKey? _sessionKey;
     private InferenceSession? _session;
@@ -130,38 +129,11 @@ public sealed class BackgroundRemovalService : IDisposable
 
     private static SessionCreationResult CreateSession(string modelPath, BackgroundRemovalDevice device)
     {
-        if (device == BackgroundRemovalDevice.CPU)
-        {
-            return new SessionCreationResult(new InferenceSession(modelPath), "CPU");
-        }
-
         if (device == BackgroundRemovalDevice.GPU)
         {
-            return CreateDirectMLSession(modelPath);
+            throw new NotSupportedException("This Linux build uses ONNX Runtime CPU. Select CPU or Auto.");
         }
-
-        try
-        {
-            return CreateDirectMLSession(modelPath);
-        }
-        catch (Exception ex) when (ex is OnnxRuntimeException or DllNotFoundException or EntryPointNotFoundException or NotSupportedException)
-        {
-            return new SessionCreationResult(new InferenceSession(modelPath), "CPU (GPU unavailable)");
-        }
-    }
-
-    private static SessionCreationResult CreateDirectMLSession(string modelPath)
-    {
-        DirectMLAdapter adapter = PreferredDirectMLAdapter.Value;
-        using SessionOptions sessionOptions = new()
-        {
-            EnableMemoryPattern = false,
-            ExecutionMode = ExecutionMode.ORT_SEQUENTIAL,
-            GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL
-        };
-
-        sessionOptions.AppendExecutionProvider_DML(adapter.DeviceId);
-        return new SessionCreationResult(new InferenceSession(modelPath, sessionOptions), adapter.Name);
+        return new SessionCreationResult(new InferenceSession(modelPath), "CPU");
     }
 
     private static BackgroundRemovalResult RunModel(SKBitmap source, SessionLookupResult sessionResult, long sessionSetupMilliseconds)
@@ -208,46 +180,6 @@ public sealed class BackgroundRemovalService : IDisposable
             phaseStopwatch.ElapsedMilliseconds);
     }
 
-    private static DirectMLAdapter FindPreferredDirectMLAdapter()
-    {
-        try
-        {
-            using IDXGIFactory1 factory = Vortice.DXGI.DXGI.CreateDXGIFactory1<IDXGIFactory1>();
-            DirectMLAdapter? preferredAdapter = null;
-            ulong largestDedicatedMemory = 0;
-
-            for (uint index = 0; ; index++)
-            {
-                if (factory.EnumAdapters1(index, out IDXGIAdapter1 adapter).Failure)
-                {
-                    break;
-                }
-
-                using (adapter)
-                {
-                    AdapterDescription1 description = adapter.Description1;
-                    if ((description.Flags & AdapterFlags.Software) != 0)
-                    {
-                        continue;
-                    }
-
-                    ulong dedicatedMemory = description.DedicatedVideoMemory;
-                    if (preferredAdapter == null || dedicatedMemory > largestDedicatedMemory)
-                    {
-                        preferredAdapter = new DirectMLAdapter((int)index, description.Description);
-                        largestDedicatedMemory = dedicatedMemory;
-                    }
-                }
-            }
-
-            return preferredAdapter ?? new DirectMLAdapter(0, "GPU 0");
-        }
-        catch
-        {
-            return new DirectMLAdapter(0, "GPU 0");
-        }
-    }
-
     public void Dispose()
     {
         lock (_sessionLock)
@@ -269,7 +201,6 @@ public sealed class BackgroundRemovalService : IDisposable
 
     private readonly record struct SessionCreationResult(InferenceSession Session, string ExecutionDevice);
 
-    private readonly record struct DirectMLAdapter(int DeviceId, string Name);
 
     private readonly record struct SessionCacheKey(
         string ModelPath,
@@ -398,7 +329,7 @@ public sealed class BackgroundRemovalService : IDisposable
             for (int x = 0; x < width; x++)
             {
                 int index = (y * width) + x;
-                float normalized = Math.Clamp((values[index] - min) / range, 0f, 1f);
+                float normalized = Math.Clamp(max - min < 0.000001f ? values[index] : (values[index] - min) / range, 0f, 1f);
                 byte alpha = (byte)MathF.Round(normalized * 255f);
                 byte* pixel = row + (x * 4);
                 pixel[0] = 0;

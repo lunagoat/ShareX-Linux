@@ -33,7 +33,7 @@ public partial class BorderlessWindowWindow : Window
 {
     private readonly BorderlessWindowViewModel _viewModel;
 
-    public BorderlessWindowWindow() : this(new BorderlessWindowSettings(), (_, _) => false)
+    public BorderlessWindowWindow() : this(new BorderlessWindowSettings(), BorderlessWindowManager.ToggleBorderlessWindow)
     {
     }
 

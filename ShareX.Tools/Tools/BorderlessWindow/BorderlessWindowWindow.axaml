@@ -96,7 +96,7 @@
                 </Border>
 
                 <Grid Grid.Row="2" ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                    <TextBlock Text="{x:Static localization:Strings.BorderlessWindowWindow_Toggle_again_to_restore_the_original_border_and_window_size}"
+                    <TextBlock Text="{Binding SupportMessage}" TextWrapping="Wrap"
                                FontWeight="Normal"
                                Foreground="{DynamicResource ShareX.Brush.Text.Secondary}"
                                VerticalAlignment="Center"/>

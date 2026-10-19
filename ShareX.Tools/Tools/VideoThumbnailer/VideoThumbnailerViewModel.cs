@@ -103,7 +103,8 @@ public sealed partial class VideoThumbnailerViewModel : ViewModelBase
     public VideoThumbnailerViewModel(string ffmpegPath, VideoThumbnailOptions options,
         Action<IReadOnlyList<VideoThumbnailInfo>>? thumbnailsTaken = null)
     {
-        _ffmpegPath = ffmpegPath;
+        try { _ffmpegPath = Linux.ToolProcess.Resolve("ffmpeg", ffmpegPath); }
+        catch (Exception ex) { _ffmpegPath = ffmpegPath; _errorMessage = ex.Message; }
         _options = options;
         _thumbnailsTaken = thumbnailsTaken;
 

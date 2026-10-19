@@ -44,6 +44,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.Tools", "ShareX.Tool
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.ScreenRecordingLib", "ShareX.ScreenRecordingLib\ShareX.ScreenRecordingLib.csproj", "{00CA5B81-08A4-4AAD-A3AB-5F8F663F6B4A}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.Linux.Tools.Tests", "tests\ShareX.Linux.Tools.Tests\ShareX.Linux.Tools.Tests.csproj", "{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|ARM64 = Debug|ARM64
@@ -624,9 +628,52 @@ Global
 		{00CA5B81-08A4-4AAD-A3AB-5F8F663F6B4A}.Steam|Any CPU.Build.0 = Steam|x64
 		{00CA5B81-08A4-4AAD-A3AB-5F8F663F6B4A}.Steam|x86.ActiveCfg = Steam|x64
 		{00CA5B81-08A4-4AAD-A3AB-5F8F663F6B4A}.Steam|x86.Build.0 = Steam|x64
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|x64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Debug|x86.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|ARM64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|ARM64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|x64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|x64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|Any CPU.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|Any CPU.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|x86.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStore|x86.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|ARM64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|ARM64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|x64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|x64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|Any CPU.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|x86.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.MicrosoftStoreDebug|x86.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|ARM64.Build.0 = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|x64.ActiveCfg = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|x64.Build.0 = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|Any CPU.Build.0 = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|x86.ActiveCfg = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Release|x86.Build.0 = Release|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|ARM64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|ARM64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|x64.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|x64.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|Any CPU.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|Any CPU.Build.0 = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|x86.ActiveCfg = Debug|Any CPU
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20}.Steam|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{024E556B-4C1B-4F88-9BBD-ADD3B9924F20} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEACF1C2-28EE-44DF-B55E-2234F6137272}

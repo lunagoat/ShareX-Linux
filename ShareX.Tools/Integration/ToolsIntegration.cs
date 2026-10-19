@@ -76,8 +76,7 @@ public static class ToolsIntegration
         {
             try
             {
-                ScreenColorPickerWindow picker = new(options);
-                completion.TrySetResult(await picker.PickAsync());
+                completion.TrySetResult(await Linux.ScreenColorPicker.PickAsync(options));
             }
             catch (Exception ex)
             {
@@ -268,6 +267,15 @@ public static class ToolsIntegration
     private static void Show(Func<Avalonia.Controls.Window> windowFactory)
     {
         AvaloniaBootstrapper.EnsureInitialized();
-        Dispatcher.UIThread.Post(() => windowFactory().Show());
+        Dispatcher.UIThread.Post(() =>
+        {
+            try { windowFactory().Show(); }
+            catch (Exception ex)
+            {
+                ToolsDiagnostics.ReportWarning(nameof(ToolsIntegration), "Could not open this tool.", ex);
+                ShareX.AvaloniaUI.MessageBox.Show(ex.Message, "ShareX tools", ShareX.AvaloniaUI.MessageBoxButtons.OK,
+                    ShareX.AvaloniaUI.MessageBoxIcon.Error);
+            }
+        });
     }
 }
