@@ -1,0 +1,39 @@
+[Desktop Entry]
+Type=Application
+Version=1.5
+Name=ShareX
+GenericName=Screen Capture and Sharing Tool
+Comment=Screen capture, file sharing and productivity tool
+Comment[de]=Programm zum Erstellen und Teilen von Screenshots
+Comment[es]=Herramienta de captura de pantalla y para compartir archivos
+Comment[fr]=Outil de capture d'écran et de partage de fichiers
+Keywords=screenshot;screen;capture;record;recording;gif;upload;share;annotate;editor;ocr;qr;color picker;region;scrolling;
+Exec=sharex %F
+TryExec=sharex
+Icon=sharex
+Terminal=false
+Categories=Graphics;
+MimeType=application/x-sharex-custom-uploader;application/x-sharex-image-effect;
+StartupNotify=true
+StartupWMClass=ShareX
+Actions=capture-region;capture-fullscreen;capture-active-window;open-history;
+
+[Desktop Action capture-region]
+Name=Capture region
+Name[de]=Bereich aufnehmen
+Exec=sharex -RectangleRegion
+
+[Desktop Action capture-fullscreen]
+Name=Capture entire screen
+Name[de]=Gesamten Bildschirm aufnehmen
+Exec=sharex -PrintScreen
+
+[Desktop Action capture-active-window]
+Name=Capture active window
+Name[de]=Aktives Fenster aufnehmen
+Exec=sharex -ActiveWindow
+
+[Desktop Action open-history]
+Name=Open history
+Name[de]=Verlauf öffnen
+Exec=sharex -OpenHistory
