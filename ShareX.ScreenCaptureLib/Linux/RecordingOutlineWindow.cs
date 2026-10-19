@@ -13,6 +13,7 @@ public sealed class RecordingOutlineWindow : Window
     public IBrush AccentBrush { get => border.AccentBrush; set => border.AccentBrush = value; }
     public RecordingOutlineWindow(SystemRectangle region)
     {
+        Title = "ShareX - Recording Region Outline";
         WindowDecorations = WindowDecorations.None;
         CanResize = false; ShowInTaskbar = false; ShowActivated = false; Topmost = true;
         Background = Brushes.Transparent;

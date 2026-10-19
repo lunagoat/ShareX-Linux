@@ -14,8 +14,11 @@ public static class RecordingTargets
         {
             using JsonDocument data = JsonDocument.Parse(LinuxProcess.Run("hyprctl", "activewindow", "-j").GetAwaiter().GetResult());
             var root = data.RootElement;
-            string address = root.GetProperty("address").GetString()!;
-            return (ReadHyprland(root), (nint)Convert.ToInt64(address[2..], 16));
+            if (!root.TryGetProperty("address", out var addr) || addr.ValueKind != JsonValueKind.String || string.IsNullOrEmpty(addr.GetString()))
+                throw new InvalidOperationException("No active window.");
+            string address = addr.GetString()!;
+            string hex = address.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? address[2..] : address;
+            return (ReadHyprland(root), (nint)Convert.ToInt64(hex, 16));
         }
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")))
         {
@@ -34,7 +37,13 @@ public static class RecordingTargets
         {
             using JsonDocument data = JsonDocument.Parse(LinuxProcess.Run("hyprctl", "clients", "-j").GetAwaiter().GetResult());
             foreach (JsonElement window in data.RootElement.EnumerateArray())
-                if (Convert.ToInt64(window.GetProperty("address").GetString()![2..], 16) == handle.ToInt64()) return ReadHyprland(window);
+            {
+                if (window.TryGetProperty("address", out var addr) && addr.GetString() is { } address)
+                {
+                    string hex = address.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? address[2..] : address;
+                    if (Convert.ToInt64(hex, 16) == handle.ToInt64()) return ReadHyprland(window);
+                }
+            }
             throw new IOException("The recorded window has closed or is unavailable.");
         }
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")))

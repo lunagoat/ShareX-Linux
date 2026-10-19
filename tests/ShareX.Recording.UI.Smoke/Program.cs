@@ -44,8 +44,9 @@ AvaloniaBootstrapper.Initialize([], async () =>
         controls.StopRequested += recorder.RequestStop;
         controls.Show();
         controls.ChangeState(ScreenRecordState.BeforeStart);
-        controls.StartCountdown(100);
-        await Task.Delay(200);
+        controls.StartCountdown(2000);
+        await Task.Delay(400);
+        await Snapshot("countdown", controls.Title!);
         controls.ChangeState(ScreenRecordState.AfterStart);
         await recorder.StartAsync();
         controls.ChangeState(ScreenRecordState.AfterRecordingStart);

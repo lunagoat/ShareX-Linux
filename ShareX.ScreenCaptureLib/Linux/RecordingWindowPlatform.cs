@@ -42,17 +42,27 @@ public static class RecordingWindowPlatform
         string title = window.Title ?? "";
         try
         {
-            await Task.Delay(80);
-            string text = await Command("clients", "-j");
-            using JsonDocument clients = JsonDocument.Parse(text);
-            foreach (JsonElement client in clients.RootElement.EnumerateArray())
+            for (int attempt = 0; attempt < 5; attempt++)
             {
-                if (client.GetProperty("pid").GetInt32() != Environment.ProcessId || client.GetProperty("title").GetString() != title) continue;
-                string address = client.GetProperty("address").GetString()!;
-                await Command("dispatch", "setfloating", "address:" + address);
-                await Command("dispatch", "resizewindowpixel", $"exact {width} {height},address:{address}");
-                await Command("dispatch", "movewindowpixel", $"exact {x} {y},address:{address}");
-                break;
+                await Task.Delay(attempt == 0 ? 80 : 100);
+                string text = await Command("clients", "-j");
+                using JsonDocument clients = JsonDocument.Parse(text);
+                bool found = false;
+                foreach (JsonElement client in clients.RootElement.EnumerateArray())
+                {
+                    if (client.GetProperty("pid").GetInt32() != Environment.ProcessId) continue;
+                    if (!string.IsNullOrEmpty(title) && client.GetProperty("title").GetString() != title) continue;
+                    string address = client.GetProperty("address").GetString()!;
+                    await Command("dispatch", "setfloating", "address:" + address);
+                    if (width >= 10 && height >= 10)
+                    {
+                        await Command("dispatch", "resizewindowpixel", $"exact {width} {height},address:{address}");
+                    }
+                    await Command("dispatch", "movewindowpixel", $"exact {x} {y},address:{address}");
+                    found = true;
+                    break;
+                }
+                if (found) break;
             }
         }
         catch (Exception ex) { DebugHelper.WriteLine("Recording overlay placement: " + ex.Message); }
