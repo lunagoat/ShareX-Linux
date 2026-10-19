@@ -323,6 +323,7 @@ def test_suite():
         with open(f"{SANDBOX}/config/ShareX/ApplicationConfig.json", "r", encoding="utf-8") as f:
             cfg = json.load(f)
         cfg["DefaultTaskSettings"]["AfterUploadJob"] = "CopyURLToClipboard"
+        cfg["DefaultTaskSettings"]["WatchFolderEnabled"] = True
         cfg["DefaultTaskSettings"]["WatchFolderList"] = [
             {
                 "FolderPath": watch_dir,
@@ -338,15 +339,19 @@ def test_suite():
         daemon = subprocess.Popen(["timeout", "25", RUN_SH, "-silent", "-NoHotkeys"], env=get_env())
         time.sleep(2)
 
-        # Place file in watched folder
+        # Ensure watch folder has no stale file from earlier run
         watched_file = f"{watch_dir}/watched_auto.txt"
+        if os.path.exists(watched_file):
+            os.remove(watched_file)
+
+        # Place file in watched folder
         with open(watched_file, "w", encoding="utf-8") as f:
             f.write("Auto watch content")
 
-        # Wait for file watcher debounce and upload
+        # Wait for file watcher debounce and upload (debounce is >= 1.25s)
         uploaded = False
-        for _ in range(25):
-            time.sleep(0.4)
+        for _ in range(40):
+            time.sleep(0.5)
             h = get_history_items()
             if h and h[0][0] == "watched_auto.txt":
                 uploaded = True
@@ -401,8 +406,10 @@ def test_suite():
         action_script = f"{action_dir}/stamp tool.sh"
         with open(action_script, "w", encoding="utf-8") as f:
             f.write("""#!/bin/sh
-echo "MODIFIED_BY_ACTION" > "$2"
-cat "$1" >> "$2"
+tmp=$(mktemp)
+echo "MODIFIED_BY_ACTION" > "$tmp"
+cat "$1" >> "$tmp"
+mv "$tmp" "$2"
 """)
         os.chmod(action_script, 0o755)
 
@@ -441,18 +448,20 @@ cat "$1" >> "$2"
         with open(f"{SANDBOX}/config/ShareX/ApplicationConfig.json", "r", encoding="utf-8") as f:
             cfg = json.load(f)
         cfg["DefaultTaskSettings"]["FileDestination"] = "FTP"
+        cfg["DefaultTaskSettings"]["TextDestination"] = "FileUploader"
+        cfg["DefaultTaskSettings"]["TextFileDestination"] = "FTP"
         cfg["DefaultTaskSettings"]["AfterCaptureJob"] = ""
         with open(f"{SANDBOX}/config/ShareX/ApplicationConfig.json", "w", encoding="utf-8") as f:
             json.dump(cfg, f, indent=2)
 
-        ftp_test_file = f"{SANDBOX}/ftp_test_file.txt"
-        with open(ftp_test_file, "w", encoding="utf-8") as f:
-            f.write("FTP payload transfer")
+        ftp_test_file = f"{SANDBOX}/ftp_test_file.bin"
+        with open(ftp_test_file, "wb") as f:
+            f.write(b"FTP binary payload transfer")
 
         res = run_sharex(["-AutoClose", "-NoHotkeys", ftp_test_file])
         time.sleep(1)
 
-        assert any("ftp_test_file.txt" in k for k in ftp_server.stored_files.keys()), f"File not in FTP server: {ftp_server.stored_files.keys()}"
+        assert any("ftp_test_file.bin" in k for k in ftp_server.stored_files.keys()), f"File not in FTP server: {ftp_server.stored_files.keys()}"
         log("  -> PASS: FTP passive transfer against local FTP server")
         results["FTP upload"] = "works"
 

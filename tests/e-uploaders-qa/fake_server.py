@@ -191,6 +191,14 @@ class FakeHttpServer:
         self.port = self.server.server_address[1]
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
 
+    @property
+    def stored_files(self):
+        return self.server.stored_files
+
+    @property
+    def request_log(self):
+        return self.server.request_log
+
     def start(self):
         self.thread.start()
 
@@ -232,7 +240,7 @@ class FakeFtpProtocol(asyncio.Protocol):
         elif cmd == "SYST":
             self.transport.write(b"215 UNIX Type: L8\r\n")
         elif cmd == "FEAT":
-            self.transport.write(b"211-Features:\r\n UTF8\r\n211 End\r\n")
+            self.transport.write(b"211-Features:\r\n UTF8\r\n EPSV\r\n211 End\r\n")
         elif cmd == "TYPE":
             self.transport.write(b"200 Type set\r\n")
         elif cmd == "PWD":
@@ -242,6 +250,15 @@ class FakeFtpProtocol(asyncio.Protocol):
             self.transport.write(b"250 Directory changed\r\n")
         elif cmd == "MKD":
             self.transport.write(b"257 Directory created\r\n")
+        elif cmd == "SIZE":
+            self.transport.write(b"550 Not found\r\n")
+        elif cmd == "EPSV":
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.bind(("127.0.0.1", 0))
+            sock.listen(1)
+            pasv_port = sock.getsockname()[1]
+            self.pasv_sock = sock
+            self.transport.write(f"229 Entering Extended Passive Mode (|||{pasv_port}|)\r\n".encode("utf-8"))
         elif cmd == "PASV":
             self.setup_pasv()
         elif cmd == "STOR":

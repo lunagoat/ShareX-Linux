@@ -53,8 +53,15 @@ internal static class MediaChecks
         settings.AfterCaptureJob = AfterCaptureTasks.SaveImageToFile | AfterCaptureTasks.AddImageEffects | AfterCaptureTasks.UploadImageToHost;
         settings.ImageSettings.ShowImageEffectsWindowAfterCapture = false;
         settings.ImageSettings.ImageEffectOnlyRegionCapture = false;
+        settings.ImageSettings.FileExistAction = FileExistAction.Overwrite;
         settings.OverrideScreenshotsFolder = true;
         settings.ScreenshotsFolder = Path.Combine(sandbox, "captures");
+        Directory.CreateDirectory(settings.ScreenshotsFolder);
+        foreach (var oldFile in new[] { "capture-integration.png", "capture-delete.png", "download.bin" })
+        {
+            var oldPath = Path.Combine(settings.ScreenshotsFolder, oldFile);
+            if (File.Exists(oldPath)) File.Delete(oldPath);
+        }
         var task = WorkerTask.CreateImageUploaderTask(new TaskMetadata(source.Copy()), settings, "capture-integration");
         await NetworkChecks.Pipeline(task);
         Assert(File.Exists(task.Info.FilePath), "capture pipeline saved image");

@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -187,7 +187,8 @@ namespace ShareX.UploadersLib
                 return "";
             }
 
-            return Path.Combine(Path.Combine(FileHelpers.ExpandFolderVariables(LocalhostRoot), GetSubFolderPath()), fileName);
+            string subFolder = (GetSubFolderPath() ?? "").Replace('\\', Path.DirectorySeparatorChar);
+            return Path.Combine(Path.Combine(FileHelpers.ExpandFolderVariables(LocalhostRoot), subFolder), fileName);
         }
 
         public string GetLocalhostUri(string fileName)
@@ -199,7 +200,8 @@ namespace ShareX.UploadersLib
                 return "";
             }
 
-            return URLHelpers.CombineURL(localhostAddress, GetSubFolderPath(), fileName);
+            string subFolder = (GetSubFolderPath() ?? "").Replace('\\', '/');
+            return URLHelpers.CombineURL(localhostAddress, subFolder, fileName);
         }
 
         public override string ToString()
