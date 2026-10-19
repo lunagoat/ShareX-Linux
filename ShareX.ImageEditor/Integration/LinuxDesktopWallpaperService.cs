@@ -60,7 +60,8 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
         Xfce,
         Kde,
         Lxqt,
-        Lxde
+        Lxde,
+        Wlroots
     }
 
     public bool IsSupported => OperatingSystem.IsLinux() && GetPreferredProviders().Any(IsAvailable);
@@ -109,7 +110,8 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
             Provider.Xfce,
             Provider.Kde,
             Provider.Lxqt,
-            Provider.Lxde
+            Provider.Lxde,
+            Provider.Wlroots
         ];
 
         foreach (Provider provider in fallbackOrder)
@@ -156,6 +158,13 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
         if (ContainsDesktopToken(currentDesktop, "LXDE"))
         {
             return "LXDE";
+        }
+
+        if (ContainsDesktopToken(currentDesktop, "Hyprland") || ContainsDesktopToken(currentDesktop, "sway") ||
+            ContainsDesktopToken(currentDesktop, "river") || ContainsDesktopToken(currentDesktop, "niri") ||
+            ContainsDesktopToken(currentDesktop, "wlroots"))
+        {
+            return "WLROOTS";
         }
 
         if (string.Equals(Environment.GetEnvironmentVariable("KDE_FULL_SESSION"), "true", StringComparison.OrdinalIgnoreCase))
@@ -234,6 +243,9 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
             case "LXDE":
                 AddProvider(providers, Provider.Lxde);
                 break;
+            case "WLROOTS":
+                AddProvider(providers, Provider.Wlroots);
+                break;
         }
     }
 
@@ -256,6 +268,7 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
             Provider.Kde => File.Exists(GetKdeWallpaperConfigPath()),
             Provider.Lxqt => HasPcmanfmConfigDirectory("pcmanfm-qt"),
             Provider.Lxde => HasPcmanfmConfigDirectory("pcmanfm"),
+            Provider.Wlroots => CommandExists("awww") || CommandExists("swww") || CommandExists("hyprctl"),
             _ => false
         };
     }
@@ -271,6 +284,7 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
             Provider.Kde => TryGetKdeWallpaper(out wallpaper),
             Provider.Lxqt => TryGetPcmanfmWallpaper("pcmanfm-qt", ["lxqt", "default"], ["settings.conf"], out wallpaper),
             Provider.Lxde => TryGetPcmanfmWallpaper("pcmanfm", ["LXDE", "default", "lxde"], ["pcmanfm.conf", "desktop-items-0.conf"], out wallpaper),
+            Provider.Wlroots => TryGetWlrootsWallpaper(out wallpaper),
             _ => ReturnFalse(out wallpaper)
         };
     }
@@ -389,6 +403,63 @@ internal sealed class LinuxDesktopWallpaperService : IDesktopWallpaperService
             };
 
             return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>
+    /// Wallpaper daemons used on wlroots-style compositors (Hyprland, sway, ...): awww/swww report the image per output,
+    /// hyprpaper reports through hyprctl.
+    /// </summary>
+    private static bool TryGetWlrootsWallpaper(out DesktopWallpaperInfo? wallpaper)
+    {
+        wallpaper = null;
+
+        foreach (string daemonClient in new[] { "awww", "swww" })
+        {
+            if (!CommandExists(daemonClient) || !TryReadCommandOutput(daemonClient, "query", out string output))
+            {
+                continue;
+            }
+
+            // ": DP-3: 3840x2160, scale: 1, currently displaying: image: /path/to/file.png"
+            const string marker = "image: ";
+            foreach (string line in output.Split('\n'))
+            {
+                int index = line.IndexOf(marker, StringComparison.Ordinal);
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                string path = line[(index + marker.Length)..].Trim();
+                if (File.Exists(path))
+                {
+                    wallpaper = new DesktopWallpaperInfo { Path = path, Layout = DesktopWallpaperLayout.Fill };
+                    return true;
+                }
+            }
+        }
+
+        if (CommandExists("hyprctl") && TryReadCommandOutput("hyprctl", "hyprpaper listactive", out string hyprpaper))
+        {
+            // "DP-1 = /path/to/file.png"
+            foreach (string line in hyprpaper.Split('\n'))
+            {
+                int index = line.IndexOf('=');
+                if (index < 0)
+                {
+                    continue;
+                }
+
+                string path = line[(index + 1)..].Trim();
+                if (File.Exists(path))
+                {
+                    wallpaper = new DesktopWallpaperInfo { Path = path, Layout = DesktopWallpaperLayout.Fill };
+                    return true;
+                }
+            }
         }
 
         return false;
