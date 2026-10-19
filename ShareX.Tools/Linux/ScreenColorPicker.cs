@@ -59,7 +59,7 @@ internal sealed class ScreenColorPicker : Window
         stream.Position = 0;
         _background = new Bitmap(stream);
         Title = "ShareX screen color picker";
-        SystemDecorations = WindowDecorations.None;
+        WindowDecorations = WindowDecorations.None;
         ShowInTaskbar = false;
         Topmost = true;
         CanResize = false;

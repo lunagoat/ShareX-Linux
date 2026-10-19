@@ -59,16 +59,29 @@ public static class BorderlessWindowManager
         bool restore = Saved.TryGetValue(handle, out var saved);
         if (DesktopTools.Hyprland)
         {
-            // Legacy Hyprland dispatchers operate on the focused window. Restore focus afterward.
-            using var active = JsonDocument.Parse(ToolProcess.Read("hyprctl", "activewindow", "-j"));
-            string? previous = active.RootElement.TryGetProperty("address", out var address) ? address.GetString() : null;
+            int state = restore ? saved!.Fullscreen : useWorkingArea ? 1 : 2;
+            string addr = $"0x{handle.ToInt64():x}";
+            bool evalSuccess = false;
             try
             {
-                Dispatch("focuswindow", $"address:0x{handle.ToInt64():x}");
-                int state = restore ? saved!.Fullscreen : useWorkingArea ? 1 : 2;
-                Dispatch("fullscreenstate", $"{state} {state} set");
+                string eval = ToolProcess.Read("hyprctl", "eval",
+                    $"return hl.dispatch(hl.dsp.window.fullscreen_state({{ window = hl.get_window('address:{addr}'), internal = {state}, client = {state} }}))").Trim();
+                if (eval.Contains("ok")) evalSuccess = true;
             }
-            finally { if (!string.IsNullOrEmpty(previous)) Dispatch("focuswindow", "address:" + previous); }
+            catch { }
+
+            if (!evalSuccess)
+            {
+                // Fallback for older Hyprland versions without Lua dispatch
+                using var active = JsonDocument.Parse(ToolProcess.Read("hyprctl", "activewindow", "-j"));
+                string? previous = active.RootElement.TryGetProperty("address", out var address) ? address.GetString() : null;
+                try
+                {
+                    Dispatch("focuswindow", $"address:{addr}");
+                    Dispatch("fullscreenstate", $"{state} {state} set");
+                }
+                finally { if (!string.IsNullOrEmpty(previous)) Dispatch("focuswindow", previous.StartsWith("0x") ? previous : "address:" + previous); }
+            }
         }
         else if (DesktopTools.Sway)
         {

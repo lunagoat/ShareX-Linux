@@ -50,7 +50,7 @@ internal sealed class MouseHighlighterOverlayWindow : Window, IDisposable
         _service = service;
         _screenBounds = bounds;
         Title = "ShareX mouse highlighter overlay";
-        SystemDecorations = WindowDecorations.None;
+        WindowDecorations = WindowDecorations.None;
         ShowInTaskbar = false;
         ShowActivated = false;
         CanResize = false;
@@ -78,10 +78,26 @@ internal sealed class MouseHighlighterOverlayWindow : Window, IDisposable
                 string address = FindOwnAddress(handle.Handle);
                 if (address.Length > 0)
                 {
-                    ToolProcess.Read("hyprctl", "dispatch", "setfloating", "address:" + address);
-                    ToolProcess.Read("hyprctl", "dispatch", "resizewindowpixel", $"exact {bounds.Width} {bounds.Height},address:{address}");
-                    ToolProcess.Read("hyprctl", "dispatch", "movewindowpixel", $"exact {bounds.X} {bounds.Y},address:{address}");
-                    ToolProcess.Read("hyprctl", "dispatch", "pin", "address:" + address);
+                    bool evalSuccess = false;
+                    try
+                    {
+                        string lua = $"local win = hl.get_window('address:{address}') if win then hl.dispatch(hl.dsp.window.float({{ window = win }})) hl.dispatch(hl.dsp.window.resize({{ window = win, x = {bounds.Width}, y = {bounds.Height} }})) hl.dispatch(hl.dsp.window.move({{ window = win, x = {bounds.X}, y = {bounds.Y} }})) hl.dispatch(hl.dsp.window.pin({{ window = win }})) end return 'ok'";
+                        string eval = ToolProcess.Read("hyprctl", "eval", lua).Trim();
+                        if (eval.Contains("ok")) evalSuccess = true;
+                    }
+                    catch { }
+
+                    if (!evalSuccess)
+                    {
+                        try
+                        {
+                            ToolProcess.Read("hyprctl", "dispatch", "setfloating", "address:" + address);
+                            ToolProcess.Read("hyprctl", "dispatch", "resizewindowpixel", $"exact {bounds.Width} {bounds.Height},address:{address}");
+                            ToolProcess.Read("hyprctl", "dispatch", "movewindowpixel", $"exact {bounds.X} {bounds.Y},address:{address}");
+                            ToolProcess.Read("hyprctl", "dispatch", "pin", "address:" + address);
+                        }
+                        catch { }
+                    }
                 }
             }
         }

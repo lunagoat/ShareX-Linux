@@ -52,7 +52,7 @@ public sealed class MediaPlayer : Control, IDisposable
     public event Action<Exception>? PlaybackFailed;
     public event Action? VideoClicked;
     public bool IsPlaybackRequested => _playing;
-    internal void SaveFrame(string path) => _frame?.Save(path);
+    internal void SaveFrame(string path) => _frame?.Save(path, PngBitmapEncoderOptions.Default);
     public double Volume
     {
         get => _volume;
@@ -200,7 +200,7 @@ public sealed class MediaPlayer : Control, IDisposable
             int* size = stackalloc int[] { width, height };
             nuint stride = (nuint)target.RowBytes;
             int block = 0;
-            byte[] format = "bgr0\0"u8.ToArray();
+            byte[] format = "bgra\0"u8.ToArray();
             fixed (byte* formatPointer = format)
             {
                 RenderParameter[] parameters = [new(17, (nint)size), new(18, (nint)formatPointer),
