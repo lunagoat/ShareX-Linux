@@ -62,11 +62,14 @@ internal static class Program
         PersonalPathManager.Initialize();
 
         int printBinds = Array.IndexOf(args, "--print-binds");
-        if (printBinds >= 0)
+        int installBinds = Array.IndexOf(args, "--install-binds");
+        int removeBinds = Array.IndexOf(args, "--remove-binds");
+        if (printBinds >= 0 || installBinds >= 0 || removeBinds >= 0)
         {
             try
             {
-                Environment.ExitCode = HotkeyBindText.PrintBinds(args[(printBinds + 1)..]);
+                Environment.ExitCode = printBinds >= 0 ? HotkeyBindText.PrintBinds(args[(printBinds + 1)..])
+                    : CompositorBinds.Run(args[((installBinds >= 0 ? installBinds : removeBinds) + 1)..], removeBinds >= 0);
             }
             catch (ArgumentException e)
             {

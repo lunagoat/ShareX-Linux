@@ -66,9 +66,10 @@ hotkey_hint() {
     case "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" in
         *yprland*|*sway*)
             log
-            log "Hotkeys: your compositor does not bind keys by itself. Print ready-made lines with:"
-            log "  sharex --print-binds hyprland     (or: hyprland-conf, sway)"
-            log "and add them to your compositor config." ;;
+            log "Hotkeys: your compositor does not bind keys by itself. To add ShareX's keys to your config"
+            log "(backup first, keys you already use are skipped), run:"
+            log "  sharex --install-binds"
+            log "or print the lines instead with: sharex --print-binds" ;;
     esac
 }
 

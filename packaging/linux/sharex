@@ -54,8 +54,10 @@ Most useful actions:
 Wrapper options:
   -h, --help            show this help
       --version         show the ShareX version
+      --install-binds       add your ShareX hotkeys to your Hyprland/sway config (backup first)
+      --remove-binds        take them out again
       --print-binds [hyprland|hyprland-conf|sway] [--global]
-                        print compositor key-bind lines for your ShareX hotkeys
+                        print the key-bind lines instead of writing them
 
 Anything else is passed to ShareX unchanged. The complete reference of every
 action is in docs/CLI.md in the ShareX source tree.

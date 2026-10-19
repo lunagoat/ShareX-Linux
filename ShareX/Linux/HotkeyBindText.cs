@@ -21,7 +21,7 @@ internal static class HotkeyBindText
     /// true: trigger the shortcuts ShareX registered through the desktop portal (<c>global</c> dispatcher, Hyprland only).
     /// false: run <c>sharex -Action</c>, which works on every compositor and does not need the portal.
     /// </param>
-    public static string Build(IEnumerable<HotkeySettings> hotkeys, BindDialect dialect, bool portal, string launcher = "sharex")
+    public static string Build(IEnumerable<HotkeySettings> hotkeys, BindDialect dialect, bool portal, string launcher = "sharex", ISet<string> takenKeys = null)
     {
         List<HotkeySettings> list = hotkeys.Where(x => x?.HotkeyInfo != null && x.TaskSettings != null).ToList();
         HotkeyNames.Assign(list);
@@ -53,8 +53,15 @@ internal static class HotkeyBindText
             if (info.Shift) mods.Add(dialect == BindDialect.Sway ? "Shift" : "SHIFT");
 
             string target = portal ? info.Name : null;
+            string prefix = "";
 
-            text.AppendLine(dialect switch
+            if (takenKeys != null && takenKeys.Contains(Normalize(mods, key)))
+            {
+                // Keep the line for reference but don't let it override or duplicate a key the user already uses.
+                prefix = dialect == BindDialect.HyprlandLua ? "-- skipped, key already bound in your config: " : "# skipped, key already bound in your config: ";
+            }
+
+            text.AppendLine(prefix + dialect switch
             {
                 BindDialect.HyprlandLua => $"hl.bind(\"{string.Join(" + ", mods.Append(key))}\", " +
                     (portal ? $"hl.dsp.global(\"sharex:{target}\")" : $"hl.dsp.exec_cmd(\"{launcher} -{job}\")") + ")  -- " + info.Description,
@@ -65,6 +72,20 @@ internal static class HotkeyBindText
         }
 
         return text.ToString();
+    }
+
+    private static string ModName(string mod) => mod.Trim().ToUpperInvariant() switch
+    {
+        "SUPER" or "MOD4" or "WIN" or "LOGO" or "$MAINMOD" or "MAINMOD" => "SUPER",
+        "CTRL" or "CONTROL" => "CTRL",
+        "ALT" or "MOD1" => "ALT",
+        var other => other
+    };
+
+    /// <summary>Canonical form of a key combination, used to detect keys that are already bound.</summary>
+    public static string Normalize(IEnumerable<string> mods, string key)
+    {
+        return string.Join("+", mods.Select(ModName).Where(x => x.Length > 0).OrderBy(x => x, StringComparer.Ordinal).Append(key.Trim().ToUpperInvariant()));
     }
 
     /// <summary>Implements <c>sharex --print-binds [hyprland|hyprland-conf|sway] [--global]</c>.</summary>

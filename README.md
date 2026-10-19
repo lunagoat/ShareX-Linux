@@ -29,23 +29,26 @@ Arch / CachyOS users can also build a package: `cd packaging/arch && makepkg -si
 
 ## Hotkeys
 
-**Hyprland, sway and other wlroots compositors never bind keys on their own** — an app can only ask. So after installing,
-add key binds that run ShareX. ShareX prints them for you, based on your own hotkey settings:
+Hyprland and sway don't let an application bind keys on its own, so ShareX writes the binds into your compositor
+config for you — one command, run once after installing:
 
 ```bash
-sharex --print-binds hyprland         # hyprland.lua  (Lua config, Hyprland 0.55+)
-sharex --print-binds hyprland-conf    # hyprland.conf
-sharex --print-binds sway
+sharex --install-binds        # detects Hyprland (hyprland.lua or hyprland.conf) or sway
 ```
 
+It adds a clearly marked block with a bind for each of your ShareX hotkeys (Print = full screen, Ctrl+Print = region, …),
+**backs the file up first**, skips any key you already use for something else (those are left as comments in the block),
+and reloads the compositor. Run it again after changing hotkeys in ShareX; remove everything with `sharex --remove-binds`.
+The same thing is in ShareX → Hotkey settings → *Linux global shortcuts* ("Add to my config").
+
+Prefer to edit by hand? `sharex --print-binds hyprland` (or `hyprland-conf`, `sway`) prints the lines instead:
+
 ```lua
--- example output: paste into hyprland.lua, drop the keys you already use, reload
 hl.bind("CTRL + Print", hl.dsp.exec_cmd("~/.local/bin/sharex -RectangleRegion"))  -- Capture region
 hl.bind("Print", hl.dsp.exec_cmd("~/.local/bin/sharex -PrintScreen"))             -- Capture entire screen
 ```
 
-The same text (with a copy button) is in ShareX → Hotkey settings → *Linux global shortcuts*. Command binds work on every
-compositor and start ShareX if it isn't running yet.
+These command binds work on every compositor and start ShareX if it isn't running yet.
 
 Optional: ShareX also registers its hotkeys with the desktop **GlobalShortcuts portal** (KDE and GNOME show them in their
 shortcut settings; on Hyprland they are listed by `hyprctl globalshortcuts` as `sharex:RectangleRegion`, `sharex:PrintScreen`, …).
