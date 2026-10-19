@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -60,6 +60,11 @@ namespace ShareX.HelpersLib
 
                 foreach (string argument in Arguments)
                 {
+                    if (string.IsNullOrEmpty(argument))
+                    {
+                        continue;
+                    }
+
                     if (lastCommand == null || argument[0] == '-')
                     {
                         CLICommand command = new CLICommand();
@@ -67,8 +72,15 @@ namespace ShareX.HelpersLib
                         if (argument[0] == '-')
                         {
                             command.IsCommand = true;
-                            command.Command = argument.Substring(1);
-                            lastCommand = command;
+                            command.Command = argument.TrimStart('-');
+                            if (CommandAcceptsParameter(command.Command))
+                            {
+                                lastCommand = command;
+                            }
+                            else
+                            {
+                                lastCommand = null;
+                            }
                         }
                         else
                         {
@@ -92,6 +104,11 @@ namespace ShareX.HelpersLib
             }
 
             return false;
+        }
+
+        protected virtual bool CommandAcceptsParameter(string command)
+        {
+            return true;
         }
 
         private string[] ParseCLI(string arguments)

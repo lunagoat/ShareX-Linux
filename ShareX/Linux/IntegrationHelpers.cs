@@ -88,7 +88,8 @@ public static class IntegrationHelpers
     public static void CreateFirefoxAddonSupport(bool create) => SetBrowser(true, create);
     private static void SetBrowser(bool firefox, bool create)
     {
-        string host = FileHelpers.GetAbsolutePath("ShareX.NativeMessagingHost");
+        string host = FileHelpers.GetAbsolutePath("ShareX_NativeMessagingHost");
+        if (!File.Exists(host)) host = FileHelpers.GetAbsolutePath("ShareX.NativeMessagingHost");
         if (create && !File.Exists(host)) throw new FileNotFoundException("Build and install the Linux ShareX.NativeMessagingHost before enabling browser support.", host);
         foreach (string path in BrowserManifests(firefox))
         {
