@@ -46,12 +46,15 @@ namespace ShareX
         public HotkeysToggledEventHandler HotkeysToggledTrigger;
 
         private IHotkeyHost hotkeyHost;
+        public event EventHandler RegistrationChanged;
+        public string BackendStatus => (hotkeyHost as LinuxHotkeyHost)?.StatusMessage ?? "";
 
         public HotkeyManager(IHotkeyHost host)
         {
             hotkeyHost = host;
             hotkeyHost.HotkeyPress += OnHotkeyPressed;
             hotkeyHost.Closed += OnHostClosed;
+            if (hotkeyHost is LinuxHotkeyHost linux) linux.RegistrationChanged += (_, _) => RegistrationChanged?.Invoke(this, EventArgs.Empty);
         }
 
         private void OnHotkeyPressed(ushort id, InputKey key, Modifiers modifier)

@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -58,7 +58,7 @@ namespace ShareX.HelpersLib
             {
                 using (Process process = Process)
                 {
-                    return process?.MainModule?.FileName;
+                    try { return process?.MainModule?.FileName; } catch { return null; }
                 }
             }
         }
@@ -71,7 +71,7 @@ namespace ShareX.HelpersLib
             {
                 using (Process process = Process)
                 {
-                    return process.Id;
+                    return process?.Id ?? 0;
                 }
             }
         }
@@ -82,99 +82,19 @@ namespace ShareX.HelpersLib
 
         public Rectangle ClientRectangle => NativeMethods.GetClientRect(Handle);
 
-        public WindowStyles Style
-        {
-            get
-            {
-                return (WindowStyles)(ulong)NativeMethods.GetWindowLong(Handle, NativeConstants.GWL_STYLE);
-            }
-            set
-            {
-                NativeMethods.SetWindowLong(Handle, NativeConstants.GWL_STYLE, (IntPtr)value);
-            }
-        }
-
-        public WindowStyles ExStyle
-        {
-            get
-            {
-                return (WindowStyles)(ulong)NativeMethods.GetWindowLong(Handle, NativeConstants.GWL_EXSTYLE);
-            }
-            set
-            {
-                NativeMethods.SetWindowLong(Handle, NativeConstants.GWL_EXSTYLE, (IntPtr)value);
-            }
-        }
-
-        public bool Layered
-        {
-            get
-            {
-                return ExStyle.HasFlag(WindowStyles.WS_EX_LAYERED);
-            }
-            set
-            {
-                if (value)
-                {
-                    ExStyle |= WindowStyles.WS_EX_LAYERED;
-                }
-                else
-                {
-                    ExStyle &= ~WindowStyles.WS_EX_LAYERED;
-                }
-            }
-        }
-
-        public bool TopMost
-        {
-            get
-            {
-                return ExStyle.HasFlag(WindowStyles.WS_EX_TOPMOST);
-            }
-            set
-            {
-                SetWindowPos(value ? (IntPtr)NativeConstants.HWND_TOPMOST : (IntPtr)NativeConstants.HWND_NOTOPMOST,
-                    SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE);
-            }
-        }
-
-        public byte Opacity
-        {
-            get
-            {
-                if (Layered)
-                {
-                    NativeMethods.GetLayeredWindowAttributes(Handle, out _, out byte alpha, out _);
-                    return alpha;
-                }
-
-                return 255;
-            }
-            set
-            {
-                if (value < 255)
-                {
-                    Layered = true;
-                    NativeMethods.SetLayeredWindowAttributes(Handle, 0, value, NativeConstants.LWA_ALPHA);
-                }
-                else
-                {
-                    Layered = false;
-                }
-            }
-        }
-
-        public Icon Icon => NativeMethods.GetApplicationIcon(Handle);
-
-        public bool IsMaximized => NativeMethods.IsZoomed(Handle);
-
-        public bool IsMinimized => NativeMethods.IsIconic(Handle);
-
-        public bool IsVisible => NativeMethods.IsWindowVisible(Handle);
-
-        public bool IsCloaked => NativeMethods.IsWindowCloaked(Handle);
-
-        public bool IsActive => NativeMethods.IsActive(Handle);
+        // Windows style bits have no compositor equivalent. Changes require compositor rules.
+        public WindowStyles Style { get; set; }
+        public WindowStyles ExStyle { get; set; }
+        public bool Layered { get; set; }
+        public bool TopMost { get; set; }
+        public byte Opacity { get; set; } = 255;
+        public Icon Icon => null;
+        public SkiaSharp.SKBitmap GetIconBitmap() => LinuxApplicationIcon.Load(ClassName);
+        public bool IsMaximized => LinuxWindowSystem.Find(Handle)?.Maximized == true;
+        public bool IsMinimized => LinuxWindowSystem.Find(Handle)?.Minimized == true;
+        public bool IsVisible => LinuxWindowSystem.Find(Handle)?.Visible == true;
+        public bool IsCloaked => !IsVisible;
+        public bool IsActive => LinuxWindowSystem.ActiveWindow == Handle;
 
         public WindowInfo(IntPtr handle)
         {
@@ -201,7 +121,7 @@ namespace ShareX.HelpersLib
         {
             if (IsHandleCreated)
             {
-                NativeMethods.ShowWindow(Handle, (int)WindowShowStyle.Restore);
+                Activate();
             }
         }
 
@@ -222,7 +142,8 @@ namespace ShareX.HelpersLib
 
         public void SetWindowPos(IntPtr insertAfter, int x, int y, int width, int height, SetWindowPosFlags flags)
         {
-            NativeMethods.SetWindowPos(Handle, insertAfter, x, y, width, height, flags);
+            // Wayland clients cannot position other windows. Focus is supported through compositor IPC.
+            if (!flags.HasFlag(SetWindowPosFlags.SWP_NOACTIVATE)) Activate();
         }
 
         public override string ToString()
