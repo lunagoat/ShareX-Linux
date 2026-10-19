@@ -22,6 +22,8 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
     public event Action SessionClosed;
     private IDisposable closed;
 
+    public string AppId { get; private set; }
+
     public async Task CreateAsync()
     {
         ObjectDisposedException.ThrowIf(disposed, this);
@@ -31,8 +33,24 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         // Flatpak provides its own identity and disallows this host-only method.
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("FLATPAK_ID")))
         {
-            try { await connection.CallMethodAsync(BuildRegistration()); }
-            catch (DBusErrorReplyException exception) when (exception.ErrorName is "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface") { }
+            string[] candidates = ["sharex", "io.github.ShareX.ShareX", "com.getsharex.ShareX", "sharex-sxcu", "sharex-sxie"];
+            foreach (string candidate in candidates)
+            {
+                try
+                {
+                    await connection.CallMethodAsync(BuildRegistration(candidate));
+                    AppId = candidate;
+                    break;
+                }
+                catch (DBusErrorReplyException exception) when (exception.ErrorName is "org.freedesktop.DBus.Error.UnknownMethod" or "org.freedesktop.DBus.Error.UnknownInterface")
+                {
+                    break;
+                }
+                catch (DBusErrorReplyException)
+                {
+                    // Candidate app info not found on host, try next
+                }
+            }
         }
         activation = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Sender = Destination, Path = Path, Interface = Interface, Member = "Activated" },
             (message, _) => { var reader = message.GetBodyReader(); return (reader.ReadObjectPathAsString(), reader.ReadString()); },
@@ -113,11 +131,11 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         catch { }
     }
 
-    private MessageBuffer BuildRegistration()
+    private MessageBuffer BuildRegistration(string appId)
     {
         using var writer = connection.GetMessageWriter();
         writer.WriteMethodCallHeader(destination: Destination, path: Path, @interface: "org.freedesktop.host.portal.Registry", member: "Register", signature: "sa{sv}");
-        writer.WriteString("com.getsharex.ShareX");
+        writer.WriteString(appId);
         writer.WriteDictionary(new Dictionary<string, VariantValue>());
         return writer.CreateMessage();
     }
