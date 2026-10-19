@@ -48,7 +48,7 @@ namespace ShareX
         protected async Task<TaskMetadata> ExecuteRegionCaptureAvaloniaAsync(TaskSettings taskSettings)
         {
             Screenshot screenshot = TaskHelpers.GetScreenshot(taskSettings);
-            screenshot.CaptureCursor = false;
+            screenshot.CaptureCursor = System.OperatingSystem.IsLinux() && taskSettings.CaptureSettings.ShowCursor;
 
             bool activeMonitorMode = taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode;
             Rectangle screenBounds = activeMonitorMode
@@ -66,7 +66,7 @@ namespace ShareX
             SKBitmap cursorBitmap = null;
             Point cursorPosition = Point.Empty;
 
-            if (taskSettings.CaptureSettings.ShowCursor)
+            if (taskSettings.CaptureSettings.ShowCursor && !System.OperatingSystem.IsLinux())
             {
                 CursorData cursorData = new CursorData();
                 if (cursorData.IsVisible)

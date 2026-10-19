@@ -26,6 +26,7 @@
 using ShareX.HelpersLib;
 using ShareX.Localization;
 using System;
+using System.Linq;
 using MessageBox = ShareX.AvaloniaUI.MessageBox;
 using MessageBoxButtons = ShareX.AvaloniaUI.MessageBoxButtons;
 using MessageBoxIcon = ShareX.AvaloniaUI.MessageBoxIcon;
@@ -40,7 +41,9 @@ namespace ShareX
 
             if (!string.IsNullOrEmpty(windowTitle))
             {
-                IntPtr hWnd = NativeMethods.SearchWindow(windowTitle);
+                IntPtr hWnd = OperatingSystem.IsLinux()
+                    ? ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows().FirstOrDefault(w => w.Title.Contains(windowTitle, StringComparison.OrdinalIgnoreCase))?.Handle ?? IntPtr.Zero
+                    : NativeMethods.SearchWindow(windowTitle);
 
                 if (hWnd == IntPtr.Zero)
                 {

@@ -49,6 +49,11 @@ namespace ShareX.ScreenCaptureLib
 
         public List<WindowInfo> GetWindowsList()
         {
+            if (OperatingSystem.IsLinux())
+            {
+                return ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows()
+                    .Where(w => !IgnoreWindows.Contains(w.Handle)).Select(w => new WindowInfo(w.Handle)).ToList();
+            }
             windows = new List<WindowInfo>();
             EnumWindowsProc ewp = EvalWindows;
             NativeMethods.EnumWindows(ewp, IntPtr.Zero);
@@ -59,7 +64,7 @@ namespace ShareX.ScreenCaptureLib
         {
             List<WindowInfo> windows = GetWindowsList();
 
-            return windows.Where(IsValidWindow).ToList();
+            return OperatingSystem.IsLinux() ? windows : windows.Where(IsValidWindow).ToList();
         }
 
         private bool IsValidWindow(WindowInfo window)

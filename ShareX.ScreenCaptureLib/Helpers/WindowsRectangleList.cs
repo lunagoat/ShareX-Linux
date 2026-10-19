@@ -48,6 +48,12 @@ namespace ShareX.ScreenCaptureLib
 
         public List<SimpleWindowInfo> GetWindowInfoList()
         {
+            if (OperatingSystem.IsLinux())
+            {
+                return ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows()
+                    .Where(w => !IgnoreHandleList.Contains(w.Handle) && !IgnoreClassNameList.Contains(w.ClassName))
+                    .Select(w => new SimpleWindowInfo(w.Handle, w.Rectangle) { IsWindow = true }).ToList();
+            }
             windows = new List<SimpleWindowInfo>();
             parentHandles = new HashSet<IntPtr>();
 

@@ -1,0 +1,68 @@
+#region License Information (GPL v3)
+
+/*
+    ShareX - A program that allows you to take screenshots and share any file type
+    Copyright (c) 2007-2026 ShareX Team
+
+    This program is free software; you can redistribute it and/or
+    modify it under the terms of the GNU General Public License
+    as published by the Free Software Foundation; either version 2
+    of the License, or (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program; if not, write to the Free Software
+    Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+
+    Optionally you can also view the license at <http://www.gnu.org/licenses/>.
+*/
+
+#endregion License Information (GPL v3)
+
+using System.Diagnostics;
+
+namespace ShareX.AvaloniaUI.Linux;
+
+/// <summary>Bounded processes with separate argument vectors; never invokes a shell.</summary>
+public static class LinuxCaptureProcess
+{
+    public static Process Start(string executable, params string[] arguments)
+    {
+        ProcessStartInfo info = new(executable)
+        {
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
+        foreach (string argument in arguments) info.ArgumentList.Add(argument);
+        return Process.Start(info) ?? throw new InvalidOperationException($"Cannot start {executable}.");
+    }
+
+    public static byte[] Run(string executable, params string[] arguments)
+    {
+        using Process process = Start(executable, arguments);
+        using MemoryStream output = new();
+        Task copy = process.StandardOutput.BaseStream.CopyToAsync(output);
+        Task<string> error = process.StandardError.ReadToEndAsync();
+        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        try
+        {
+            Task.WhenAll(copy, process.WaitForExitAsync(timeout.Token)).GetAwaiter().GetResult();
+        }
+        catch
+        {
+            if (!process.HasExited) process.Kill(true);
+            throw;
+        }
+        if (process.ExitCode != 0) throw new InvalidOperationException($"{executable}: {error.GetAwaiter().GetResult().Trim()} {System.Text.Encoding.UTF8.GetString(output.ToArray()).Trim()}");
+        return output.ToArray();
+    }
+
+    public static string Text(string executable, params string[] arguments) =>
+        System.Text.Encoding.UTF8.GetString(Run(executable, arguments));
+}

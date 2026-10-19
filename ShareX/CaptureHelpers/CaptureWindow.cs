@@ -47,6 +47,14 @@ namespace ShareX
 
         protected override TaskMetadata Execute(TaskSettings taskSettings)
         {
+            if (OperatingSystem.IsLinux())
+            {
+                ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.Activate(WindowHandle);
+                Thread.Sleep(100);
+                TaskMetadata linuxMetadata = CreateMetadata();
+                linuxMetadata.Image = TaskHelpers.GetScreenshot(taskSettings).CaptureWindow(WindowHandle);
+                return linuxMetadata;
+            }
             WindowInfo windowInfo = new WindowInfo(WindowHandle);
 
             if (windowInfo.IsMinimized)

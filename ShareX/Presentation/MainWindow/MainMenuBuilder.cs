@@ -150,6 +150,16 @@ internal sealed class MainMenuBuilder
 
         try
         {
+            if (OperatingSystem.IsLinux())
+            {
+                foreach (var window in ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows())
+                {
+                    var selected = window;
+                    items.Add(Item(selected.Title.Truncate(50, "..."), string.Empty,
+                        () => new CaptureWindow(selected.Handle).Capture(!_trayMenu)));
+                }
+                return items;
+            }
             foreach (WindowInfo window in new WindowsList().GetVisibleWindowsList())
             {
                 WindowInfo selectedWindow = window;

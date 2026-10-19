@@ -26,6 +26,7 @@
 #nullable enable
 
 using Avalonia;
+using ShareX.AvaloniaUI.Linux;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -93,6 +94,9 @@ public partial class RegionCaptureWindow : Window
     private double _captureToolbarCenterX = double.NaN;
     private double _captureToolbarTop = double.NaN;
     private double _positionedCaptureToolbarWidth = double.NaN;
+    private double ImageScale => _request == null ? 1 : (double)_imageWidth / _request.ScreenBounds.Width;
+    // Image pixels per UI DIP. XWayland desktop positions are logical compositor coordinates.
+    private double WorkspaceScale => OperatingSystem.IsLinux() && Bounds.Width > 0 ? _imageWidth / Bounds.Width : RenderScaling;
     private int _imageWidth;
     private int _imageHeight;
     private bool _regionToolActive = true;
@@ -122,8 +126,8 @@ public partial class RegionCaptureWindow : Window
     public RegionCaptureWindow(AvaloniaRegionCaptureRequest request) : this()
     {
         _request = request ?? throw new ArgumentNullException(nameof(request));
-        _imageWidth = Math.Max(1, request.ScreenBounds.Width);
-        _imageHeight = Math.Max(1, request.ScreenBounds.Height);
+        _imageWidth = request.Screenshot.Width;
+        _imageHeight = request.Screenshot.Height;
         if (request.RegionCaptureOptions.ActiveMonitorMode)
         {
             Helpers.LockCursorToWindow(this);
@@ -139,6 +143,7 @@ public partial class RegionCaptureWindow : Window
             throw new InvalidOperationException("A capture request is required.");
         }
 
+        Title += " [" + Guid.NewGuid().ToString("N") + "]";
         ConfigureInitialPixelBounds();
         Show();
         return _completionSource.Task;
@@ -460,7 +465,8 @@ public partial class RegionCaptureWindow : Window
             }
 
             ApplyPixelSize();
-            Helpers.EnsureWindowPosition(this, _request.ScreenBounds.X, _request.ScreenBounds.Y);
+            if (OperatingSystem.IsLinux()) await LinuxCaptureOverlay.PlaceAsync(this, _request.ScreenBounds);
+            else Helpers.EnsureWindowPosition(this, _request.ScreenBounds.X, _request.ScreenBounds.Y);
             UpdatePixelTransforms();
             _editorWorkspace.ConfigureForFullscreenWorkspace();
             _editorWorkspace.LoadWorkspaceImage(_request.Screenshot);
@@ -480,8 +486,8 @@ public partial class RegionCaptureWindow : Window
 
             DrawingPoint cursorPosition = CaptureHelpers.GetCursorPosition();
             _lastPointerPoint = ClampPoint(new Point(
-                cursorPosition.X - _request.ScreenBounds.X,
-                cursorPosition.Y - _request.ScreenBounds.Y));
+                (cursorPosition.X - _request.ScreenBounds.X) * ImageScale,
+                (cursorPosition.Y - _request.ScreenBounds.Y) * ImageScale));
             UpdateToolbarPosition(new PixelPoint(cursorPosition.X, cursorPosition.Y));
             UpdateHud(_lastPointerPoint);
 
@@ -880,7 +886,7 @@ public partial class RegionCaptureWindow : Window
             return;
         }
 
-        Screen? screen = Screens.ScreenFromPoint(desktopPoint);
+        var screen = DesktopScreen.FromPoint(new DrawingPoint(desktopPoint.X, desktopPoint.Y));
         if (screen == null)
         {
             return;
@@ -889,8 +895,8 @@ public partial class RegionCaptureWindow : Window
         double scale = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
         double monitorCenterX = screen.Bounds.X - _request.ScreenBounds.X + screen.Bounds.Width / 2d;
         double monitorTop = screen.Bounds.Y - _request.ScreenBounds.Y;
-        _captureToolbarCenterX = monitorCenterX / scale;
-        _captureToolbarTop = monitorTop / scale;
+        _captureToolbarCenterX = monitorCenterX / (OperatingSystem.IsLinux() ? (double)_request.ScreenBounds.Width / Bounds.Width : scale);
+        _captureToolbarTop = monitorTop / (OperatingSystem.IsLinux() ? (double)_request.ScreenBounds.Width / Bounds.Width : scale);
         _positionedCaptureToolbarWidth = double.NaN;
         PositionCaptureToolbar();
     }
@@ -1066,8 +1072,8 @@ public partial class RegionCaptureWindow : Window
             return;
         }
 
-        double screenX = _request.ScreenBounds.X + Math.Round(imagePoint.X);
-        double screenY = _request.ScreenBounds.Y + Math.Round(imagePoint.Y);
+        double screenX = _request.ScreenBounds.X + imagePoint.X / ImageScale;
+        double screenY = _request.ScreenBounds.Y + imagePoint.Y / ImageScale;
         SimpleWindowInfo? candidate = _windows.FirstOrDefault(window =>
             ContainsPoint(window.Rectangle, screenX, screenY));
 
@@ -1079,12 +1085,12 @@ public partial class RegionCaptureWindow : Window
         }
 
         DrawingRectangle candidateRectangle = candidate.Rectangle;
-        double candidateLeft = (double)candidateRectangle.X - _request.ScreenBounds.X;
-        double candidateTop = (double)candidateRectangle.Y - _request.ScreenBounds.Y;
+        double candidateLeft = (candidateRectangle.X - _request.ScreenBounds.X) * ImageScale;
+        double candidateTop = (candidateRectangle.Y - _request.ScreenBounds.Y) * ImageScale;
         double left = Math.Max(0, candidateLeft);
         double top = Math.Max(0, candidateTop);
-        double right = Math.Min(_imageWidth, candidateLeft + candidateRectangle.Width);
-        double bottom = Math.Min(_imageHeight, candidateTop + candidateRectangle.Height);
+        double right = Math.Min(_imageWidth, candidateLeft + candidateRectangle.Width * ImageScale);
+        double bottom = Math.Min(_imageHeight, candidateTop + candidateRectangle.Height * ImageScale);
         Rect hover = right > left && bottom > top
             ? new Rect(left, top, right - left, bottom - top)
             : default;
@@ -1234,7 +1240,7 @@ public partial class RegionCaptureWindow : Window
             _magnifierPanel.IsVisible = true;
             _pointerInfoText.Text = GetPointerInfoText(imagePoint);
 
-            double scale = Math.Max(1, RenderScaling);
+            double scale = WorkspaceScale;
             Point pointer = new Point(imagePoint.X / scale, imagePoint.Y / scale);
             PositionPanelNearPointer(_magnifierPanel, pointer, 18);
             _magnifierPanel.InvalidateVisual();
@@ -1257,8 +1263,8 @@ public partial class RegionCaptureWindow : Window
         int imageX = Math.Clamp((int)Math.Round(imagePoint.X), 0, _imageWidth - 1);
         int imageY = Math.Clamp((int)Math.Round(imagePoint.Y), 0, _imageHeight - 1);
         DrawingPoint screenPosition = new(
-            _request.ScreenBounds.X + imageX,
-            _request.ScreenBounds.Y + imageY);
+            _request.ScreenBounds.X + (int)(imageX / ImageScale),
+            _request.ScreenBounds.Y + (int)(imageY / ImageScale));
 
         RegionCaptureOptions options = _request.RegionCaptureOptions;
         if (options.UseCustomInfoText)
@@ -1408,7 +1414,7 @@ public partial class RegionCaptureWindow : Window
         _selectionInfoText.Text = $"{width} × {height}";
         _selectionInfoPanel.IsVisible = true;
 
-        double scale = Math.Max(1, RenderScaling);
+        double scale = WorkspaceScale;
         Point anchor = new Point(selection.Left / scale, selection.Bottom / scale);
         double x = Math.Clamp(anchor.X, 0, Math.Max(0, Bounds.Width - 100));
         double y = anchor.Y + 8;
@@ -1446,7 +1452,7 @@ public partial class RegionCaptureWindow : Window
 
         if (isMagnifierPanel)
         {
-            double scale = Math.Max(1, RenderScaling);
+            double scale = WorkspaceScale;
             targetX = Math.Round(targetX * scale) / scale;
             targetY = Math.Round(targetY * scale) / scale;
             _magnifierTransform.X = targetX;
@@ -1528,10 +1534,10 @@ public partial class RegionCaptureWindow : Window
         }
 
         Complete(new Rect(
-            screenRectangle.X - _request.ScreenBounds.X,
-            screenRectangle.Y - _request.ScreenBounds.Y,
-            screenRectangle.Width,
-            screenRectangle.Height), includeWindowInfo: false);
+            (screenRectangle.X - _request.ScreenBounds.X) * ImageScale,
+            (screenRectangle.Y - _request.ScreenBounds.Y) * ImageScale,
+            screenRectangle.Width * ImageScale,
+            screenRectangle.Height * ImageScale), includeWindowInfo: false);
     }
 
     private void CompleteActiveMonitor()
@@ -1542,19 +1548,19 @@ public partial class RegionCaptureWindow : Window
         }
 
         PixelPoint desktopPoint = new PixelPoint(
-            _request.ScreenBounds.X + (int)Math.Round(_lastPointerPoint.X),
-            _request.ScreenBounds.Y + (int)Math.Round(_lastPointerPoint.Y));
-        Screen? screen = Screens.ScreenFromPoint(desktopPoint);
+            _request.ScreenBounds.X + (int)Math.Round(_lastPointerPoint.X / ImageScale),
+            _request.ScreenBounds.Y + (int)Math.Round(_lastPointerPoint.Y / ImageScale));
+        var screen = DesktopScreen.FromPoint(new DrawingPoint(desktopPoint.X, desktopPoint.Y));
         if (screen == null)
         {
             return;
         }
 
         Rect relative = new Rect(
-            screen.Bounds.X - _request.ScreenBounds.X,
-            screen.Bounds.Y - _request.ScreenBounds.Y,
-            screen.Bounds.Width,
-            screen.Bounds.Height);
+            (screen.Bounds.X - _request.ScreenBounds.X) * ImageScale,
+            (screen.Bounds.Y - _request.ScreenBounds.Y) * ImageScale,
+            screen.Bounds.Width * ImageScale,
+            screen.Bounds.Height * ImageScale);
         Complete(RegionSelectionOverlay.Intersect(relative,
             new Rect(0, 0, _imageWidth, _imageHeight)),
             includeWindowInfo: false);
@@ -1582,10 +1588,10 @@ public partial class RegionCaptureWindow : Window
         }
 
         DrawingRectangle screenRectangle = new DrawingRectangle(
-            _request.ScreenBounds.X + left,
-            _request.ScreenBounds.Y + top,
-            width,
-            height);
+            _request.ScreenBounds.X + (int)Math.Floor(left / ImageScale),
+            _request.ScreenBounds.Y + (int)Math.Floor(top / ImageScale),
+            (int)Math.Ceiling(right / ImageScale) - (int)Math.Floor(left / ImageScale),
+            (int)Math.Ceiling(bottom / ImageScale) - (int)Math.Floor(top / ImageScale));
         WindowInfo? windowInfo = includeWindowInfo ? FindTopLevelWindowInfo(screenRectangle) : null;
 
         _pendingResult = new AvaloniaRegionCaptureResult(
@@ -1600,6 +1606,7 @@ public partial class RegionCaptureWindow : Window
 
     private WindowInfo? FindTopLevelWindowInfo(DrawingRectangle selectedRectangle)
     {
+        if (OperatingSystem.IsLinux()) return null; // Metadata is supplied by the capture-local Linux window seam.
         if (_selectedCandidate is { IsWindow: true })
         {
             return _selectedCandidate.WindowInfo;
@@ -1673,17 +1680,17 @@ public partial class RegionCaptureWindow : Window
         }
 
         double scaling = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
-        Width = _request.ScreenBounds.Width / scaling;
-        Height = _request.ScreenBounds.Height / scaling;
+        Width = _request.ScreenBounds.Width / (OperatingSystem.IsLinux() ? 1 : scaling);
+        Height = _request.ScreenBounds.Height / (OperatingSystem.IsLinux() ? 1 : scaling);
     }
 
     private void UpdatePixelTransforms()
     {
         double scaling = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
-        _regionTransform.LayoutTransform = new ScaleTransform(1 / scaling, 1 / scaling);
+        _regionTransform.LayoutTransform = new ScaleTransform(1 / WorkspaceScale, 1 / WorkspaceScale);
         if (_viewModel != null)
         {
-            _viewModel.DpiScale = scaling;
+            _viewModel.DpiScale = WorkspaceScale;
             _viewModel.Zoom = 1;
         }
         _regionInputSurface.Cursor = CursorAssetLoader.GetCrosshairCursor(scaling);

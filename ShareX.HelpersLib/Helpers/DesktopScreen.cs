@@ -44,24 +44,25 @@ public sealed class DesktopScreen
         Primary = screen.IsPrimary;
     }
 
-    public static DesktopScreen[] AllScreens => DesktopServices.Run(() =>
+    private DesktopScreen(ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor monitor)
+    {
+        Bounds = monitor.Bounds;
+        WorkingArea = monitor.Bounds;
+        Primary = monitor.Primary;
+    }
+
+    public static DesktopScreen[] AllScreens => OperatingSystem.IsLinux()
+        ? ShareX.AvaloniaUI.Linux.LinuxScreenCapture.GetMonitors().Select(x => new DesktopScreen(x)).ToArray()
+        : DesktopServices.Run(() =>
         DesktopServices.GetWindow().Screens.All.Select(x => new DesktopScreen(x)).ToArray());
 
     public static DesktopScreen PrimaryScreen => AllScreens.FirstOrDefault(x => x.Primary) ?? AllScreens.FirstOrDefault();
 
-    public static DesktopScreen FromPoint(Point point) => DesktopServices.Run(() =>
-    {
-        var screens = DesktopServices.GetWindow().Screens;
-        var screen = screens.ScreenFromPoint(new Avalonia.PixelPoint(point.X, point.Y)) ?? screens.Primary;
-        return screen == null ? null : new DesktopScreen(screen);
-    });
+    public static DesktopScreen FromPoint(Point point) =>
+        AllScreens.FirstOrDefault(x => x.Bounds.Contains(point)) ?? PrimaryScreen;
 
-    public static DesktopScreen FromRectangle(Rectangle bounds) => DesktopServices.Run(() =>
-    {
-        var screens = DesktopServices.GetWindow().Screens;
-        var screen = screens.ScreenFromBounds(new Avalonia.PixelRect(bounds.X, bounds.Y, bounds.Width, bounds.Height)) ?? screens.Primary;
-        return screen == null ? null : new DesktopScreen(screen);
-    });
+    public static DesktopScreen FromRectangle(Rectangle bounds) =>
+        AllScreens.OrderByDescending(x => { var r = Rectangle.Intersect(x.Bounds, bounds); return (long)r.Width * r.Height; }).FirstOrDefault();
 
     public static DesktopScreen FromHandle(IntPtr handle) =>
         OperatingSystem.IsWindows() ? FromRectangle(NativeMethods.GetWindowRect(handle)) : PrimaryScreen;
