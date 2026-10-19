@@ -184,16 +184,10 @@ internal sealed class MainMenuBuilder
 
     private static byte[]? GetWindowIcon(WindowInfo window)
     {
-        if (!OperatingSystem.IsWindows()) return null;
-        using Icon? icon = window.Icon;
-        if (icon == null)
-        {
-            return null;
-        }
-
-        using Bitmap bitmap = WindowsImageInterop.FromIcon(icon.Handle);
+        using Bitmap? bitmap = window.GetIconBitmap();
+        if (bitmap == null) return null;
         using MemoryStream stream = new();
-        bitmap.Save(stream, ImageFormat.Png);
+        bitmap.Encode(stream, ImageFormat.Png, 100);
         return stream.ToArray();
     }
 

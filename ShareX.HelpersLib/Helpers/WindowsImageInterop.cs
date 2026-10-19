@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -172,12 +172,6 @@ public static class WindowsImageInterop
         return result;
     }
 
-    public static System.Drawing.Icon ToIcon(this SKBitmap bitmap)
-    {
-        using System.IO.MemoryStream stream = new(bitmap.GetIconBytes(), false);
-        using System.Drawing.Icon icon = new(stream);
-        return (System.Drawing.Icon)icon.Clone();
-    }
 
     private static unsafe void SetOpaque(SKBitmap bitmap)
     {
