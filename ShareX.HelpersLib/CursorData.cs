@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -26,128 +26,42 @@
 using SkiaSharp;
 using System;
 using System.Drawing;
-using System.Runtime.InteropServices;
 
 namespace ShareX.HelpersLib
 {
-    public class CursorData
+    public class CursorData : IDisposable
     {
+        private SKBitmap bitmap;
         public IntPtr Handle { get; private set; }
         public Point Position { get; private set; }
         public Size Size { get; private set; }
-        public float SizeMultiplier { get; private set; }
-        public bool IsDefaultSize => SizeMultiplier == 1f;
+        public float SizeMultiplier => 1f;
+        public bool IsDefaultSize => true;
         public Point Hotspot { get; private set; }
-        public Point DrawPosition => new Point(Position.X - Hotspot.X, Position.Y - Hotspot.Y);
-        public bool IsVisible { get; private set; }
-
-        public CursorData()
-        {
-            UpdateCursorData();
-        }
-
+        public Point DrawPosition => new(Position.X - Hotspot.X, Position.Y - Hotspot.Y);
+        public bool IsVisible => bitmap != null;
+        public CursorData() => UpdateCursorData();
         public void UpdateCursorData()
         {
-            Handle = IntPtr.Zero;
-            Position = Point.Empty;
-            IsVisible = false;
-
-            CursorInfo cursorInfo = new CursorInfo();
-            cursorInfo.cbSize = Marshal.SizeOf(cursorInfo);
-
-            if (NativeMethods.GetCursorInfo(out cursorInfo))
-            {
-                Handle = cursorInfo.hCursor;
-                Position = cursorInfo.ptScreenPos;
-                Size = Size.Empty;
-                SizeMultiplier = GetCursorSizeMultiplier();
-                IsVisible = cursorInfo.flags == NativeConstants.CURSOR_SHOWING;
-
-                if (IsVisible)
-                {
-                    IntPtr iconHandle = NativeMethods.CopyIcon(Handle);
-
-                    if (iconHandle != IntPtr.Zero)
-                    {
-                        if (NativeMethods.GetIconInfo(iconHandle, out IconInfo iconInfo))
-                        {
-                            if (IsDefaultSize)
-                            {
-                                Hotspot = new Point(iconInfo.xHotspot, iconInfo.yHotspot);
-                            }
-                            else
-                            {
-                                Hotspot = new Point((int)Math.Round(iconInfo.xHotspot * SizeMultiplier), (int)Math.Round(iconInfo.yHotspot * SizeMultiplier));
-                            }
-
-                            if (iconInfo.hbmColor != IntPtr.Zero)
-                            {
-                                NativeMethods.DeleteObject(iconInfo.hbmColor);
-                            }
-
-                            if (iconInfo.hbmMask != IntPtr.Zero)
-                            {
-                                if (!IsDefaultSize)
-                                {
-                                    Size maskSize = WindowsImageInterop.GetBitmapSize(iconInfo.hbmMask);
-                                    int cursorWidth = maskSize.Width;
-                                    int cursorHeight = iconInfo.hbmColor != IntPtr.Zero ? maskSize.Height : maskSize.Height / 2;
-                                    Size = new Size((int)Math.Round(cursorWidth * SizeMultiplier), (int)Math.Round(cursorHeight * SizeMultiplier));
-                                }
-
-                                NativeMethods.DeleteObject(iconInfo.hbmMask);
-                            }
-                        }
-
-                        NativeMethods.DestroyIcon(iconHandle);
-                    }
-                }
-            }
+            bitmap?.Dispose();
+            bitmap = LinuxCursorImage.Capture(out Point position, out Point hotspot);
+            Position = bitmap == null ? CaptureHelpers.GetCursorPosition() : position;
+            Hotspot = hotspot;
+            Size = bitmap == null ? Size.Empty : new Size(bitmap.Width, bitmap.Height);
         }
-
-        public static float GetCursorSizeMultiplier()
-        {
-            float sizeMultiplier = 1f;
-
-            int? cursorSize = RegistryHelpers.GetValueDWord(@"SOFTWARE\Microsoft\Accessibility", "CursorSize");
-
-            if (cursorSize != null && cursorSize > 1)
-            {
-                sizeMultiplier = 1f + ((cursorSize.Value - 1) * 0.5f);
-            }
-
-            return sizeMultiplier;
-        }
-
-        public void DrawCursor(IntPtr hdcDest)
-        {
-            DrawCursor(hdcDest, Point.Empty);
-        }
-
-        public void DrawCursor(IntPtr hdcDest, Point offset)
-        {
-            if (IsVisible)
-            {
-                Point drawPosition = new Point(DrawPosition.X - offset.X, DrawPosition.Y - offset.Y);
-
-                NativeMethods.DrawIconEx(hdcDest, drawPosition.X, drawPosition.Y, Handle, Size.Width, Size.Height, 0, IntPtr.Zero, NativeConstants.DI_NORMAL);
-            }
-        }
-
+        public static float GetCursorSizeMultiplier() => 1f;
+        // HDC drawing has no Linux equivalent. Capture backends draw onto SKBitmap or request compositor cursor inclusion.
+        public void DrawCursor(IntPtr destination) { }
+        public void DrawCursor(IntPtr destination, Point offset) { }
         public void DrawCursor(SKBitmap image) => DrawCursor(image, Point.Empty);
-
         public void DrawCursor(SKBitmap image, Point offset)
         {
-            if (!IsVisible) return;
-            using SKBitmap cursor = ToBitmap(image, offset);
+            if (bitmap == null) return;
             using SKCanvas canvas = new(image);
-            Point position = new(DrawPosition.X - offset.X, DrawPosition.Y - offset.Y);
-            canvas.DrawBitmap(cursor, position.X, position.Y);
+            canvas.DrawBitmap(bitmap, DrawPosition.X - offset.X, DrawPosition.Y - offset.Y);
         }
-
-        public SKBitmap ToBitmap() => WindowsImageInterop.FromIcon(Handle, Size);
-
-        public SKBitmap ToBitmap(SKBitmap background, Point offset) => WindowsImageInterop.FromIcon(Handle, Size, background,
-            new Point(DrawPosition.X - offset.X, DrawPosition.Y - offset.Y));
+        public SKBitmap ToBitmap() => bitmap?.Copy();
+        public SKBitmap ToBitmap(SKBitmap background, Point offset) => ToBitmap();
+        public void Dispose() { bitmap?.Dispose(); bitmap = null; }
     }
 }

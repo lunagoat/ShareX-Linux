@@ -52,6 +52,8 @@ public partial class HotkeySettingsWindow : Window
         Closed += (_, _) => _viewModel?.Dispose();
     }
 
+    private async void OnLinuxBindingsClick(object? sender, RoutedEventArgs e) => await new LinuxHotkeyBindingWindow().ShowDialog(this);
+
     private void OnAddClick(object? sender, RoutedEventArgs e) => _viewModel?.Add();
     private void OnRemoveClick(object? sender, RoutedEventArgs e) => _viewModel?.RemoveSelected();
     private void OnEditClick(object? sender, RoutedEventArgs e) => _viewModel?.EditSelectedTask();

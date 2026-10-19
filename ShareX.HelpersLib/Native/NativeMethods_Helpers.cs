@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -41,29 +41,7 @@ namespace ShareX.HelpersLib
 
         public static string GetWindowText(IntPtr handle)
         {
-            if (handle.ToInt32() > 0)
-            {
-                try
-                {
-                    int length = GetWindowTextLength(handle);
-
-                    if (length > 0)
-                    {
-                        StringBuilder sb = new StringBuilder(length + 1);
-
-                        if (GetWindowText(handle, sb, sb.Capacity) > 0)
-                        {
-                            return sb.ToString();
-                        }
-                    }
-                }
-                catch (Exception e)
-                {
-                    DebugHelper.WriteException(e);
-                }
-            }
-
-            return null;
+            return LinuxWindowSystem.Find(handle)?.Title;
         }
 
         public static Process GetForegroundWindowProcess()
@@ -82,39 +60,12 @@ namespace ShareX.HelpersLib
 
         public static Process GetProcessByWindowHandle(IntPtr hwnd)
         {
-            if (hwnd.ToInt32() > 0)
-            {
-                try
-                {
-                    GetWindowThreadProcessId(hwnd, out uint processID);
-
-                    if (processID != 0)
-                    {
-                        return Process.GetProcessById((int)processID);
-                    }
-                }
-                catch (Exception e)
-                {
-                    DebugHelper.WriteException(e);
-                }
-            }
-
-            return null;
+            try { int pid = LinuxWindowSystem.Find(hwnd)?.Pid ?? 0; return pid > 0 ? Process.GetProcessById(pid) : null; } catch { return null; }
         }
 
         public static string GetClassName(IntPtr handle)
         {
-            if (handle.ToInt32() > 0)
-            {
-                StringBuilder sb = new StringBuilder(256);
-
-                if (GetClassName(handle, sb, sb.Capacity) > 0)
-                {
-                    return sb.ToString();
-                }
-            }
-
-            return null;
+            return LinuxWindowSystem.Find(handle)?.ClassName;
         }
 
         public static IntPtr GetClassLongPtrSafe(IntPtr hWnd, int nIndex)
@@ -147,55 +98,9 @@ namespace ShareX.HelpersLib
             return SetWindowLongPtr64(hWnd, nIndex, dwNewLong);
         }
 
-        private static Icon GetSmallApplicationIcon(IntPtr handle)
-        {
-            IntPtr iconHandle;
-
-            SendMessageTimeout(handle, (int)WindowsMessages.GETICON, NativeConstants.ICON_SMALL2, 0, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 1000, out iconHandle);
-
-            if (iconHandle == IntPtr.Zero)
-            {
-                SendMessageTimeout(handle, (int)WindowsMessages.GETICON, NativeConstants.ICON_SMALL, 0, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 1000, out iconHandle);
-
-                if (iconHandle == IntPtr.Zero)
-                {
-                    iconHandle = GetClassLongPtrSafe(handle, NativeConstants.GCL_HICONSM);
-
-                    if (iconHandle == IntPtr.Zero)
-                    {
-                        SendMessageTimeout(handle, (int)WindowsMessages.QUERYDRAGICON, 0, 0, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 1000, out iconHandle);
-                    }
-                }
-            }
-
-            if (iconHandle != IntPtr.Zero)
-            {
-                return Icon.FromHandle(iconHandle);
-            }
-
-            return null;
-        }
-
-        private static Icon GetBigApplicationIcon(IntPtr handle)
-        {
-            SendMessageTimeout(handle, (int)WindowsMessages.GETICON, NativeConstants.ICON_BIG, 0, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 1000, out IntPtr iconHandle);
-
-            if (iconHandle == IntPtr.Zero)
-            {
-                iconHandle = GetClassLongPtrSafe(handle, NativeConstants.GCL_HICON);
-            }
-
-            if (iconHandle != IntPtr.Zero)
-            {
-                return Icon.FromHandle(iconHandle);
-            }
-
-            return null;
-        }
-
         public static Icon GetApplicationIcon(IntPtr handle)
         {
-            return GetSmallApplicationIcon(handle) ?? GetBigApplicationIcon(handle);
+            return null; // System.Drawing.Icon is not supported on Linux; use WindowInfo.GetIconBitmap().
         }
 
         public static bool GetBorderSize(IntPtr handle, out Size size)
@@ -217,7 +122,7 @@ namespace ShareX.HelpersLib
 
         public static bool IsDWMEnabled()
         {
-            return Helpers.IsWindowsVistaOrGreater() && DwmIsCompositionEnabled();
+            return false;
         }
 
         public static bool GetExtendedFrameBounds(IntPtr handle, out Rectangle rectangle)
@@ -264,10 +169,7 @@ namespace ShareX.HelpersLib
 
         public static Rectangle GetClientRect(IntPtr handle)
         {
-            GetClientRect(handle, out RECT rect);
-            Point position = rect.Location;
-            ClientToScreen(handle, ref position);
-            return new Rectangle(position, rect.Size);
+            return LinuxWindowSystem.Find(handle)?.ClientBounds ?? Rectangle.Empty;
         }
 
         public static Rectangle MaximizedWindowFix(IntPtr handle, Rectangle windowRect)
@@ -356,13 +258,7 @@ namespace ShareX.HelpersLib
 
         public static bool IsWindowCloaked(IntPtr handle)
         {
-            if (IsDWMEnabled())
-            {
-                int result = DwmGetWindowAttribute(handle, (int)DWMWINDOWATTRIBUTE.DWMWA_CLOAKED, out int cloaked, sizeof(int));
-                return result == 0 && cloaked != 0;
-            }
-
-            return false;
+            return LinuxWindowSystem.Find(handle)?.Visible != true;
         }
 
         public static bool IsActive(IntPtr handle)

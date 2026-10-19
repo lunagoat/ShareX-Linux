@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -46,7 +46,7 @@ namespace ShareX.HelpersLib
         {
             INPUT[] inputList = InputList.ToArray();
             uint len = (uint)inputList.Length;
-            uint successfulInputs = NativeMethods.SendInput(len, inputList, Marshal.SizeOf(typeof(INPUT)));
+            uint successfulInputs = LinuxInputSimulation.Send(inputList);
             if (AutoClearAfterSend) ClearInputs();
             return successfulInputs == len;
         }
@@ -99,7 +99,7 @@ namespace ShareX.HelpersLib
 
         public void AddKeyPressText(string text)
         {
-            byte[] chars = Encoding.ASCII.GetBytes(text);
+            char[] chars = text.ToCharArray();
 
             for (int i = 0; i < chars.Length; i++)
             {
@@ -183,8 +183,8 @@ namespace ShareX.HelpersLib
             INPUT input = new INPUT();
             input.Type = InputType.InputMouse;
             input.Data.Mouse = new MOUSEINPUT();
-            input.Data.Mouse.dx = (int)Math.Ceiling((double)(x * 65535) / NativeMethods.GetSystemMetrics(SystemMetric.SM_CXSCREEN)) + 1;
-            input.Data.Mouse.dy = (int)Math.Ceiling((double)(y * 65535) / NativeMethods.GetSystemMetrics(SystemMetric.SM_CYSCREEN)) + 1;
+            input.Data.Mouse.dx = x;
+            input.Data.Mouse.dy = y;
             input.Data.Mouse.dwFlags = MouseEventFlags.MOUSEEVENTF_MOVE | MouseEventFlags.MOUSEEVENTF_ABSOLUTE;
             InputList.Add(input);
         }

@@ -58,6 +58,7 @@ internal sealed class HotkeySettingsAvaloniaService : IHotkeySettingsService
         InvokeOnMainThread(() =>
         {
             _manager.HotkeysToggledTrigger += OnHotkeysToggled;
+            _manager.RegistrationChanged += OnRegistrationChanged;
             _manager.RegisterFailedHotkeys();
         });
     }
@@ -265,6 +266,8 @@ internal sealed class HotkeySettingsAvaloniaService : IHotkeySettingsService
         return key;
     }
 
+    private void OnRegistrationChanged(object sender, EventArgs e) => StateChanged?.Invoke(this, EventArgs.Empty);
+
     private void OnHotkeysToggled(bool hotkeysDisabled)
     {
         StateChanged?.Invoke(this, EventArgs.Empty);
@@ -304,6 +307,7 @@ internal sealed class HotkeySettingsAvaloniaService : IHotkeySettingsService
         {
             _manager.IgnoreHotkeys = false;
             _manager.HotkeysToggledTrigger -= OnHotkeysToggled;
+            _manager.RegistrationChanged -= OnRegistrationChanged;
             _closed();
         });
     }

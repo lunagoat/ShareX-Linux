@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -62,9 +62,6 @@ namespace ShareX.HelpersLib
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool DestroyIcon(IntPtr hIcon);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool EnumWindows(EnumWindowsProc lpEnumFunc, IntPtr lParam);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -114,15 +111,10 @@ namespace ShareX.HelpersLib
         [DllImport("user32.dll")]
         public static extern IntPtr GetClassLongPtr(IntPtr hWnd, int nIndex);
 
-        [DllImport("user32.dll")]
-        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
         public static extern bool GetCursorInfo(out CursorInfo pci);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetCursorPos(out POINT lpPoint);
 
         [DllImport("user32.dll")]
         public static extern IntPtr GetDC(IntPtr hWnd);
@@ -130,8 +122,7 @@ namespace ShareX.HelpersLib
         [DllImport("user32.dll")]
         public static extern IntPtr GetDesktopWindow();
 
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetForegroundWindow();
+
 
         [DllImport("user32.dll")]
         public static extern bool GetIconInfo(IntPtr hIcon, out IconInfo piconinfo);
@@ -150,8 +141,6 @@ namespace ShareX.HelpersLib
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool ClipCursor(IntPtr rectangle);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
-        public static extern IntPtr GetParent(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -192,9 +181,6 @@ namespace ShareX.HelpersLib
         [DllImport("user32.dll", CharSet = CharSet.Auto, EntryPoint = "SetWindowLongPtr")]
         public static extern IntPtr SetWindowLongPtr64(IntPtr hWnd, int nIndex, IntPtr dwNewLong);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
         [DllImport("user32.dll")]
         public static extern int GetWindowRgn(IntPtr hWnd, IntPtr hRgn);
@@ -205,23 +191,12 @@ namespace ShareX.HelpersLib
         [DllImport("user32.dll", CharSet = CharSet.Auto)]
         public static extern int GetWindowTextLength(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
-        public static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 
         /// <summary>Determines the visibility state of the specified window.</summary>
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsWindowVisible(IntPtr hWnd);
 
         /// <summary>Determines whether the specified window is minimized (iconic).</summary>
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsIconic(IntPtr hWnd);
 
         /// <summary>Determines whether a window is maximized.</summary>
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsZoomed(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         public static extern IntPtr LoadCursor(IntPtr hInstance, int iconId);
@@ -263,12 +238,7 @@ namespace ShareX.HelpersLib
         [DllImport("user32.dll")]
         public static extern IntPtr SetActiveWindow(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
-        public static extern bool SetCursorPos(int x, int y);
 
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
 
         [DllImport("user32.dll")]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, SetWindowPosFlags uFlags);

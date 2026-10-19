@@ -47,6 +47,7 @@ namespace ShareX.HelpersLib
         private const int ConnectTimeout = 5000;
 
         private readonly MutexManager mutex;
+        private readonly LinuxInstanceConnection linux;
         private CancellationTokenSource cts;
 
         public SingleInstanceManager(string mutexName, string pipeName, string[] args) : this(mutexName, pipeName, true, args)
@@ -58,6 +59,17 @@ namespace ShareX.HelpersLib
             MutexName = mutexName;
             PipeName = pipeName;
             IsSingleInstance = isSingleInstance;
+
+            if (OperatingSystem.IsLinux())
+            {
+                if (isSingleInstance)
+                {
+                    linux = new LinuxInstanceConnection(pipeName, args, OnArgumentsReceived);
+                    IsFirstInstance = linux.IsFirstInstance;
+                }
+                else IsFirstInstance = true;
+                return;
+            }
 
             mutex = new MutexManager(MutexName, 0);
             IsFirstInstance = mutex.HasHandle;
@@ -174,6 +186,7 @@ namespace ShareX.HelpersLib
                 cts.Dispose();
             }
 
+            linux?.Dispose();
             mutex?.Dispose();
         }
     }

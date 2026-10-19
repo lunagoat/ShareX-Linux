@@ -4,6 +4,7 @@
     <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
+    <PackageVersion Include="Tmds.DBus.Protocol" Version="0.94.1" />
     <PackageVersion Include="FluentFTP" Version="55.0.0" />
     <PackageVersion Include="Microsoft.Data.Sqlite" Version="11.0.0-rc.1.26425.128" />
     <PackageVersion Include="Microsoft.Data.Sqlite.Core" Version="11.0.0-rc.1.26425.128" />

@@ -37,22 +37,23 @@ namespace ShareX.HelpersLib;
 
 internal static class AvaloniaClipboard
 {
+    private static bool UseNative => OperatingSystem.IsLinux() && LinuxClipboard.IsAvailable;
     private static IClipboard Clipboard => DesktopServices.GetWindow().Clipboard ??
         throw new PlatformNotSupportedException("Clipboard access is unavailable.");
 
-    public static bool Clear() => DesktopServices.Run(async () => { await Clipboard.ClearAsync(); return true; });
-    public static string GetText() => DesktopServices.Run(() => Clipboard.TryGetTextAsync());
-    public static bool SetText(string text) => DesktopServices.Run(async () =>
+    public static bool Clear() => UseNative ? LinuxClipboard.Clear() : DesktopServices.Run(async () => { await Clipboard.ClearAsync(); return true; });
+    public static string GetText() => UseNative ? LinuxClipboard.GetText() : DesktopServices.Run(() => Clipboard.TryGetTextAsync());
+    public static bool SetText(string text) => UseNative ? LinuxClipboard.SetText(text) : DesktopServices.Run(async () =>
     {
         await Clipboard.SetTextAsync(text);
         await Clipboard.FlushAsync();
         return true;
     });
 
-    public static string[] GetFiles() => DesktopServices.Run(async () =>
+    public static string[] GetFiles() => UseNative ? LinuxClipboard.GetFiles() : DesktopServices.Run(async () =>
         (await Clipboard.TryGetFilesAsync())?.Select(x => x.TryGetLocalPath()).Where(x => !string.IsNullOrEmpty(x)).ToArray());
 
-    public static bool SetFiles(string[] paths) => DesktopServices.Run(async () =>
+    public static bool SetFiles(string[] paths) => UseNative ? LinuxClipboard.SetFiles(paths) : DesktopServices.Run(async () =>
     {
         IStorageProvider storage = DesktopServices.GetWindow().StorageProvider;
         List<IStorageItem> files = new();
@@ -68,13 +69,8 @@ internal static class AvaloniaClipboard
         return true;
     });
 
-    public static bool SetImage(byte[] png, byte[] dib, string html) => DesktopServices.Run(async () =>
+    public static bool SetImage(byte[] png, byte[] dib, string html) => UseNative ? LinuxClipboard.Write("image/png", png) : DesktopServices.Run(async () =>
     {
-        if (OperatingSystem.IsWindows())
-        {
-            WindowsClipboard.SetImage(DesktopServices.GetWindow().TryGetPlatformHandle()?.Handle ?? IntPtr.Zero, png, dib, html);
-            return true;
-        }
         OwnedImageTransfer owned = CreateImageTransfer(png, html);
         try { await Clipboard.SetDataAsync(owned); }
         catch { owned.Dispose(); throw; }
@@ -101,7 +97,7 @@ internal static class AvaloniaClipboard
         catch { ((IDisposable)transfer).Dispose(); bitmap.Dispose(); throw; }
     }
 
-    public static bool Contains(string kind) => DesktopServices.Run(async () =>
+    public static bool Contains(string kind) => UseNative ? LinuxClipboard.Contains(kind) : DesktopServices.Run(async () =>
     {
         IReadOnlyList<DataFormat> formats = await Clipboard.GetDataFormatsAsync();
         return kind switch
@@ -114,7 +110,7 @@ internal static class AvaloniaClipboard
         };
     });
 
-    public static byte[] GetImage() => DesktopServices.Run(async () =>
+    public static byte[] GetImage() => UseNative ? LinuxClipboard.Read("image/png") : DesktopServices.Run(async () =>
     {
         byte[] png = await Clipboard.TryGetValueAsync(DataFormat.CreateBytesPlatformFormat(OperatingSystem.IsWindows() ? "PNG" : "image/png"));
         if (png != null) return png;
@@ -125,7 +121,7 @@ internal static class AvaloniaClipboard
         return stream.ToArray();
     });
 
-    public static ClipboardData Capture() => DesktopServices.Run(async () =>
+    public static ClipboardData Capture() => UseNative ? LinuxClipboard.Capture() : DesktopServices.Run(async () =>
     {
         ClipboardData snapshot = new();
         using IAsyncDataTransfer transfer = await Clipboard.TryGetDataAsync();

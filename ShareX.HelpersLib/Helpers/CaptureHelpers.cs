@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -289,24 +289,7 @@ namespace ShareX.HelpersLib
 
         public static Rectangle GetWindowRectangle(IntPtr handle)
         {
-            Rectangle rect = Rectangle.Empty;
-
-            if (NativeMethods.IsDWMEnabled() && NativeMethods.GetExtendedFrameBounds(handle, out Rectangle tempRect))
-            {
-                rect = tempRect;
-            }
-
-            if (rect.IsEmpty)
-            {
-                rect = NativeMethods.GetWindowRect(handle);
-            }
-
-            if (!Helpers.IsWindows10OrGreater() && NativeMethods.IsZoomed(handle))
-            {
-                rect = NativeMethods.MaximizedWindowFix(handle, rect);
-            }
-
-            return rect;
+            return NativeMethods.GetWindowRect(handle);
         }
 
         public static Rectangle GetActiveWindowRectangle()
@@ -325,13 +308,13 @@ namespace ShareX.HelpersLib
         {
             IntPtr handle = NativeMethods.GetForegroundWindow();
 
-            if (handle.ToInt32() > 0)
+            if (handle != IntPtr.Zero)
             {
                 WindowInfo windowInfo = new WindowInfo(handle);
                 string className = windowInfo.ClassName;
                 string[] ignoreList = new string[] { "Progman", "WorkerW" };
 
-                if (ignoreList.All(ignore => !className.Equals(ignore, StringComparison.OrdinalIgnoreCase)))
+                if (ignoreList.All(ignore => !string.Equals(className, ignore, StringComparison.OrdinalIgnoreCase)))
                 {
                     Rectangle windowRectangle = windowInfo.Rectangle;
                     Rectangle monitorRectangle = DesktopScreen.FromRectangle(windowRectangle).Bounds;

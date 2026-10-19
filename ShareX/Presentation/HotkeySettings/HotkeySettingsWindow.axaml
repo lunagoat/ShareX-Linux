@@ -75,7 +75,7 @@
             <Grid Margin="10,0,10,10" RowDefinitions="Auto,Auto,*" RowSpacing="5">
                 <Border Grid.Row="0"
                         Classes="tool-panel docked-top-toolbar">
-                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto">
+                    <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
                         <Button Grid.Column="0" Classes="compact" Click="OnAddClick">
                             <StackPanel Orientation="Horizontal" Spacing="7">
                                 <TextBlock Classes="icon" Text="{x:Static theming:LucideIcons.plus}"/>
@@ -110,7 +110,8 @@
                                 IsEnabled="{Binding CanMove}" ToolTip.Tip="{x:Static res:Strings.HotkeySettingsWindow_MoveDown}">
                             <TextBlock Classes="icon" Text="{x:Static theming:LucideIcons.chevron_down}" FontSize="16"/>
                         </Button>
-                        <Button Grid.Column="7" Classes="compact" Click="OnResetClick">
+                        <Button Grid.Column="7" Classes="compact" Click="OnLinuxBindingsClick" Content="Linux bindings…"/>
+                        <Button Grid.Column="8" Classes="compact" Click="OnResetClick">
                             <StackPanel Orientation="Horizontal" Spacing="7">
                                 <TextBlock Classes="icon" Text="{x:Static theming:LucideIcons.rotate_ccw}"/>
                                 <TextBlock Text="{x:Static res:Strings.HotkeySettingsWindow_ResetWithEllipsis}"/>

@@ -32,7 +32,7 @@ using System.Threading.Tasks;
 namespace ShareX;
 
 /// <summary>
-/// Coordinates the Windows hotkey host and desktop notification-area icon.
+/// Coordinates the Linux hotkey host and desktop notification-area icon.
 /// Avalonia owns the application lifetime and all visible windows.
 /// </summary>
 internal sealed class MainForm
@@ -43,7 +43,7 @@ internal sealed class MainForm
 
     public MainForm()
     {
-        _hotkeyHost = new WindowsHotkeyHost();
+        _hotkeyHost = new LinuxHotkeyHost();
         _hotkeyHost.NativeMessageReceived += OnNativeMessage;
         _hotkeyHost.Closed += OnHostClosed;
 
