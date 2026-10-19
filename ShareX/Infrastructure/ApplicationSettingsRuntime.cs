@@ -82,9 +82,12 @@ internal static class ApplicationSettingsRuntime
         _hotkeyHost?.ApplyHotkeySettings();
         _hotkeyHost?.UpdateTrayIcon();
 
-        ApplicationState.UpdateManager.AllowAutoUpdate = !SystemOptions.DisableUpdateCheck && settings.AutoCheckUpdate;
-        ApplicationState.UpdateManager.UpdateChannel = settings.UpdateChannel;
-        ApplicationState.UpdateManager.ConfigureAutoUpdate();
+        if (ApplicationState.UpdateManager != null)
+        {
+            ApplicationState.UpdateManager.AllowAutoUpdate = !SystemOptions.DisableUpdateCheck && settings.AutoCheckUpdate;
+            ApplicationState.UpdateManager.UpdateChannel = settings.UpdateChannel;
+            ApplicationState.UpdateManager.ConfigureAutoUpdate();
+        }
 
         MainWindowIntegration.SetTitle(ApplicationInfo.Title);
         MainWindowIntegration.SetTrayVisible(settings.ShowTray);

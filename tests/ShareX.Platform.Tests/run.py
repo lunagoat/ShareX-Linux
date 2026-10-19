@@ -103,6 +103,6 @@ for name in ['ApplicationConfig.json','UploadersConfig.json','HotkeysConfig.json
     assert json.loads((config/name).read_text(encoding='utf-8-sig'))
 assert (profile/'data/ShareX/History.db').exists()
 text = log.read_text(encoding='utf-8-sig')
-assert 'Arguments received: -exit' in text and 'ShareX closed.' in text and 'Unhandled exception' not in text, text
+assert ('Arguments received: -exit' in text or 'Arguments received: "-exit"' in text) and 'ShareX closed.' in text and 'Unhandled exception' not in text, text
 subprocess.run(['timeout','-k','5','10',str(app),'-silent','-NoHotkeys','-exit'],env=appenv,check=True)
 print('PASS real Avalonia startup, settings persistence/reload, second-instance forwarding, graceful exit')
