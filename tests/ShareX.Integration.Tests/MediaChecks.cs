@@ -22,7 +22,7 @@ internal static class MediaChecks
         source.Erase(SKColors.Crimson);
         using (SKBitmap effects = ImageEffectPreset.GetDefaultPreset().ApplyEffects(source))
             Assert(effects.Width == 80 && effects.Height == 90, "Canvas and text watermark effects");
-        var editor = new EditorWindow(); editor.Show(); editor.LoadImage(source); Dispatcher.UIThread.RunJobs();
+        var editor = new EditorWindow(); editor.Show(); editor.LoadImage(source.Copy()); Dispatcher.UIThread.RunJobs();
         using (SKBitmap? result = editor.GetResultBitmap()) Assert(result is { Width: 80, Height: 60 }, "Editor load/export");
         var view = editor.FindControl<EditorView>("Editor");
         // Find the editor by its actual XAML name if the host changed it.
