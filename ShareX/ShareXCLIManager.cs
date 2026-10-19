@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -202,6 +202,64 @@ namespace ShareX
                 }
 
                 return true;
+            }
+
+            return false;
+        }
+
+        protected override bool CommandAcceptsParameter(string command)
+        {
+            if (string.IsNullOrEmpty(command))
+            {
+                return false;
+            }
+
+            if (command.Equals("AutoClose", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("NoHotkeys", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("silent", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("s", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("portable", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("p", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("sandbox", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("multi", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("m", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("quit", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("uninstall", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            if (command.Equals("task", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("workflow", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("CustomUploader", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("ImageEffect", StringComparison.OrdinalIgnoreCase) ||
+                command.Equals("NativeMessagingInput", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (Enum.TryParse<HotkeyType>(command, true, out HotkeyType hotkeyType))
+            {
+                return hotkeyType switch
+                {
+                    HotkeyType.FileUpload or
+                    HotkeyType.FolderUpload or
+                    HotkeyType.QRCode or
+                    HotkeyType.ImageEditor or
+                    HotkeyType.ImageEffects or
+                    HotkeyType.ImageViewer or
+                    HotkeyType.ImageBeautifier or
+                    HotkeyType.VideoConverter or
+                    HotkeyType.AnalyzeImage or
+                    HotkeyType.Metadata or
+                    HotkeyType.StripMetadata or
+                    HotkeyType.HashCheck or
+                    HotkeyType.OCR or
+                    HotkeyType.PinToScreen or
+                    HotkeyType.PinToScreenFromFile => true,
+                    _ => false
+                };
             }
 
             return false;
