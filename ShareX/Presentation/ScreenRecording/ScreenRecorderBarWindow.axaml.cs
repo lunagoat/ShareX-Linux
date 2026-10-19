@@ -425,7 +425,7 @@ internal partial class ScreenRecorderBarWindow : Window
     private void ShowRegion()
     {
         if (_closed) return;
-        _regionWindow ??= new RecordingOutlineWindow(RecordingRegion) { Title = Title };
+        _regionWindow ??= new RecordingOutlineWindow(RecordingRegion);
         _regionWindow.AccentBrush = Brushes.Goldenrod;
         _regionWindow.Show();
 

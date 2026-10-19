@@ -60,9 +60,9 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
              !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK"))) ? "grim" : "portal") : "x11";
         if (backend == "portal" && !File.Exists(LinuxProcess.Find("gpu-screen-recorder")))
             throw new InvalidOperationException("Wayland recording on this compositor needs gpu-screen-recorder and a ScreenCast desktop portal. Install them with your distribution's package manager.");
-        await SelectEncoder().ConfigureAwait(false);
         if (options.WindowHandle != 0) region = await WindowRegion().ConfigureAwait(false);
         if (region.Width < 2 || region.Height < 2) throw new ArgumentException("The capture target must be at least 2 × 2 pixels.");
+        await SelectEncoder().ConfigureAwait(false);
         Encoder = new(videoEncoder, videoEncoder != "libx264", false);
         prepared = true;
         Diagnostic?.Invoke($"Linux capture backend: {backend}; output: {region.Width & ~1} × {region.Height & ~1}. Wayland uses logical coordinates.");
@@ -70,15 +70,28 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
 
     private async Task SelectEncoder()
     {
+        int targetWidth = region.Width & ~1;
+        int targetHeight = region.Height & ~1;
         if (File.Exists("/dev/nvidia0"))
         {
             try
             {
-                await LinuxProcess.Run(options.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "color=size=64x64:rate=1", "-frames:v", "1", "-c:v", "h264_nvenc", "-f", "null", "-").ConfigureAwait(false);
+                await LinuxProcess.Run(options.FFmpegPath, "-v", "error", "-f", "lavfi", "-i", "color=size=256x256:rate=1", "-frames:v", "1", "-c:v", "h264_nvenc", "-f", "null", "-").ConfigureAwait(false);
+                if (targetWidth < 146 || targetHeight < 146)
+                {
+                    if (options.RequireHardwareEncoder)
+                        throw new InvalidOperationException($"The recording region ({region.Width} × {region.Height}) is smaller than the minimum dimensions supported by the NVENC hardware encoder (146 × 146). Allow software encoding in recording settings, or increase the region size.");
+                    Diagnostic?.Invoke($"Recording region ({region.Width} × {region.Height}) is smaller than NVENC hardware minimum (146 × 146); falling back to software encoder (libx264).");
+                    videoEncoder = "libx264";
+                    return;
+                }
                 videoEncoder = "h264_nvenc";
                 return;
             }
-            catch (Exception ex) { Diagnostic?.Invoke("NVENC unavailable: " + ex.Message); }
+            catch (Exception ex) when (ex is not InvalidOperationException)
+            {
+                Diagnostic?.Invoke("NVENC unavailable: " + ex.Message);
+            }
         }
         if (Directory.Exists("/dev/dri"))
         {
@@ -86,7 +99,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
             {
                 try
                 {
-                    await LinuxProcess.Run(options.FFmpegPath, "-v", "error", "-vaapi_device", device, "-f", "lavfi", "-i", "color=size=64x64:rate=1", "-vf", "format=nv12,hwupload", "-frames:v", "1", "-c:v", "h264_vaapi", "-f", "null", "-").ConfigureAwait(false);
+                    await LinuxProcess.Run(options.FFmpegPath, "-v", "error", "-vaapi_device", device, "-f", "lavfi", "-i", "color=size=256x256:rate=1", "-vf", "format=nv12,hwupload", "-frames:v", "1", "-c:v", "h264_vaapi", "-f", "null", "-").ConfigureAwait(false);
                     videoEncoder = "h264_vaapi"; vaapiDevice = device;
                     return;
                 }
@@ -260,6 +273,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         if (audio.Count > 0) args.AddRange(["-map", audio.Count == 1 ? "[a0]" : "[a]", "-c:a", "aac", "-b:a", N(options.AudioBitrate), "-shortest"]);
         args.AddRange(["-c:v", videoEncoder, "-b:v", N(options.VideoBitrate), "-threads", "2"]);
         if (videoEncoder == "libx264") args.AddRange(["-preset", "ultrafast", "-pix_fmt", "yuv420p"]);
+        else if (videoEncoder == "h264_nvenc") args.AddRange(["-preset", "p4", "-tune", "ll", "-pix_fmt", "yuv420p"]);
         args.AddRange(["-y", path]);
         if (!string.IsNullOrWhiteSpace(options.CustomCommands))
         {
@@ -287,7 +301,17 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
                 long written = 0;
                 while (!End() || written == 0)
                 {
-                    Rectangle target = options.WindowHandle == 0 ? region : await WindowRegion().ConfigureAwait(false);
+                    Rectangle target = region;
+                    if (options.WindowHandle != 0)
+                    {
+                        try { target = await WindowRegion().ConfigureAwait(false); }
+                        catch (Exception ex)
+                        {
+                            Diagnostic?.Invoke("Target window closed; finishing recording: " + ex.Message);
+                            RequestStop();
+                            break;
+                        }
+                    }
                     List<string> grab = ["-s", "1", "-t", "png", "-l", "0", "-g", $"{target.X},{target.Y} {target.Width}x{target.Height}"];
                     if (options.IncludeCursor) grab.Add("-c");
                     grab.Add("-");
@@ -376,6 +400,59 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         string list = Path.Combine(workspace!, "segments.txt");
         await File.WriteAllLinesAsync(list, segments.Select(path => "file '" + Path.GetFileName(path) + "'")).ConfigureAwait(false);
         string extension = Path.GetExtension(options.OutputPath).ToLowerInvariant();
+
+        if (!string.IsNullOrWhiteSpace(options.CustomCommands))
+        {
+            if (segments.Count == 1)
+            {
+                File.Copy(segments[0], options.OutputPath, true);
+            }
+            else
+            {
+                await LinuxProcess.Run(TimeSpan.FromHours(12), options.FFmpegPath,
+                    "-hide_banner", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i", list, "-c", "copy", "-y", options.OutputPath).ConfigureAwait(false);
+            }
+            string customCodec = "custom";
+            var customTokens = SplitArguments(options.CustomCommands);
+            for (int i = 0; i < customTokens.Count; i++)
+            {
+                if ((customTokens[i] == "-c:v" || customTokens[i] == "-vcodec") && i + 1 < customTokens.Count)
+                {
+                    customCodec = customTokens[i + 1];
+                    break;
+                }
+            }
+            Encoder = new(customCodec, customCodec.Contains("nvenc") || customCodec.Contains("vaapi"), false);
+            return;
+        }
+
+        if (segments.Count == 1 && string.IsNullOrWhiteSpace(options.ExtraArguments) && (extension is ".mp4" or ".mkv"))
+        {
+            List<string> copyArgs = ["-hide_banner", "-loglevel", "error", "-i", segments[0], "-c", "copy"];
+            if (extension == ".mp4") copyArgs.AddRange(["-movflags", "+faststart"]);
+            copyArgs.AddRange(["-y", options.OutputPath]);
+            await LinuxProcess.Run(TimeSpan.FromHours(12), options.FFmpegPath, copyArgs.ToArray()).ConfigureAwait(false);
+            Encoder = new(videoEncoder, videoEncoder != "libx264", false);
+            return;
+        }
+
+        var extraArgs = SplitArguments(options.ExtraArguments);
+        bool hasVideoCodec = false;
+        string extraVideoCodec = "";
+        for (int i = 0; i < extraArgs.Count; i++)
+        {
+            if ((extraArgs[i] == "-c:v" || extraArgs[i] == "-vcodec") && i + 1 < extraArgs.Count)
+            {
+                hasVideoCodec = true;
+                extraVideoCodec = extraArgs[i + 1];
+                break;
+            }
+        }
+        bool hasAudioCodec = extraArgs.Any(a => a is "-c:a" or "-acodec" or "-an");
+        bool hasVideoBitrate = extraArgs.Contains("-b:v");
+        bool hasPixFmt = extraArgs.Contains("-pix_fmt");
+        bool hasMovFlags = extraArgs.Contains("-movflags");
+
         List<string> args = ["-hide_banner", "-loglevel", "error", "-filter_complex_threads", "1", "-filter_threads", "1", "-f", "concat", "-safe", "0", "-i", list];
         if (vaapiDevice != null) args.InsertRange(0, ["-vaapi_device", vaapiDevice]);
         if (extension is ".m4a" or ".ogg" or ".opus" or ".mp3" or ".wav")
@@ -383,24 +460,54 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
             string codec = extension switch { ".ogg" => "libvorbis", ".opus" => "libopus", ".mp3" => "libmp3lame", ".wav" => "pcm_s16le", _ => "aac" };
             args.AddRange(["-vn", "-c:a", codec]);
         }
-        else if (extension == ".gif") args.AddRange(["-an", "-filter_complex", "[0:v]split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0"]);
-        else if (extension is ".webp" or ".apng") args.AddRange(["-an", "-c:v", extension == ".webp" ? "libwebp_anim" : "apng", "-loop", "0"]);
+        else if (extension == ".gif")
+        {
+            args.Add("-an");
+            if (!options.ExtraArguments.Contains("filter_complex") && !options.ExtraArguments.Contains("lavfi"))
+            {
+                args.AddRange(["-filter_complex", "[0:v]split[a][b];[a]palettegen[p];[b][p]paletteuse", "-loop", "0"]);
+            }
+        }
+        else if (extension is ".webp" or ".apng")
+        {
+            args.Add("-an");
+            if (!hasVideoCodec) args.AddRange(["-c:v", extension == ".webp" ? "libwebp_anim" : "apng", "-loop", "0"]);
+        }
         else
         {
-            args.AddRange(["-c:v", extension == ".webm" ? "libvpx-vp9" : videoEncoder, "-b:v", N(options.VideoBitrate), "-pix_fmt", "yuv420p", "-threads", "2"]);
-            if (extension == ".webm") args.AddRange(["-deadline", "realtime", "-cpu-used", "6", "-c:a", "libopus"]);
+            if (!hasVideoCodec)
+            {
+                args.AddRange(["-c:v", extension == ".webm" ? "libvpx-vp9" : videoEncoder]);
+                if (videoEncoder == "libx264" && extension != ".webm") args.AddRange(["-preset", "ultrafast"]);
+                if (videoEncoder == "h264_nvenc" && extension != ".webm") args.AddRange(["-preset", "p4", "-tune", "ll"]);
+            }
+            if (!hasVideoBitrate && !extraArgs.Contains("-crf") && !extraArgs.Contains("-qscale:v"))
+            {
+                args.AddRange(["-b:v", N(options.VideoBitrate)]);
+            }
+            if (!hasPixFmt)
+            {
+                args.AddRange(["-pix_fmt", "yuv420p"]);
+            }
+            args.AddRange(["-threads", "2"]);
+            if (extension == ".webm")
+            {
+                if (!extraArgs.Contains("-deadline")) args.AddRange(["-deadline", "realtime"]);
+                if (!extraArgs.Contains("-cpu-used")) args.AddRange(["-cpu-used", "6"]);
+                if (!hasAudioCodec) args.AddRange(["-c:a", "libopus"]);
+            }
             else
             {
-                if (videoEncoder == "libx264") args.AddRange(["-preset", "ultrafast"]);
                 if (vaapiDevice != null) args.AddRange(["-vf", "format=nv12,hwupload"]);
-                args.AddRange(["-c:a", "aac", "-b:a", N(options.AudioBitrate)]);
+                if (!hasAudioCodec) args.AddRange(["-c:a", "aac", "-b:a", N(options.AudioBitrate)]);
             }
-            if (extension == ".mp4") args.AddRange(["-movflags", "+faststart"]);
+            if (extension == ".mp4" && !hasMovFlags) args.AddRange(["-movflags", "+faststart"]);
         }
-        args.AddRange(SplitArguments(options.ExtraArguments));
+        args.AddRange(extraArgs);
         args.AddRange(["-y", options.OutputPath]);
         await LinuxProcess.Run(TimeSpan.FromHours(12), options.FFmpegPath, args.ToArray()).ConfigureAwait(false);
-        Encoder = new(extension == ".gif" ? "gif" : extension == ".webm" ? "libvpx-vp9" : videoEncoder, extension is ".mp4" or ".mkv" or ".avi" && videoEncoder != "libx264", false);
+        string finalCodec = hasVideoCodec ? extraVideoCodec : (extension == ".gif" ? "gif" : extension == ".webm" ? "libvpx-vp9" : videoEncoder);
+        Encoder = new(finalCodec, finalCodec.Contains("nvenc") || finalCodec.Contains("vaapi") || finalCodec.Contains("qsv") || finalCodec.Contains("amf"), false);
     }
 
     /// <summary>Parse FFmpeg arguments without invoking a shell or expanding shell metacharacters.</summary>

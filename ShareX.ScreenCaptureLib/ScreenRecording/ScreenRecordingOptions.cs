@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -184,6 +184,16 @@ namespace ShareX.ScreenCaptureLib
                         case FFmpegVideoCodec.apng:
                             args.Append("-f apng ");
                             args.Append("-plays 0 ");
+                            break;
+                        case FFmpegVideoCodec.gif:
+                            StringBuilder gifFilter = new("-filter_complex \"[0:v]split[a][b];[a]palettegen");
+                            if (FFmpeg.GIFStatsMode == FFmpegPaletteGenStatsMode.diff) gifFilter.Append("=stats_mode=diff");
+                            else if (FFmpeg.GIFStatsMode == FFmpegPaletteGenStatsMode.single) gifFilter.Append("=stats_mode=single");
+                            gifFilter.Append("[p];[b][p]paletteuse");
+                            if (FFmpeg.GIFDither != FFmpegPaletteUseDither.sierra2_4a) gifFilter.Append($"=dither={FFmpeg.GIFDither}");
+                            if (FFmpeg.GIFDither == FFmpegPaletteUseDither.bayer) gifFilter.Append($":bayer_scale={FFmpeg.GIFBayerScale}");
+                            gifFilter.Append("\" -loop 0 ");
+                            args.Append(gifFilter);
                             break;
                     }
 
