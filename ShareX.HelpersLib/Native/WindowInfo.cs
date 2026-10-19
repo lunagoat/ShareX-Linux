@@ -88,7 +88,6 @@ namespace ShareX.HelpersLib
         public bool Layered { get; set; }
         public bool TopMost { get; set; }
         public byte Opacity { get; set; } = 255;
-        public Icon Icon => null;
         public SkiaSharp.SKBitmap GetIconBitmap() => LinuxApplicationIcon.Load(ClassName);
         public bool IsMaximized => LinuxWindowSystem.Find(Handle)?.Maximized == true;
         public bool IsMinimized => LinuxWindowSystem.Find(Handle)?.Minimized == true;

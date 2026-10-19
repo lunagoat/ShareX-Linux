@@ -9,12 +9,8 @@
     <PackageReference Include="Tmds.DBus.Protocol" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SkiaSharp" />
-    <PackageReference Include="System.Drawing.Common" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="Microsoft.Win32.SystemEvents" />
-  </ItemGroup>
-  <ItemGroup>
-    <!-- Existing Windows printing and shell icon interop still require System.Drawing.Common. -->
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ShareX.Avalonia\ShareX.Avalonia.csproj" />

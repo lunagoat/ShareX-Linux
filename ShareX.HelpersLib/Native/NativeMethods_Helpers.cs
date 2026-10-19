@@ -98,11 +98,6 @@ namespace ShareX.HelpersLib
             return SetWindowLongPtr64(hWnd, nIndex, dwNewLong);
         }
 
-        public static Icon GetApplicationIcon(IntPtr handle)
-        {
-            return null; // System.Drawing.Icon is not supported on Linux; use WindowInfo.GetIconBitmap().
-        }
-
         public static bool GetBorderSize(IntPtr handle, out Size size)
         {
             WINDOWINFO wi = WINDOWINFO.Create();
@@ -401,46 +396,6 @@ namespace ShareX.HelpersLib
             return CreateProcess(path, $"\"{path}\" {arguments}", ref pSec, ref tSec, false, (uint)flags, IntPtr.Zero, null, ref sInfo, out _);
         }
 
-        public static Icon GetFileIcon(string filePath, bool isSmallIcon)
-        {
-            SHFILEINFO shfi = new SHFILEINFO();
-
-            SHGFI flags = SHGFI.Icon;
-
-            if (isSmallIcon)
-            {
-                flags |= SHGFI.SmallIcon;
-            }
-            else
-            {
-                flags |= SHGFI.LargeIcon;
-            }
-
-            SHGetFileInfo(filePath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), (uint)flags);
-
-            Icon icon = (Icon)Icon.FromHandle(shfi.hIcon).Clone();
-            DestroyIcon(shfi.hIcon);
-            return icon;
-        }
-
-        public static Icon GetJumboFileIcon(string filePath, bool jumboSize = true)
-        {
-            SHFILEINFO shfi = new SHFILEINFO();
-
-            SHGFI flags = SHGFI.SysIconIndex | SHGFI.UseFileAttributes;
-            SHGetFileInfo(filePath, 0, ref shfi, (uint)Marshal.SizeOf(shfi), (uint)flags);
-
-            IImageList spiml = null;
-            Guid guil = new Guid(NativeConstants.IID_IImageList2);
-
-            SHGetImageList(jumboSize ? NativeConstants.SHIL_JUMBO : NativeConstants.SHIL_EXTRALARGE, ref guil, ref spiml);
-            IntPtr hIcon = IntPtr.Zero;
-            spiml.GetIcon(shfi.iIcon, NativeConstants.ILD_TRANSPARENT | NativeConstants.ILD_IMAGE, ref hIcon);
-
-            Icon icon = (Icon)Icon.FromHandle(hIcon).Clone();
-            DestroyIcon(hIcon);
-            return icon;
-        }
 
         public static SkiaSharp.SKBitmap GetFileThumbnail(string filePath, Size thumbnailSize)
         {
