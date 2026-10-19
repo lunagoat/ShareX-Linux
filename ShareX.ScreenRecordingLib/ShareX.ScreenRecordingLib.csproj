@@ -1,15 +1,16 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0-windows10.0.22621.0</TargetFramework>
-    <SupportedOSPlatformVersion>10.0.22621.0</SupportedOSPlatformVersion>
+    <TargetFramework>net10.0</TargetFramework>
     <OutputType>Library</OutputType>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-    <Description>Windows-native GPU screen recording and WASAPI audio capture</Description>
+    <Description>Linux screen recording (ffmpeg / PipeWire / PulseAudio / V4L2)</Description>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="Vortice.Direct3D11" />
-    <PackageReference Include="Vortice.MediaFoundation" />
+    <!-- The original Windows implementation (Media Foundation, WASAPI, Windows.Graphics.Capture). Kept for reference only. -->
+    <Compile Remove="LegacyWindows\**" />
+    <EmbeddedResource Remove="LegacyWindows\**" />
+    <None Remove="LegacyWindows\**" />
   </ItemGroup>
 </Project>

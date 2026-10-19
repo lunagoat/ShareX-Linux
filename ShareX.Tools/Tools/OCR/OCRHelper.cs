@@ -24,28 +24,61 @@
 #endregion License Information (GPL v3)
 
 using ShareX.HelpersLib;
-using Windows.Globalization;
-using Windows.Graphics.Imaging;
-using Windows.Media.Ocr;
-using Windows.Storage.Streams;
+using System.Diagnostics;
+using System.Globalization;
 using Bitmap = SkiaSharp.SKBitmap;
 using ImageFormat = SkiaSharp.SKEncodedImageFormat;
 
 namespace ShareX.Tools;
 
+/// <summary>OCR through the system <c>tesseract</c> binary (the Windows build used the WinRT OCR engine).</summary>
 public static class OCRHelper
 {
-    private const string SupportedVersion = "10.0.18362.0";
+    // Tesseract language codes (ISO 639-2) that don't map to a .NET culture through ThreeLetterISOLanguageName.
+    private static readonly Dictionary<string, string> SpecialCultures = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["chi_sim"] = "zh-Hans",
+        ["chi_tra"] = "zh-Hant",
+        ["deu"] = "de",
+        ["fra"] = "fr",
+        ["nld"] = "nl",
+        ["ces"] = "cs",
+        ["ell"] = "el",
+        ["fas"] = "fa",
+        ["isl"] = "is",
+        ["kat"] = "ka",
+        ["mkd"] = "mk",
+        ["msa"] = "ms",
+        ["ron"] = "ro",
+        ["slk"] = "sk",
+        ["sqi"] = "sq",
+        ["bod"] = "bo",
+        ["cym"] = "cy",
+        ["eus"] = "eu",
+        ["hye"] = "hy",
+        ["mya"] = "my",
+        ["zho"] = "zh"
+    };
 
-    public static bool IsSupported => Helpers.OSVersion >= new Version(SupportedVersion);
+    private static OCRLanguageOption[]? _languages;
+
+    public static bool IsSupported => GetInstalledTesseractCodes().Length > 0;
 
     public static OCRLanguageOption[] AvailableLanguages
     {
         get
         {
             ThrowIfNotSupported();
-            return OcrEngine.AvailableRecognizerLanguages
-                .Select(x => new OCRLanguageOption(x.DisplayName, x.LanguageTag))
+            return _languages ??= GetInstalledTesseractCodes()
+                .Where(x => x != "osd")
+                .Select(code =>
+                {
+                    string tag = CodeToTag(code);
+                    string name;
+                    try { name = CultureInfo.GetCultureInfo(tag).EnglishName; }
+                    catch (CultureNotFoundException) { name = code; }
+                    return new OCRLanguageOption(name, tag);
+                })
                 .ToArray();
         }
     }
@@ -55,7 +88,7 @@ public static class OCRHelper
         if (!IsSupported)
         {
             throw new InvalidOperationException(
-                string.Format(Localization.Strings.OCRHelper_Requires_Windows_version, SupportedVersion));
+                "OCR requires the 'tesseract' command and at least one language pack (for example the tesseract-data-eng package).");
         }
     }
 
@@ -74,35 +107,121 @@ public static class OCRHelper
 
     private static async Task<string> OCRInternal(Bitmap bitmap, string languageTag, bool singleLine)
     {
-        Language language = new(languageTag);
-        if (!OcrEngine.IsLanguageSupported(language))
+        string code = TagToCode(languageTag);
+
+        if (!GetInstalledTesseractCodes().Contains(code, StringComparer.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException(string.Format(Localization.Strings.OCRHelper_Language_unavailable, language.DisplayName));
+            throw new InvalidOperationException($"OCR language \"{languageTag}\" is not installed (tesseract language pack \"{code}\").");
         }
 
-        OcrEngine engine = OcrEngine.TryCreateFromLanguage(language);
-        using InMemoryRandomAccessStream stream = new();
-        bitmap.Save(stream.AsStream(), ImageFormat.Png);
-        stream.Seek(0);
-        BitmapDecoder decoder = await BitmapDecoder.CreateAsync(stream);
-        using SoftwareBitmap softwareBitmap = await decoder.GetSoftwareBitmapAsync();
-        OcrResult result = await engine.RecognizeAsync(softwareBitmap);
+        ProcessStartInfo psi = new("tesseract")
+        {
+            RedirectStandardInput = true,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            StandardOutputEncoding = System.Text.Encoding.UTF8
+        };
+        psi.ArgumentList.Add("stdin");
+        psi.ArgumentList.Add("stdout");
+        psi.ArgumentList.Add("-l");
+        psi.ArgumentList.Add(code);
+        psi.ArgumentList.Add("--psm");
+        psi.ArgumentList.Add(singleLine ? "7" : "3");
 
-        IEnumerable<string> lines;
-        if (language.LanguageTag.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ||
-            language.LanguageTag.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
+        using Process process = Process.Start(psi) ?? throw new InvalidOperationException("Could not start tesseract.");
+
+        using (SkiaSharp.SKData data = SkiaSharp.SKImage.FromBitmap(bitmap).Encode(ImageFormat.Png, 100))
         {
-            lines = result.Lines.Select(line => string.Concat(line.Words.Select(word => word.Text)));
+            await process.StandardInput.BaseStream.WriteAsync(data.ToArray());
         }
-        else if (language.LayoutDirection == LanguageLayoutDirection.Rtl)
+
+        process.StandardInput.Close();
+
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        string text = await process.StandardOutput.ReadToEndAsync();
+        await process.WaitForExitAsync();
+
+        if (process.ExitCode != 0)
         {
-            lines = result.Lines.Select(line => string.Join(" ", line.Words.Reverse().Select(word => word.Text)));
+            throw new InvalidOperationException("tesseract failed: " + (await stderrTask).Trim());
         }
-        else
+
+        text = text.Replace("\f", "").TrimEnd();
+        string[] lines = text.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+
+        // Chinese and Japanese are written without spaces, tesseract inserts one between every glyph.
+        if (languageTag.StartsWith("zh", StringComparison.OrdinalIgnoreCase) ||
+            languageTag.StartsWith("ja", StringComparison.OrdinalIgnoreCase))
         {
-            lines = result.Lines.Select(line => line.Text);
+            lines = lines.Select(line => line.Replace(" ", "")).ToArray();
         }
 
         return string.Join(singleLine ? " " : Environment.NewLine, lines);
+    }
+
+    private static string[]? _installedCodes;
+
+    private static string[] GetInstalledTesseractCodes()
+    {
+        if (_installedCodes != null)
+        {
+            return _installedCodes;
+        }
+
+        try
+        {
+            ProcessStartInfo psi = new("tesseract", "--list-langs")
+            {
+                RedirectStandardOutput = true,
+                RedirectStandardError = true,
+                UseShellExecute = false,
+                CreateNoWindow = true
+            };
+
+            using Process? process = Process.Start(psi);
+            if (process == null) return _installedCodes = [];
+
+            string output = process.StandardOutput.ReadToEnd();
+            process.WaitForExit(10000);
+
+            // First line is a "List of available languages" header.
+            _installedCodes = output.Split('\n', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries)
+                .Skip(1)
+                .ToArray();
+        }
+        catch (System.ComponentModel.Win32Exception)
+        {
+            _installedCodes = [];
+        }
+
+        return _installedCodes;
+    }
+
+    private static string CodeToTag(string code)
+    {
+        if (SpecialCultures.TryGetValue(code, out string? tag)) return tag;
+
+        foreach (CultureInfo culture in CultureInfo.GetCultures(CultureTypes.NeutralCultures))
+        {
+            if (culture.ThreeLetterISOLanguageName.Equals(code, StringComparison.OrdinalIgnoreCase))
+            {
+                return culture.Name;
+            }
+        }
+
+        return code;
+    }
+
+    private static string TagToCode(string tag)
+    {
+        foreach (KeyValuePair<string, string> pair in SpecialCultures)
+        {
+            if (pair.Value.Equals(tag, StringComparison.OrdinalIgnoreCase)) return pair.Key;
+        }
+
+        try { return CultureInfo.GetCultureInfo(tag).ThreeLetterISOLanguageName; }
+        catch (CultureNotFoundException) { return tag; }
     }
 }

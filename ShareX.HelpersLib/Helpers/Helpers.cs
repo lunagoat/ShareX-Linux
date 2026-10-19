@@ -379,17 +379,7 @@ namespace ShareX.HelpersLib
 
         public static void PlaySound(Stream stream)
         {
-            if (stream != null)
-            {
-                Task.Run(() =>
-                {
-                    using (stream)
-                    using (SoundPlayer soundPlayer = new SoundPlayer(stream))
-                    {
-                        soundPlayer.Play();
-                    }
-                });
-            }
+            PlaySoundSync(stream);
         }
 
         public static void PlaySoundSync(Stream stream)
@@ -398,10 +388,21 @@ namespace ShareX.HelpersLib
             {
                 Task.Run(() =>
                 {
-                    using (stream)
-                    using (SoundPlayer soundPlayer = new SoundPlayer(stream))
+                    string tempPath = Path.Combine(Path.GetTempPath(), "sharex-sound-" + Guid.NewGuid().ToString("N") + ".wav");
+
+                    try
                     {
-                        soundPlayer.PlaySync();
+                        using (stream)
+                        using (FileStream fileStream = File.Create(tempPath))
+                        {
+                            stream.CopyTo(fileStream);
+                        }
+
+                        PlaySoundFile(tempPath);
+                    }
+                    finally
+                    {
+                        try { File.Delete(tempPath); } catch { }
                     }
                 });
             }
@@ -411,13 +412,38 @@ namespace ShareX.HelpersLib
         {
             if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
             {
-                Task.Run(() =>
+                Task.Run(() => PlaySoundFile(filePath));
+            }
+        }
+
+        // Linux sound playback: tries the common players in order of preference until one is present.
+        private static void PlaySoundFile(string filePath)
+        {
+            string[][] players =
+            {
+                new[] { "pw-play", filePath },
+                new[] { "paplay", filePath },
+                new[] { "aplay", "-q", filePath },
+                new[] { "ffplay", "-nodisp", "-autoexit", "-loglevel", "quiet", filePath }
+            };
+
+            foreach (string[] player in players)
+            {
+                try
                 {
-                    using (SoundPlayer soundPlayer = new SoundPlayer(filePath))
+                    ProcessStartInfo psi = new ProcessStartInfo(player[0]) { UseShellExecute = false, CreateNoWindow = true };
+                    for (int i = 1; i < player.Length; i++) psi.ArgumentList.Add(player[i]);
+
+                    using (Process process = Process.Start(psi))
                     {
-                        soundPlayer.PlaySync();
+                        process?.WaitForExit(30000);
+                        return;
                     }
-                });
+                }
+                catch (System.ComponentModel.Win32Exception)
+                {
+                    // player not installed, try the next one
+                }
             }
         }
 
