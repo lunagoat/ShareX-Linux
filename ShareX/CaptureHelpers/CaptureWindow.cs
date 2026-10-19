@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -25,6 +25,8 @@
 
 using ShareX.HelpersLib;
 using System;
+using System.Drawing;
+using System.Linq;
 using System.Threading;
 
 namespace ShareX
@@ -51,7 +53,14 @@ namespace ShareX
             {
                 ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.Activate(WindowHandle);
                 Thread.Sleep(100);
-                TaskMetadata linuxMetadata = CreateMetadata();
+                Rectangle windowRect = CaptureHelpers.GetWindowRectangle(WindowHandle);
+                TaskMetadata linuxMetadata = CreateMetadata(windowRect);
+                var window = ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows().FirstOrDefault(w => w.Handle == WindowHandle);
+                if (window != null)
+                {
+                    linuxMetadata.WindowTitle = window.Title;
+                    linuxMetadata.ProcessName = window.ClassName;
+                }
                 linuxMetadata.Image = TaskHelpers.GetScreenshot(taskSettings).CaptureWindow(WindowHandle);
                 return linuxMetadata;
             }

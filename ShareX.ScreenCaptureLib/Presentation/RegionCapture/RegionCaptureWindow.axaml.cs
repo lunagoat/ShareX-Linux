@@ -221,6 +221,17 @@ public partial class RegionCaptureWindow : Window
             return;
         }
 
+        if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None)
+        {
+            e.Handled = true;
+            if (!_regionToolActive && _editorWorkspace.CancelActiveInteractionOrSelection())
+            {
+                return;
+            }
+            CancelCapture();
+            return;
+        }
+
         if (_regionToolActive && _interaction == RegionInteraction.Creating &&
             (e.Key is Key.LeftShift or Key.RightShift))
         {
@@ -229,7 +240,7 @@ public partial class RegionCaptureWindow : Window
             return;
         }
 
-        if (_regionToolActive && e.Key == Key.Enter && HasValidSelection())
+        if (e.Key == Key.Enter && HasValidSelection())
         {
             e.Handled = true;
             Complete(_regionOverlay.SelectionRectangle);

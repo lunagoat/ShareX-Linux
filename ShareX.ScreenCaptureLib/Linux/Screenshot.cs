@@ -44,7 +44,13 @@ namespace ShareX.ScreenCaptureLib
         public Bitmap CaptureRectangle(Rectangle rect) => LinuxScreenCapture.Capture(rect, CaptureCursor);
         public Bitmap CaptureFullscreen() => CaptureRectangle(LinuxScreenCapture.DesktopBounds);
         public Bitmap CaptureActiveMonitor() => CaptureRectangle(CaptureHelpers.GetActiveScreenBounds());
-        public Bitmap CaptureWindow(IntPtr handle) => handle == IntPtr.Zero ? null : CaptureRectangle(CaptureHelpers.GetWindowRectangle(handle));
+        public Bitmap CaptureWindow(IntPtr handle)
+        {
+            if (handle == IntPtr.Zero) return null;
+            Rectangle rect = CaptureHelpers.GetWindowRectangle(handle);
+            if (rect.Width <= 0 || rect.Height <= 0) return null;
+            return CaptureRectangle(rect);
+        }
         public Bitmap CaptureActiveWindow() => CaptureWindow(LinuxCaptureWindows.ActiveHandle);
         // Wayland captures the compositor output, including decorations, opacity and shadows.
         // It cannot reconstruct alpha behind an already composited window.

@@ -37,7 +37,7 @@ namespace ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 /// <summary>UI-thread boundary for the Avalonia region capture experience.</summary>
 public static class RegionCaptureIntegration
 {
-    public static Rectangle LastRegionRectangle { get; internal set; }
+    public static Rectangle LastRegionRectangle { get; set; }
 
     public static Task<AvaloniaRegionCaptureResult?> CaptureAsync(AvaloniaRegionCaptureRequest request)
     {
