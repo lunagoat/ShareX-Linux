@@ -108,6 +108,7 @@ public class SingleInstanceManager : IDisposable
                 // Acknowledge delivery before executing UI work. Preserve receive order.
                 OnArgumentsReceived(args);
                 await stream.WriteAsync(new byte[] { 1 }, deadline.Token).ConfigureAwait(false);
+                await stream.FlushAsync(deadline.Token).ConfigureAwait(false);
             }
             catch (OperationCanceledException) { }
             catch (Exception ex) when (!cancellation.IsCancellationRequested) { DebugHelper.WriteException(ex); }
@@ -142,7 +143,16 @@ public class SingleInstanceManager : IDisposable
             BinaryPrimitives.WriteInt32LittleEndian(header, message.Length);
             await stream.WriteAsync(header, deadline.Token).ConfigureAwait(false);
             await stream.WriteAsync(message, deadline.Token).ConfigureAwait(false);
-            await stream.ReadExactlyAsync(new byte[1], deadline.Token).ConfigureAwait(false);
+            await stream.FlushAsync(deadline.Token).ConfigureAwait(false);
+            try
+            {
+                byte[] ack = new byte[1];
+                await stream.ReadExactlyAsync(ack, deadline.Token).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                DebugHelper.WriteException(ex);
+            }
             return;
         }
     }

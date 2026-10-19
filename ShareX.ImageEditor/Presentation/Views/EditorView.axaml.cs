@@ -960,6 +960,10 @@ namespace ShareX.ImageEditor.Presentation.Views
         public void LoadWorkspaceImage(SKBitmap bitmap)
         {
             ArgumentNullException.ThrowIfNull(bitmap);
+            if (bitmap.Handle == IntPtr.Zero)
+            {
+                throw new ArgumentException("Bitmap handle is invalid.", nameof(bitmap));
+            }
 
             if (_canvasControl == null)
             {
@@ -981,15 +985,23 @@ namespace ShareX.ImageEditor.Presentation.Views
         /// <summary>Reads a pixel from the live raster owned by an embedded workspace.</summary>
         public SKColor GetWorkspacePixel(int x, int y)
         {
+            if (_workspaceDisposed) return SKColors.Transparent;
             SKBitmap? sourceImage = _editorCore.SourceImage;
-            if (sourceImage == null ||
+            if (sourceImage == null || sourceImage.Handle == IntPtr.Zero ||
                 x < 0 || y < 0 ||
                 x >= _editorCore.CanvasSize.Width || y >= _editorCore.CanvasSize.Height)
             {
                 return SKColors.Transparent;
             }
 
-            return sourceImage.GetPixel(x, y);
+            try
+            {
+                return sourceImage.GetPixel(x, y);
+            }
+            catch
+            {
+                return SKColors.Transparent;
+            }
         }
 
         /// <summary>Deletes the topmost annotation under a point supplied by an embedded host.</summary>

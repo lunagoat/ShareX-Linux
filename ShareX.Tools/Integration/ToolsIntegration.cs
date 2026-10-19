@@ -76,7 +76,8 @@ public static class ToolsIntegration
         {
             try
             {
-                completion.TrySetResult(await Linux.ScreenColorPicker.PickAsync(options));
+                var picker = new ShareX.AvaloniaUI.Windows.ScreenColorPickerWindow(options);
+                completion.TrySetResult(await picker.PickAsync());
             }
             catch (Exception ex)
             {

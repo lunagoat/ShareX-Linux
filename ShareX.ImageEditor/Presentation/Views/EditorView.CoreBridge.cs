@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -80,7 +80,13 @@ namespace ShareX.ImageEditor.Presentation.Views
             if (_workspaceDisposed || _canvasControl == null) return;
             // Hybrid rendering: Render only background + raster effects from Core
             // Vector annotations are handled by Avalonia Canvas
-            _canvasControl.Draw(canvas => _editorCore.Render(canvas));
+            _canvasControl.Draw(canvas =>
+            {
+                if (!_workspaceDisposed)
+                {
+                    _editorCore.Render(canvas);
+                }
+            });
         }
 
         private void RequestRenderCore()
@@ -190,8 +196,9 @@ namespace ShareX.ImageEditor.Presentation.Views
         /// </summary>
         public SkiaSharp.SKBitmap? GetSnapshot(Rect sourceRectangle)
         {
+            if (_workspaceDisposed) return null;
             SkiaSharp.SKBitmap? sourceImage = _editorCore.SourceImage;
-            if (sourceImage == null)
+            if (sourceImage == null || sourceImage.Handle == IntPtr.Zero)
             {
                 return null;
             }

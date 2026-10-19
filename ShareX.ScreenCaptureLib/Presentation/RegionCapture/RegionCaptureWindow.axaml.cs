@@ -479,6 +479,12 @@ public partial class RegionCaptureWindow : Window
             if (OperatingSystem.IsLinux()) await LinuxCaptureOverlay.PlaceAsync(this, _request.ScreenBounds);
             else Helpers.EnsureWindowPosition(this, _request.ScreenBounds.X, _request.ScreenBounds.Y);
             UpdatePixelTransforms();
+            if (_request.Screenshot == null || _request.Screenshot.Handle == IntPtr.Zero)
+            {
+                CancelCapture();
+                return;
+            }
+
             _editorWorkspace.ConfigureForFullscreenWorkspace();
             _editorWorkspace.LoadWorkspaceImage(_request.Screenshot);
             _workspaceOwnsScreenshot = true;
@@ -1076,7 +1082,7 @@ public partial class RegionCaptureWindow : Window
 
     private void UpdateHover(Point imagePoint)
     {
-        if (_request == null || HasValidSelection() || _interaction != RegionInteraction.None)
+        if (_closing || _request == null || HasValidSelection() || _interaction != RegionInteraction.None)
         {
             _regionOverlay.HoverRectangle = default;
             _hoverCandidate = null;
@@ -1229,7 +1235,7 @@ public partial class RegionCaptureWindow : Window
 
     private void UpdateHud(Point imagePoint)
     {
-        if (_request == null)
+        if (_closing || _request == null)
         {
             return;
         }
