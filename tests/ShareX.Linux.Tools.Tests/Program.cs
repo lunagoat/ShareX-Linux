@@ -7,6 +7,7 @@ using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ShareX.AvaloniaUI.Integration;
 using ShareX.AvaloniaUI.Theming;
+using ShareX.AvaloniaUI.Windows;
 using ShareX.HelpersLib;
 using ShareX.Tools;
 using ShareX.Tools.Linux;
@@ -69,6 +70,7 @@ internal static class Program
             image.Save(SecondImage, SKEncodedImageFormat.Png);
         }
         await Check("image formats resize watermark compare icon", ImageOperations);
+        await Check("combiner splitter thumbnailer", CombinerSplitterThumbnailer);
         await Check("directory indexer all formats", DirectoryIndex);
         await Check("animated GIF maker and trimmer", GifOperations);
         await Check("OCR tesseract language list and auto-copy", Ocr);
@@ -76,6 +78,9 @@ internal static class Program
         await Check("QR generation and scan", Qr);
         await Check("background remover CPU ONNX inference and cache", Onnx);
         await Check("video converter thumbnailer trimmer", Videos);
+        await Check("metadata reader and stripper", MetadataTest);
+        await Check("tool viewmodels and features", ToolViewModels);
+        await Check("screen color picker sampling", ColorPickerSampleTest);
         await Check("network probe localhost", async () =>
         {
             var result = await new NetworkMonitorProbe().ProbeAsync(new("Localhost", [new("loopback", "127.0.0.1")]), TimeSpan.FromSeconds(2), default);
@@ -214,6 +219,166 @@ internal static class Program
         Require(File.Exists(trim), "Video trim failed");
     }
 
+    private static async Task CombinerSplitterThumbnailer()
+    {
+        using SKBitmap source = SkiaImageHelpers.LoadImage(ImagePath);
+
+        // Combine
+        using var combinedH = SkiaImageHelpers.CombineImages([ImagePath, SecondImage], ImageOrientation.Horizontal);
+        Require(combinedH != null && combinedH.Width == 1280 && combinedH.Height == 240, "Combine horizontal failed");
+        using var combinedV = SkiaImageHelpers.CombineImages([ImagePath, SecondImage], ImageOrientation.Vertical);
+        Require(combinedV != null && combinedV.Width == 640 && combinedV.Height == 480, "Combine vertical failed");
+
+        bool combinedViaVm = false;
+        var combinerVm = new ImageCombinerViewModel(new ImageCombinerOptions(), new ImageCombinerServices
+        {
+            CreatePreviewAsync = req => Task.FromResult<byte[]?>(File.ReadAllBytes(ImagePath)),
+            ProcessAsync = req => { combinedViaVm = true; return Task.CompletedTask; }
+        }, [ImagePath, SecondImage]);
+        Require(combinerVm.CanCombine, "ImageCombinerViewModel CanCombine false");
+        await combinerVm.CombineCommand.ExecuteAsync(null);
+        Require(combinedViaVm, "ImageCombinerViewModel ProcessAsync was not called");
+
+        // Split
+        var split = SkiaImageHelpers.SplitImage(source, 2, 2);
+        Require(split.Count == 4, "SplitImage count != 4");
+        foreach (var tile in split)
+        {
+            Require(tile.Width == 320 && tile.Height == 120, "Split tile dimension mismatch");
+            tile.Dispose();
+        }
+
+        var splitterVm = new ImageSplitterViewModel();
+        splitterVm.SetImageFile(ImagePath);
+        splitterVm.OutputFolderPath = Root;
+        splitterVm.RowCount = 2;
+        splitterVm.ColumnCount = 2;
+        Require(splitterVm.CanProcess, "ImageSplitterViewModel CanProcess false");
+        await splitterVm.SplitImageCommand.ExecuteAsync(null);
+        string baseName = Path.GetFileNameWithoutExtension(ImagePath);
+        Require(File.Exists(Path.Combine(Root, $"{baseName}1.png")), "Split output tile 1 missing");
+        Require(File.Exists(Path.Combine(Root, $"{baseName}4.png")), "Split output tile 4 missing");
+
+        // Thumbnailer
+        using var thumb = SkiaImageHelpers.CreateThumbnail(source, 160, 60);
+        Require(thumb.Width <= 160 && thumb.Height <= 60 && thumb.Width > 0 && thumb.Height > 0, "Thumbnail dimension mismatch");
+
+        var thumbnailerVm = new ImageThumbnailerViewModel();
+        thumbnailerVm.AddFiles([ImagePath]);
+        thumbnailerVm.OutputFolderPath = Root;
+        thumbnailerVm.Width = 120;
+        thumbnailerVm.Height = 80;
+        Require(thumbnailerVm.CanGenerate, "ImageThumbnailerViewModel CanGenerate false");
+        await thumbnailerVm.GenerateCommand.ExecuteAsync(null);
+        string thumbPath = Path.Combine(Root, baseName + "_th.jpg");
+        Require(File.Exists(thumbPath), "ImageThumbnailer output missing: " + thumbPath);
+    }
+
+    private static async Task MetadataTest()
+    {
+        var metaPng = await MetadataService.ReadMetadataAsync(ImagePath);
+        Require(metaPng.Count > 0, "PNG metadata empty");
+        Require(metaPng.Any(m => m.Tag.Contains("Width") || m.Tag.Contains("Height")), "PNG metadata missing dimension tags");
+
+        string jpegPath = Path.Combine(Root, "test-meta.jpg");
+        using (var bmp = SkiaImageHelpers.LoadImage(ImagePath))
+        {
+            SkiaImageHelpers.SaveJPEG(bmp, jpegPath, 90);
+        }
+        var metaJpg = await MetadataService.ReadMetadataAsync(jpegPath);
+        Require(metaJpg.Count > 0, "JPEG metadata empty");
+        Require(MetadataService.CanStripMetadata(jpegPath), "JPEG should be strippable");
+        await MetadataService.StripMetadataAsync(jpegPath);
+        Require(File.Exists(jpegPath) && new FileInfo(jpegPath).Length > 0, "Stripped JPEG missing or empty");
+        using var stripped = SkiaImageHelpers.LoadImage(jpegPath);
+        Require(stripped.Width == 640 && stripped.Height == 240, "Stripped JPEG dimension mismatch");
+    }
+
+    private static Task ColorPickerSampleTest()
+    {
+        using SKBitmap sampleBmp = new(100, 100, SKColorType.Bgra8888, SKAlphaType.Premul);
+        using SKCanvas canvas = new(sampleBmp);
+        canvas.Clear(new SKColor(255, 128, 64, 255));
+        var picker = new ScreenColorPicker(sampleBmp, new PixelRect(0, 0, 100, 100), 1.0, new ScreenColorPickerOptions(), _ => { });
+        var sample = picker.Sample(new Point(50, 50));
+        Require(sample.Color.R == 255 && sample.Color.G == 128 && sample.Color.B == 64, "ScreenColorPicker sampled wrong color: " + sample.Color);
+        picker.Close();
+        return Task.CompletedTask;
+    }
+
+    private static async Task ToolViewModels()
+    {
+        // QRCodeViewModel
+        var qrVm = new QRCodeViewModel(new QRCodeServices
+        {
+            GeneratePreviewAsync = (t, s) => Task.FromResult<byte[]?>(File.ReadAllBytes(ImagePath)),
+            ScanAsync = (m, p) => Task.FromResult<string[]?>(["ShareX Linux QR 12345"]),
+            SaveAsync = (t, s, p) => Task.FromResult(true),
+            CopyImage = (t, s) => { },
+            UploadImage = (t, s) => { }
+        }, new QRCodeWindowOptions { InitialText = "ShareX Linux QR 12345" });
+        await qrVm.InitializeAsync();
+        Require(qrVm.HasQRCode, "QRCodeViewModel failed to generate preview");
+        Require(qrVm.HasValidContent, "QRCodeViewModel content invalid");
+
+        // HashCheckerViewModel
+        var hashVm = new HashCheckerViewModel(async (fp, alg, prog, ct) =>
+        {
+            return await new HashChecker().Start(fp, (HashType)alg);
+        }, filePath: ImagePath);
+        hashVm.SelectedAlgorithm = HashCheckerViewModel.Algorithms.First(a => a.Algorithm == HashCheckerAlgorithm.Sha256);
+        await hashVm.CheckCommand.ExecuteAsync(null);
+        Require(hashVm.ResultHash.Equals(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(ImagePath))), StringComparison.OrdinalIgnoreCase), "HashCheckerViewModel SHA256 mismatch");
+
+        // InspectWindowViewModel
+        var inspectVm = new InspectWindowViewModel();
+        inspectVm.ReloadWindowList();
+        Console.WriteLine($"  InspectWindow list: {inspectVm.Windows.Count} items");
+        if (DesktopTools.Hyprland)
+        {
+            Require(inspectVm.Windows.Count > 0, "InspectWindow list empty on Hyprland");
+            inspectVm.SelectedListItem = inspectVm.Windows[0];
+            Require(inspectVm.HasSelection, "InspectWindow failed to select window");
+            Require(inspectVm.Details.Count > 0, "InspectWindow details empty");
+        }
+
+        // ClipboardViewerViewModel
+        ClipboardHelpers.CopyText("ShareX Linux Clipboard Test");
+        var clipVm = new ClipboardViewerViewModel();
+        clipVm.RefreshCommand.Execute(null);
+        Console.WriteLine($"  Clipboard formats: {string.Join(", ", clipVm.Formats)}");
+        Require(clipVm.HasFormats, "ClipboardViewer found no formats");
+
+        // MonitorTestViewModel
+        var monVm = new MonitorTestViewModel();
+        foreach (var mode in Enum.GetValues<MonitorTestMode>())
+        {
+            monVm.SelectMode(mode);
+            Require(monVm.SelectedMode == mode, "MonitorTest mode select failed: " + mode);
+        }
+
+        // AnalyzeImageViewModel
+        var aiVm = new AnalyzeImageViewModel(ImagePath, new AIOptions());
+        Require(aiVm.HasImage, "AnalyzeImageViewModel failed to load image");
+        Require(aiVm.PresetPrompts.Count > 0, "AnalyzeImageViewModel preset prompts empty");
+
+        // RemoteStorageBrowserViewModel with mock provider
+        var mockProvider = new MockRemoteStorageProvider();
+        var storageVm = new RemoteStorageBrowserViewModel([mockProvider]);
+        await storageVm.InitializeAsync();
+        Require(storageVm.Items.Count == 2, "RemoteStorage items count mismatch");
+        var folderItem = storageVm.Items.First(i => i.IsFolder);
+        await storageVm.OpenFolderAsync(folderItem);
+        Require(storageVm.Items.Count == 1, "RemoteStorage folder navigation failed");
+        await storageVm.GoUpAsync();
+        Require(storageVm.Items.Count == 2, "RemoteStorage GoUp failed");
+
+        // PinToScreen
+        PinToScreenManager.Pin(File.ReadAllBytes(ImagePath), new PinToScreenOptions(), _ => { });
+        await Task.Delay(100);
+        PinToScreenManager.CloseAll();
+    }
+
     private static async Task Windows()
     {
         var toolTypes = typeof(VideoPlayerWindow).Assembly.GetTypes().Where(t => t.IsPublic && !t.IsAbstract && typeof(Window).IsAssignableFrom(t)
@@ -237,7 +402,9 @@ internal static class Program
                 {
                     try
                     {
-                        var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && w.Text == window.Title);
+                        var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(window.Title) && w.Text == window.Title)
+                            ?? DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(window.Title) && (w.Text.Contains(window.Title) || window.Title.Contains(w.Text)))
+                            ?? DesktopTools.GetWindows().LastOrDefault(w => w.ProcessId == Environment.ProcessId);
                         if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
                         {
                             ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
@@ -251,20 +418,118 @@ internal static class Program
             catch (Exception ex) { Failures.Add(type.Name + ": " + ex); }
             finally { window?.Close(); }
         }
+
+        // ColorPickerWindow from ShareX.HelpersLib
+        try
+        {
+            var colorPicker = new ColorPickerWindow();
+            colorPicker.Show();
+            await Task.Delay(Live ? 300 : 80);
+            colorPicker.UpdateLayout();
+            using RenderTargetBitmap cpBitmap = new(new PixelSize(Math.Max(1, (int)colorPicker.Bounds.Width), Math.Max(1, (int)colorPicker.Bounds.Height)), new Vector(96, 96));
+            cpBitmap.Render(colorPicker);
+            cpBitmap.Save(Path.Combine(Root, "ColorPickerWindow" + (Live ? "-live" : "-headless") + ".png"), PngBitmapEncoderOptions.Default);
+            if (Live)
+            {
+                try
+                {
+                    var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(colorPicker.Title) && w.Text == colorPicker.Title)
+                        ?? DesktopTools.GetWindows().LastOrDefault(w => w.ProcessId == Environment.ProcessId);
+                    if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
+                    {
+                        ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
+                            Path.Combine(Root, "ColorPickerWindow-grim.png")]).GetAwaiter().GetResult();
+                    }
+                }
+                catch { }
+            }
+            colorPicker.Close();
+            Console.WriteLine("  window ColorPickerWindow");
+        }
+        catch (Exception ex) { Failures.Add("ColorPickerWindow: " + ex); }
+
         // The mouse settings window has no parameterless constructor.
-        var mouse = new MouseHighlighterWindow(new(), null);
-        mouse.Show();
-        await Task.Delay(100);
-        mouse.Close();
+        try
+        {
+            var mouse = new MouseHighlighterWindow(new(), null);
+            mouse.Show();
+            await Task.Delay(Live ? 300 : 80);
+            mouse.UpdateLayout();
+            using RenderTargetBitmap mBitmap = new(new PixelSize(Math.Max(1, (int)mouse.Bounds.Width), Math.Max(1, (int)mouse.Bounds.Height)), new Vector(96, 96));
+            mBitmap.Render(mouse);
+            mBitmap.Save(Path.Combine(Root, "MouseHighlighterWindow" + (Live ? "-live" : "-headless") + ".png"), PngBitmapEncoderOptions.Default);
+            if (Live)
+            {
+                try
+                {
+                    var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(mouse.Title) && w.Text == mouse.Title)
+                        ?? DesktopTools.GetWindows().LastOrDefault(w => w.ProcessId == Environment.ProcessId);
+                    if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
+                    {
+                        ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
+                            Path.Combine(Root, "MouseHighlighterWindow-grim.png")]).GetAwaiter().GetResult();
+                    }
+                }
+                catch { }
+            }
+            mouse.Close();
+            Console.WriteLine("  window MouseHighlighterWindow");
+        }
+        catch (Exception ex) { Failures.Add("MouseHighlighterWindow: " + ex); }
+
+        // PinToScreenWindow active with real image
+        try
+        {
+            var pin = new PinToScreenWindow(File.ReadAllBytes(ImagePath), new PinToScreenOptions { Border = true, Shadow = true }, _ => { });
+            pin.Show();
+            await Task.Delay(Live ? 300 : 80);
+            pin.UpdateLayout();
+            using RenderTargetBitmap pBitmap = new(new PixelSize(Math.Max(1, (int)pin.Bounds.Width), Math.Max(1, (int)pin.Bounds.Height)), new Vector(96, 96));
+            pBitmap.Render(pin);
+            pBitmap.Save(Path.Combine(Root, "PinToScreenWindow-Active" + (Live ? "-live" : "-headless") + ".png"), PngBitmapEncoderOptions.Default);
+            if (Live)
+            {
+                try
+                {
+                    var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(pin.Title) && w.Text == pin.Title)
+                        ?? DesktopTools.GetWindows().LastOrDefault(w => w.ProcessId == Environment.ProcessId);
+                    if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
+                    {
+                        ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
+                            Path.Combine(Root, "PinToScreenWindow-Active-grim.png")]).GetAwaiter().GetResult();
+                    }
+                }
+                catch { }
+            }
+            pin.Close();
+            Console.WriteLine("  window PinToScreenWindow (active with image)");
+        }
+        catch (Exception ex) { Failures.Add("PinToScreenWindow-Active: " + ex); }
+
         // A real OCR image validates source preview, languages and result layout.
         var ocr = new OCRWindow(File.ReadAllBytes(ImagePath), OCRHelper.AvailableLanguages, new OCROptions { SingleLine = true },
             async (data, language, scale, line) => { using var b = SKBitmap.Decode(data); return await OCRHelper.OCR(b, language, scale, line); },
             () => Task.FromResult<byte[]?>(null));
         ocr.Show();
-        await Task.Delay(600);
+        await Task.Delay(Live ? 600 : 200);
+        ocr.UpdateLayout();
         using (RenderTargetBitmap bitmap = new(new PixelSize(1000, 700), new Vector(96, 96)))
         {
             bitmap.Render(ocr); bitmap.Save(Path.Combine(Root, "OCR-result.png"), PngBitmapEncoderOptions.Default);
+        }
+        if (Live)
+        {
+            try
+            {
+                var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && !string.IsNullOrEmpty(ocr.Title) && w.Text == ocr.Title)
+                    ?? DesktopTools.GetWindows().LastOrDefault(w => w.ProcessId == Environment.ProcessId);
+                if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
+                {
+                    ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
+                        Path.Combine(Root, "OCRWindow-grim.png")]).GetAwaiter().GetResult();
+                }
+            }
+            catch { }
         }
         ocr.Close();
     }
@@ -331,5 +596,30 @@ internal static class Program
             Require(DesktopTools.GetWindows().Any(w => w.ProcessId == Environment.ProcessId && w.Text == "ShareX mouse highlighter overlay"), "No halo overlay");
         }
         finally { window.Close(); }
+    }
+
+    private sealed class MockRemoteStorageProvider : IRemoteStorageProvider
+    {
+        public string DisplayName => "MockStorage";
+        public string RootDisplayName => "/";
+        public string RootPath => "/";
+        public RemoteStorageProviderCapabilities Capabilities => RemoteStorageProviderCapabilities.Download | RemoteStorageProviderCapabilities.Upload | RemoteStorageProviderCapabilities.CreateFolder;
+
+        public string GetDisplayPath(string path) => path;
+        public string? GetParentPath(string path) => path == "/" ? null : "/";
+        public Task<IReadOnlyList<RemoteStorageItem>> GetItemsAsync(string path, CancellationToken cancellationToken = default)
+        {
+            IReadOnlyList<RemoteStorageItem> items = path == "/"
+                ? [new RemoteStorageItem("Folder1", "/Folder1", true), new RemoteStorageItem("file1.png", "/file1.png", false, 1024, DateTimeOffset.UtcNow)]
+                : [new RemoteStorageItem("nested.txt", $"{path}/nested.txt", false, 512, DateTimeOffset.UtcNow)];
+            return Task.FromResult(items);
+        }
+        public Task DownloadAsync(RemoteStorageItem item, Stream destination, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task UploadAsync(string directoryPath, string fileName, Stream source, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task CreateFolderAsync(string directoryPath, string folderName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task RenameAsync(RemoteStorageItem item, string newName, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public Task<bool> HasChildrenAsync(RemoteStorageItem folder, CancellationToken cancellationToken = default) => Task.FromResult(true);
+        public Task DeleteAsync(RemoteStorageItem item, CancellationToken cancellationToken = default) => Task.CompletedTask;
+        public string? GetUrl(RemoteStorageItem item) => "https://example.com" + item.Path;
     }
 }
