@@ -331,4 +331,4 @@ ASALocalRun/
 # ShareX
 Output/
 APIKeysLocal.cs
-ResXManager.config.xml
+ResXManager.config.xml.cache/
