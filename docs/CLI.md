@@ -35,7 +35,7 @@ These are handled by the `sharex` shell wrapper, before ShareX itself is started
 | `--version` | Print the ShareX version and exit. |
 | `--install-binds [hyprland\|hyprland-conf\|sway] [--global]` | Write ShareX key binds into your Hyprland/sway config (marked block, timestamped backup, keys you already bind are skipped, then reloads the compositor). Autodetects the compositor. Safe to repeat. |
 | `--remove-binds [...]` | Remove that block again. |
-| `--print-binds [hyprland\|hyprland-conf\|sway] [--global]` | Print compositor key-bind lines for *your* configured hotkeys (default `hyprland`, the Lua syntax). `--global` prints `hl.dsp.global("sharex:<Action>")` binds for the portal shortcuts instead of `sharex -<Action>` commands. Needs no display. |
+| `--print-binds [hyprland\|hyprland-conf\|sway\|niri\|gnome\|kde] [--global]` | Print key-bind lines for *your* configured hotkeys (default `hyprland`, the Lua syntax; `niri` prints KDL for `config.kdl`, `gnome` prints a `gsettings` script to pipe into `sh`, `kde` explains the System Settings route). `--global` prints `hl.dsp.global("sharex:<Action>")` binds for the portal shortcuts instead of `sharex -<Action>` commands. Needs no display. |
 
 The wrapper also translates file-manager/MIME invocations: a `.sxcu` file becomes
 `-CustomUploader <file>` and a `.sxie` file becomes `-ImageEffect <file>`, which is what

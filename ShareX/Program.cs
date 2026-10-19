@@ -106,6 +106,15 @@ internal static class Program
 
     private static void Run(string[] args)
     {
+        string displayProblem = DisplayGuard.Check();
+        if (displayProblem != null)
+        {
+            Console.Error.WriteLine("ShareX: " + displayProblem);
+            try { System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo("notify-send", new[] { "-a", "ShareX", "ShareX cannot start", displayProblem }) { UseShellExecute = false })?.Dispose(); } catch (Exception) { }
+            Environment.ExitCode = 3;
+            return;
+        }
+
         DebugHelper.WriteLine("ShareX starting.");
         DebugHelper.WriteLine("Version: " + ApplicationInfo.VersionText);
         DebugHelper.WriteLine("Build: " + ApplicationInfo.Build);

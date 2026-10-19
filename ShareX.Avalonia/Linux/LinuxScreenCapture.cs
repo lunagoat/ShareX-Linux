@@ -73,8 +73,76 @@ public static class LinuxScreenCapture
             }).ToArray();
     }
 
+    /// <summary>`niri msg --json outputs`: a map of output name to an object with a "logical" rectangle and scale.</summary>
+    public static LinuxCaptureMonitor[] ParseNiriOutputs(string json, string? focusedName = null)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        List<LinuxCaptureMonitor> monitors = [];
+
+        foreach (JsonProperty output in document.RootElement.EnumerateObject())
+        {
+            // Disabled outputs have no logical rectangle.
+            if (!output.Value.TryGetProperty("logical", out JsonElement logical) || logical.ValueKind != JsonValueKind.Object) continue;
+            double scale = logical.TryGetProperty("scale", out var s) && s.ValueKind == JsonValueKind.Number ? s.GetDouble() : 1;
+            if (!double.IsFinite(scale) || scale <= 0) scale = 1;
+            string name = output.Value.TryGetProperty("name", out var n) && n.ValueKind == JsonValueKind.String ? n.GetString()! : output.Name;
+            monitors.Add(new LinuxCaptureMonitor(name, new Rectangle(logical.GetProperty("x").GetInt32(), logical.GetProperty("y").GetInt32(),
+                logical.GetProperty("width").GetInt32(), logical.GetProperty("height").GetInt32()), scale, name == focusedName));
+        }
+
+        return monitors.ToArray();
+    }
+
+    /// <summary>`kscreen-doctor -j` (KDE Plasma): outputs with a logical position, a physical mode size, a scale and a rotation.</summary>
+    public static LinuxCaptureMonitor[] ParseKScreenDoctor(string json)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+        List<LinuxCaptureMonitor> monitors = [];
+
+        foreach (JsonElement output in document.RootElement.GetProperty("outputs").EnumerateArray())
+        {
+            if (output.TryGetProperty("enabled", out var enabled) && enabled.ValueKind == JsonValueKind.False) continue;
+            if (output.TryGetProperty("connected", out var connected) && connected.ValueKind == JsonValueKind.False) continue;
+            if (!output.TryGetProperty("pos", out var pos) || !output.TryGetProperty("size", out var size)) continue;
+
+            double scale = output.TryGetProperty("scale", out var s) && s.ValueKind == JsonValueKind.Number ? s.GetDouble() : 1;
+            if (!double.IsFinite(scale) || scale <= 0) scale = 1;
+            int width = size.GetProperty("width").GetInt32(), height = size.GetProperty("height").GetInt32();
+            int rotation = output.TryGetProperty("rotation", out var r) && r.ValueKind == JsonValueKind.Number ? r.GetInt32() : 1;
+            if (rotation is 2 or 8) (width, height) = (height, width);
+
+            monitors.Add(new LinuxCaptureMonitor(output.GetProperty("name").GetString()!,
+                new Rectangle(pos.GetProperty("x").GetInt32(), pos.GetProperty("y").GetInt32(), (int)Math.Round(width / scale), (int)Math.Round(height / scale)),
+                scale, output.TryGetProperty("primary", out var primary) && primary.ValueKind == JsonValueKind.True));
+        }
+
+        return monitors.ToArray();
+    }
+
     private static LinuxCaptureMonitor[] ReadMonitors()
     {
+        if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")))
+        {
+            try
+            {
+                string focused = null;
+                try { using JsonDocument f = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "focused-output")); focused = f.RootElement.GetProperty("name").GetString(); }
+                catch (Exception) { }
+                LinuxCaptureMonitor[] monitors = ParseNiriOutputs(LinuxCaptureProcess.Text("niri", "msg", "--json", "outputs"), focused);
+                if (monitors.Length > 0) return monitors;
+            }
+            catch (Exception) { }
+        }
+        else if (IsWayland && (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Contains("KDE", StringComparison.OrdinalIgnoreCase))
+        {
+            try
+            {
+                LinuxCaptureMonitor[] monitors = ParseKScreenDoctor(LinuxCaptureProcess.Text("kscreen-doctor", "-j"));
+                if (monitors.Length > 0) return monitors;
+            }
+            catch (Exception) { }
+        }
+
         if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
             return ParseHyprlandMonitors(LinuxCaptureProcess.Text("hyprctl", "monitors", "-j"));
         if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")))

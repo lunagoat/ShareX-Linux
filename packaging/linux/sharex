@@ -56,7 +56,7 @@ Wrapper options:
       --version         show the ShareX version
       --install-binds       add your ShareX hotkeys to your Hyprland/sway config (backup first)
       --remove-binds        take them out again
-      --print-binds [hyprland|hyprland-conf|sway] [--global]
+      --print-binds [hyprland|hyprland-conf|sway|niri|gnome|kde] [--global]
                         print the key-bind lines instead of writing them
 
 Anything else is passed to ShareX unchanged. The complete reference of every

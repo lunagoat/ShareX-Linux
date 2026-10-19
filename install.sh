@@ -70,6 +70,17 @@ hotkey_hint() {
             log "(backup first, keys you already use are skipped), run:"
             log "  sharex --install-binds"
             log "or print the lines instead with: sharex --print-binds" ;;
+        *niri*)
+            log
+            log "niri: ShareX needs xwayland-satellite installed (niri 25.08+ starts it automatically)."
+            log "Hotkeys: run  sharex --print-binds niri  and add the lines to the binds { } block of ~/.config/niri/config.kdl" ;;
+        *GNOME*|*gnome*|*ubuntu*|*Ubuntu*)
+            log
+            log "GNOME: add the hotkeys with  sharex --print-binds gnome | sh"
+            log "(the tray icon needs the AppIndicator extension)." ;;
+        *KDE*|*kde*|*plasma*)
+            log
+            log "KDE Plasma: assign keys to ShareX's actions in System Settings -> Shortcuts (free the Print key from Spectacle first)." ;;
     esac
 }
 

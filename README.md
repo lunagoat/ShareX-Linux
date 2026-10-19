@@ -71,9 +71,12 @@ for the complete matrix and how each item was checked:
 * uploads: custom uploaders, clipboard/text/URL uploads, URL shorteners, watch folders, FTP/SFTP/WebDAV/S3, after-capture and after-upload tasks, history
 * desktop integration: tray icon, notifications with actions, autostart, `.sxcu`/`.sxie` file associations, CUPS printing, encrypted settings
 
-Other sessions (sway, GNOME, KDE, plain X11) have code paths but have not been tested on real machines yet —
-reports welcome. Wayland has no way to see other applications' windows without compositor help, so window
-capture needs Hyprland, sway or X11. [README.linux.md](README.linux.md) has the per-session support matrix and troubleshooting.
+## Which desktops?
+
+Written for **Hyprland** (the only desktop it has been tested on so far) and implemented for **sway, niri, KDE Plasma, GNOME and X11
+sessions**, using each desktop's own interfaces. The app itself needs XWayland on Wayland (niri: `xwayland-satellite`). See
+[docs/COMPATIBILITY.md](docs/COMPATIBILITY.md) for the table of what each desktop uses and needs, and
+[README.linux.md](README.linux.md) for troubleshooting. Reports from other desktops are very welcome.
 
 ## Build from source
 

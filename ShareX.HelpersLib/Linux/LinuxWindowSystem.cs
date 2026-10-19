@@ -20,6 +20,7 @@ public static class LinuxWindowSystem
     private static long updated;
     public static string Backend => !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")) ? "Hyprland" :
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) ? "sway" :
+        !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) ? "niri" :
         !IsWayland ? "X11" : "Wayland (window enumeration unavailable)";
     public static bool IsWayland => Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland" ||
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
@@ -35,6 +36,8 @@ public static class LinuxWindowSystem
                 {
                     "Hyprland" => ReadHyprland(),
                     "sway" => ParseSway(LinuxCommand.Run("swaymsg", "-r", "-t", "get_tree") ?? "{}", LinuxCommand.Run("swaymsg", "-r", "-t", "get_workspaces")),
+                    "niri" => ParseNiri(LinuxCommand.Run("niri", "msg", "--json", "windows") ?? "[]", LinuxCommand.Run("niri", "msg", "--json", "workspaces") ?? "[]",
+                        LinuxCommand.Run("niri", "msg", "--json", "outputs") ?? "{}"),
                     "X11" => LinuxX11.GetWindows(),
                     _ => []
                 };
@@ -48,6 +51,10 @@ public static class LinuxWindowSystem
             return cached;
         }
     }
+
+    public static Window[] ParseNiri(string windows, string workspaces, string outputs) =>
+        ShareX.AvaloniaUI.Linux.NiriIpc.Parse(windows, workspaces, outputs)
+            .Select(w => new Window(new IntPtr(w.Id), w.Title, w.AppId, w.Pid, w.Bounds, w.Bounds, w.Visible, w.Focused)).ToArray();
 
     public static Window Find(IntPtr handle) => GetWindows().FirstOrDefault(x => x.Handle == handle);
     public static IntPtr ActiveWindow => GetWindows().FirstOrDefault(x => x.Active)?.Handle ?? IntPtr.Zero;

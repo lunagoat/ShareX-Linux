@@ -21,21 +21,20 @@ internal static class CompositorBinds
 
     public static BindDialect? Detect()
     {
-        string desktop = (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "") + (Environment.GetEnvironmentVariable("XDG_SESSION_DESKTOP") ?? "");
+        string desktop = ((Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "") + ":" + (Environment.GetEnvironmentVariable("XDG_SESSION_DESKTOP") ?? "")).ToLowerInvariant();
         string configDir = ConfigHome();
 
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")) || desktop.Contains("Hyprland", StringComparison.OrdinalIgnoreCase)
-            || File.Exists(Path.Combine(configDir, "hypr", "hyprland.lua")) || File.Exists(Path.Combine(configDir, "hypr", "hyprland.conf")))
-        {
+        // What is running right now decides first; config files only break ties (a Hyprland config may exist on a GNOME session).
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")) || desktop.Contains("hyprland"))
             return File.Exists(Path.Combine(configDir, "hypr", "hyprland.lua")) ? BindDialect.HyprlandLua : BindDialect.HyprlandConf;
-        }
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) || desktop.Contains("sway")) return BindDialect.Sway;
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) || desktop.Contains("niri")) return BindDialect.Niri;
+        if (desktop.Contains("kde") || desktop.Contains("plasma")) return BindDialect.Kde;
+        if (desktop.Contains("gnome") || desktop.Contains("ubuntu")) return BindDialect.Gnome;
 
-        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) || desktop.Contains("sway", StringComparison.OrdinalIgnoreCase)
-            || File.Exists(Path.Combine(configDir, "sway", "config")))
-        {
-            return BindDialect.Sway;
-        }
-
+        if (File.Exists(Path.Combine(configDir, "hypr", "hyprland.lua"))) return BindDialect.HyprlandLua;
+        if (File.Exists(Path.Combine(configDir, "hypr", "hyprland.conf"))) return BindDialect.HyprlandConf;
+        if (File.Exists(Path.Combine(configDir, "sway", "config"))) return BindDialect.Sway;
         return null;
     }
 
@@ -203,14 +202,26 @@ internal static class CompositorBinds
             "hyprland" or "hyprland-lua" or "lua" => BindDialect.HyprlandLua,
             "hyprland-conf" or "conf" => BindDialect.HyprlandConf,
             "sway" => BindDialect.Sway,
+            "niri" => BindDialect.Niri,
+            "gnome" => BindDialect.Gnome,
+            "kde" or "plasma" => BindDialect.Kde,
             null => Detect(),
-            _ => throw new ArgumentException("Unknown compositor '" + name + "'. Use hyprland, hyprland-conf or sway.")
+            _ => throw new ArgumentException("Unknown compositor '" + name + "'. Use hyprland, hyprland-conf, sway, niri, gnome or kde.")
         };
 
         if (dialect == null)
         {
             Console.Error.WriteLine("No Hyprland or sway configuration found. Use `sharex --print-binds` and add the lines to your compositor by hand.");
             return 1;
+        }
+
+        if (dialect is BindDialect.Niri or BindDialect.Gnome or BindDialect.Kde)
+        {
+            // These desktops keep their shortcuts somewhere an app cannot edit safely (niri's KDL config, dconf, KDE's shortcut daemon).
+            Console.WriteLine(dialect == BindDialect.Niri ? "niri: ShareX cannot edit config.kdl for you. Add the lines below to your binds { } block:" :
+                dialect == BindDialect.Gnome ? "GNOME: run  sharex --print-binds gnome | sh  to add the shortcuts (shown below)." : "KDE Plasma:");
+            Console.WriteLine();
+            return HotkeyBindText.PrintBinds([dialect.Value.ToString().ToLowerInvariant()]);
         }
 
         if (remove)

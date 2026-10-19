@@ -89,6 +89,11 @@ public static class LinuxCaptureWindows
             Visit(doc.RootElement);
             return windows.OrderByDescending(w => w.Active).ToArray();
         }
+        if (LinuxScreenCapture.IsWayland && NiriIpc.IsAvailable)
+        {
+            return NiriIpc.GetWindows().Where(w => w.Visible && w.Bounds.Width > 0 && w.Bounds.Height > 0)
+                .Select(w => new LinuxCaptureWindow((nint)w.Id, w.Bounds, w.Title, w.AppId, w.Focused)).ToArray();
+        }
         if (!LinuxScreenCapture.IsWayland) return X11CaptureWindows.GetWindows();
         return [];
     }
