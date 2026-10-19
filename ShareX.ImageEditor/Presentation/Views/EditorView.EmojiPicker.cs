@@ -40,11 +40,8 @@ namespace ShareX.ImageEditor.Presentation.Views
             ResetModalContentPosition();
 
             // Pick the monitor once, so browsing emojis does not make the panel chase the cursor.
-            if (OperatingSystem.IsWindows() && GetCursorPos(out NativePoint cursorPosition))
-            {
-                _emojiPickerScreen = TopLevel.GetTopLevel(this)?.Screens?.ScreenFromPoint(
-                    new PixelPoint(cursorPosition.X, cursorPosition.Y));
-            }
+            TopLevel? topLevel = TopLevel.GetTopLevel(this);
+            _emojiPickerScreen = topLevel?.Screens?.ScreenFromTopLevel(topLevel);
 
             UpdateEmojiPickerPosition();
         }

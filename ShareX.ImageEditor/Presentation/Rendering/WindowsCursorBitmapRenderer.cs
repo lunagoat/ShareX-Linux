@@ -165,6 +165,8 @@ namespace ShareX.ImageEditor.Presentation.Rendering
                 return SKBitmap.Decode(data);
             }
 
+            if (OperatingSystem.IsLinux()) return ShareX.ImageEditor.Linux.CursorBitmapRenderer.Create(cursorType);
+
             IntPtr cursorHandle = TryLoadFallbackCursorHandle(cursorType);
 
             if (cursorHandle == IntPtr.Zero)

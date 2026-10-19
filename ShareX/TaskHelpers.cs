@@ -741,30 +741,12 @@ namespace ShareX
                 taskSettings.ExternalPrograms = new List<ExternalProgram>();
             }
 
-            AddExternalProgramFromRegistry(taskSettings, "Paint", "mspaint.exe");
-            AddExternalProgramFromRegistry(taskSettings, "Paint.NET", "PaintDotNet.exe");
-            AddExternalProgramFromRegistry(taskSettings, "Adobe Photoshop", "Photoshop.exe");
-            AddExternalProgramFromRegistry(taskSettings, "IrfanView", "i_view32.exe");
-            AddExternalProgramFromRegistry(taskSettings, "XnView", "xnview.exe");
-        }
-
-        private static void AddExternalProgramFromRegistry(TaskSettings taskSettings, string name, string fileName)
-        {
-            if (!taskSettings.ExternalPrograms.Exists(x => x.Name == name))
+            foreach ((string name, string executable) in new[] { ("GIMP", "gimp"), ("Krita", "krita"), ("Inkscape", "inkscape"), ("Satty", "satty") })
             {
-                try
+                string path = ShareX.HelpersLib.Linux.ActionCommand.FindExecutable(executable);
+                if (path != null && !taskSettings.ExternalPrograms.Exists(x => x.Path == path))
                 {
-                    string filePath = RegistryHelpers.SearchProgramPath(fileName);
-
-                    if (!string.IsNullOrEmpty(filePath))
-                    {
-                        ExternalProgram externalProgram = new ExternalProgram(name, filePath);
-                        taskSettings.ExternalPrograms.Add(externalProgram);
-                    }
-                }
-                catch (Exception e)
-                {
-                    DebugHelper.WriteException(e);
+                    taskSettings.ExternalPrograms.Add(new ExternalProgram(name, path));
                 }
             }
         }

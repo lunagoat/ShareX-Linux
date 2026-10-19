@@ -507,7 +507,7 @@ public partial class ImageHistoryWindow : Window
         if (Math.Abs(current.X - _dragStart.X) < 5 && Math.Abs(current.Y - _dragStart.Y) < 5) return;
 
         string[] files = GetSelectedItems().Select(item => item.FilePath).Where(File.Exists)
-            .Distinct(StringComparer.OrdinalIgnoreCase).ToArray();
+            .Distinct(StringComparer.Ordinal).ToArray();
         if (files.Length == 0)
         {
             _dragPointerPressed = null;
@@ -610,7 +610,7 @@ public partial class ImageHistoryWindow : Window
             bool imagesOnly = ImportImagesOnlyCheckBox.IsChecked == true;
             HashSet<string> existing = ImportSkipDuplicatesCheckBox.IsChecked == true
                 ? _allHistoryItems.Where(item => !string.IsNullOrWhiteSpace(item.FilePath))
-                    .Select(item => item.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase)!
+                    .Select(item => item.FilePath).ToHashSet(StringComparer.Ordinal)!
                 : [];
             int imported = await Task.Run(() => ImportFolder(folder, imagesOnly, existing));
             ImportStatusText.Text = string.Format(Strings.ImageHistoryWindow_SuccessfullyImportedFilesFormat, imported);
@@ -814,7 +814,7 @@ public partial class ImageHistoryWindow : Window
         ShowPrompt(Strings.ImageHistoryWindow_RenameFile, Strings.ImageHistoryWindow_EnterNewFileName, Strings.ImageHistoryWindow_Rename, () =>
         {
             string newName = PromptTextBox.Text?.Trim() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(newName) && !newName.Equals(oldName, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(newName) && !newName.Equals(oldName, StringComparison.Ordinal))
             {
                 if (Path.HasExtension(item.FilePath)) newName += Path.GetExtension(item.FilePath);
                 item.FileName = newName;

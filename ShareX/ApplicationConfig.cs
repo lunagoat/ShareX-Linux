@@ -169,7 +169,7 @@ namespace ShareX
         [Category("Application"), DefaultValue(false), Description("Automatically expand capture menu when you open the tray menu.")]
         public bool TrayAutoExpandCaptureMenu { get; set; }
 
-        [Category("Application"), DefaultValue(""), Description("URLs will open using this path instead of default browser. Example path: chrome.exe")]
+        [Category("Application"), DefaultValue(""), Description("URLs will open using this path instead of default browser. Example path: /usr/bin/firefox")]
         public string BrowserPath { get; set; }
 
         [Category("Application"), DefaultValue(false), Description("Save settings after task completed but only if there are no other active tasks.")]

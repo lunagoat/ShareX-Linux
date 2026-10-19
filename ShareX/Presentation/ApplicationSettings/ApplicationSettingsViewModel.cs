@@ -147,6 +147,8 @@ public sealed class ApplicationSettingsViewModel : INotifyPropertyChanged, IDisp
         }
     }
 
+    public bool BrowserIntegrationVisible => true;
+
     public bool WindowsIntegrationVisible
     {
         get
@@ -154,7 +156,7 @@ public sealed class ApplicationSettingsViewModel : INotifyPropertyChanged, IDisp
 #if MicrosoftStore
             return false;
 #else
-            return true;
+            return OperatingSystem.IsWindows();
 #endif
         }
     }
@@ -895,9 +897,12 @@ public sealed class ApplicationSettingsViewModel : INotifyPropertyChanged, IDisp
     private void RefreshIntegrations()
     {
 #if !MicrosoftStore
-        _shellContextMenu = IntegrationHelpers.CheckShellContextMenuButton();
-        _editWithShareX = IntegrationHelpers.CheckEditShellContextMenuButton();
-        _sendToMenu = IntegrationHelpers.CheckSendToMenuButton();
+        if (WindowsIntegrationVisible)
+        {
+            _shellContextMenu = IntegrationHelpers.CheckShellContextMenuButton();
+            _editWithShareX = IntegrationHelpers.CheckEditShellContextMenuButton();
+            _sendToMenu = IntegrationHelpers.CheckSendToMenuButton();
+        }
         _chromeExtensionSupport = IntegrationHelpers.CheckChromeExtensionSupport();
         _firefoxAddonSupport = IntegrationHelpers.CheckFirefoxAddonSupport();
 #endif
@@ -908,7 +913,7 @@ public sealed class ApplicationSettingsViewModel : INotifyPropertyChanged, IDisp
 
     private void RefreshStartWithWindows()
     {
-        StartWithWindowsText = Strings.ApplicationSettingsForm_cbStartWithWindows_Text;
+        StartWithWindowsText = OperatingSystem.IsLinux() ? Strings.LinuxIntegration_StartOnLogin : Strings.ApplicationSettingsForm_cbStartWithWindows_Text;
         StartWithWindowsEnabled = false;
 
         try

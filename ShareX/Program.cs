@@ -95,7 +95,8 @@ internal static class Program
         {
             DebugHelper.WriteLine("Personal path detection method: " + PersonalPathManager.DetectionMethod);
         }
-        DebugHelper.WriteLine("Operating system: " + Helpers.GetOperatingSystemProductName(true));
+        DebugHelper.WriteLine("Operating system: " + (OperatingSystem.IsLinux() ?
+            System.Runtime.InteropServices.RuntimeInformation.OSDescription : Helpers.GetOperatingSystemProductName(true)));
         DebugHelper.WriteLine(".NET version: " + Environment.Version);
         DebugHelper.WriteLine("Running as elevated process: " + StartupOptions.IsAdmin);
 

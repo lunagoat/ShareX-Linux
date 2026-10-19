@@ -3121,4 +3121,16 @@ You can later disable it from "After capture tasks" menu.</value>
   <data name="YourSystemAdminDisabledTheUploadFeature" xml:space="preserve">
     <value>Your system admin disabled the upload feature.</value>
   </data>
+  <data name="LinuxIntegration_DesktopSession" xml:space="preserve">
+    <value>Desktop session</value>
+  </data>
+  <data name="LinuxIntegration_StartOnLogin" xml:space="preserve">
+    <value>Start ShareX when I sign in</value>
+  </data>
+  <data name="LinuxIntegration_PrintDirectly" xml:space="preserve">
+    <value>Print directly without a dialog</value>
+  </data>
+  <data name="LinuxIntegration_PlatformNote" xml:space="preserve">
+    <value>Capture and sharing for your Linux desktop.</value>
+  </data>
 </root>
