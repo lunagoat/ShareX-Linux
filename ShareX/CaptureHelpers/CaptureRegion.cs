@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -27,6 +27,7 @@ using ShareX.HelpersLib;
 using ShareX.ScreenCaptureLib;
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using SkiaSharp;
+using System;
 using System.Drawing;
 using System.Threading.Tasks;
 using Bitmap = SkiaSharp.SKBitmap;
@@ -55,12 +56,13 @@ namespace ShareX
                 ? CaptureHelpers.GetActiveScreenBounds()
                 : CaptureHelpers.GetScreenBounds();
 
-            SKBitmap frozenScreenshot;
-            using (Bitmap canvas = activeMonitorMode
+            SKBitmap frozenScreenshot = activeMonitorMode
                 ? screenshot.CaptureActiveMonitor()
-                : screenshot.CaptureFullscreen())
+                : screenshot.CaptureFullscreen();
+
+            if (frozenScreenshot == null || frozenScreenshot.Handle == IntPtr.Zero)
             {
-                frozenScreenshot = canvas.Copy();
+                return null;
             }
 
             SKBitmap cursorBitmap = null;

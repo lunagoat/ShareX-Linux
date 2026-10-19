@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -1299,9 +1299,10 @@ public class EditorCore : IDisposable
         canvas.Clear(SKColors.Transparent);
 
         // Draw source image only — annotations are handled by Avalonia controls
-        if (SourceImage != null)
+        var image = SourceImage;
+        if (image != null && image.Handle != IntPtr.Zero)
         {
-            canvas.DrawBitmap(SourceImage, 0, 0);
+            canvas.DrawBitmap(image, 0, 0);
         }
     }
 
@@ -1578,8 +1579,9 @@ public class EditorCore : IDisposable
         }
 
         _annotations.Clear();
-        SourceImage?.Dispose();
+        var img = SourceImage;
         SourceImage = null;
+        img?.Dispose();
     }
 
     #endregion

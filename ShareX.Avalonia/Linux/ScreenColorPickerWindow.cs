@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -98,7 +98,7 @@ public partial class ScreenColorPickerWindow : Window
         root.Children.Add(image);
         root.Children.Add(canvas);
         Content = root;
-        Title = "ShareX color picker [" + Guid.NewGuid().ToString("N") + "]";
+        Title = "ShareX screen color picker [" + Guid.NewGuid().ToString("N") + "]";
         Position = new PixelPoint(_screenBounds.X, _screenBounds.Y);
         Width = _screenBounds.Width;
         Height = _screenBounds.Height;

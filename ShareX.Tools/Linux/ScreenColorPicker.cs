@@ -85,7 +85,8 @@ internal sealed class ScreenColorPicker : Window
                 complete(new(sample.Color, sample.Position, e.KeyModifiers.HasFlag(KeyModifiers.Control)));
             }
         };
-        KeyDown += (_, e) => { if (e.Key == Key.Escape) complete(null); };
+        KeyDown += (_, e) => { if (e.Key == Key.Escape) { e.Handled = true; complete(null); } };
+        Opened += (_, _) => { Activate(); Focus(); };
         Closed += (_, _) => { _background.Dispose(); _pixels.Dispose(); };
     }
 
@@ -129,6 +130,11 @@ internal sealed class ScreenColorPicker : Window
                 overlays.Add(new(CaptureScreen(screen.Bounds), screen.Bounds, screen.Scaling, options, Complete));
             foreach (var overlay in overlays) { overlay.Closed += (_, _) => Complete(null); overlay.Show(); }
             if (overlays.Count == 0) Complete(null);
+            else
+            {
+                overlays[0].Activate();
+                overlays[0].Focus();
+            }
         }
         catch { Complete(null); throw; }
         finally { probe.Close(); }
