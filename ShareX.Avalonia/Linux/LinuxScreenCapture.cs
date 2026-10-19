@@ -131,7 +131,8 @@ public static class LinuxScreenCapture
         rectangle = Rectangle.Intersect(DesktopBounds, rectangle);
         if (rectangle.Width <= 0 || rectangle.Height <= 0) throw new ArgumentOutOfRangeException(nameof(rectangle), "The capture area is outside the desktop.");
         if (!IsWayland) return X11Capture.Capture(rectangle, cursor);
-        double scale = GetMonitors().Where(m => m.Bounds.IntersectsWith(rectangle)).Max(m => m.Scale);
+        var intersecting = GetMonitors().Where(m => m.Bounds.IntersectsWith(rectangle)).ToArray();
+        double scale = intersecting.Length > 0 ? intersecting.Max(m => m.Scale) : 1.0;
         List<string> args = ["-t", "png", "-s", scale.ToString(CultureInfo.InvariantCulture), "-g",
             FormattableString.Invariant($"{rectangle.X},{rectangle.Y} {rectangle.Width}x{rectangle.Height}")];
         if (cursor) args.Add("-c");

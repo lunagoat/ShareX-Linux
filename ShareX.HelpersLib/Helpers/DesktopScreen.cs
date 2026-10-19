@@ -65,5 +65,5 @@ public sealed class DesktopScreen
         AllScreens.OrderByDescending(x => { var r = Rectangle.Intersect(x.Bounds, bounds); return (long)r.Width * r.Height; }).FirstOrDefault();
 
     public static DesktopScreen FromHandle(IntPtr handle) =>
-        OperatingSystem.IsWindows() ? FromRectangle(NativeMethods.GetWindowRect(handle)) : PrimaryScreen;
+        FromRectangle(NativeMethods.GetWindowRect(handle)) ?? PrimaryScreen;
 }

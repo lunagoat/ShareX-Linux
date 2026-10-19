@@ -41,14 +41,35 @@ public static class LinuxCaptureWindows
     {
         if (LinuxScreenCapture.IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
         {
+            string activeAddress = "";
+            try
+            {
+                using JsonDocument activeDoc = JsonDocument.Parse(LinuxCaptureProcess.Text("hyprctl", "activewindow", "-j"));
+                if (activeDoc.RootElement.TryGetProperty("address", out var addrProp))
+                    activeAddress = addrProp.GetString() ?? "";
+            }
+            catch { }
+
             using JsonDocument doc = JsonDocument.Parse(LinuxCaptureProcess.Text("hyprctl", "clients", "-j"));
             return doc.RootElement.EnumerateArray()
                 .Where(w => w.GetProperty("mapped").GetBoolean() && !w.GetProperty("hidden").GetBoolean() &&
                     (!w.TryGetProperty("visible", out var visible) || visible.GetBoolean()))
                 .OrderBy(w => w.TryGetProperty("focusHistoryID", out var f) ? f.GetInt32() : int.MaxValue)
-                .Select(w => new LinuxCaptureWindow((nint)long.Parse(w.GetProperty("address").GetString()![2..], NumberStyles.HexNumber, CultureInfo.InvariantCulture),
-                    new Rectangle(w.GetProperty("at")[0].GetInt32(), w.GetProperty("at")[1].GetInt32(), w.GetProperty("size")[0].GetInt32(), w.GetProperty("size")[1].GetInt32()),
-                    w.GetProperty("title").GetString() ?? "", w.GetProperty("class").GetString() ?? "", w.GetProperty("focusHistoryID").GetInt32() == 0)).ToArray();
+                .Select(w =>
+                {
+                    string addr = w.GetProperty("address").GetString() ?? "";
+                    bool isActive = !string.IsNullOrEmpty(activeAddress)
+                        ? string.Equals(addr, activeAddress, StringComparison.OrdinalIgnoreCase)
+                        : (w.TryGetProperty("focusHistoryID", out var f) && f.GetInt32() == 0);
+                    return new LinuxCaptureWindow(
+                        (nint)long.Parse(addr.StartsWith("0x") ? addr[2..] : addr, NumberStyles.HexNumber, CultureInfo.InvariantCulture),
+                        new Rectangle(w.GetProperty("at")[0].GetInt32(), w.GetProperty("at")[1].GetInt32(), w.GetProperty("size")[0].GetInt32(), w.GetProperty("size")[1].GetInt32()),
+                        w.GetProperty("title").GetString() ?? "",
+                        w.GetProperty("class").GetString() ?? "",
+                        isActive);
+                })
+                .OrderByDescending(w => w.Active)
+                .ToArray();
         }
         if (LinuxScreenCapture.IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")))
         {

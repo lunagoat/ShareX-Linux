@@ -125,6 +125,16 @@ public partial class ScrollingCaptureWindow : Window
         _service.Dispose();
     }
 
+    protected override void OnKeyDown(KeyEventArgs e)
+    {
+        base.OnKeyDown(e);
+        if (e.Key == Key.Escape)
+        {
+            Close();
+            e.Handled = true;
+        }
+    }
+
     private async Task SelectWindowAsync()
     {
         _captureOperation = true;

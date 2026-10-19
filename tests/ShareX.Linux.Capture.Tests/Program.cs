@@ -26,10 +26,12 @@ using (SKBitmap source = new(300, 150))
 }
 if (args.Contains("--portal")) { await PortalChecks.RunAsync(); return; }
 if (args.Contains("--ui")) { Environment.ExitCode = UiChecks.Run(); return; }
+if (args.Contains("--e2e")) { await E2EChecks.RunAsync(); return; }
 if (!args.Contains("--live")) return;
 Directory.CreateDirectory("/tmp/sx-wp3/evidence");
 foreach (var monitor in LinuxScreenCapture.GetMonitors())
 {
+    Console.WriteLine($"MONITOR: {monitor.Name} Bounds={monitor.Bounds} Scale={monitor.Scale} Primary={monitor.Primary}");
     using SKBitmap capture = new Screenshot().CaptureRectangle(monitor.Bounds);
     Assert(capture.Width == (int)Math.Round(monitor.Bounds.Width * monitor.Scale) && capture.Height == (int)Math.Round(monitor.Bounds.Height * monitor.Scale), "native pixel dimensions for " + monitor.Name);
     using var data = capture.Encode(SKEncodedImageFormat.Png, 100);
