@@ -127,7 +127,8 @@ public static class LinuxWindowSystem
 
     public static bool Activate(IntPtr handle) => Backend switch
     {
-        "Hyprland" => LinuxCommand.Run("hyprctl", "dispatch", "focuswindow", "address:0x" + handle.ToInt64().ToString("x")) != null,
+        "Hyprland" => (LinuxCommand.Run("hyprctl", "eval", $"return hl.dispatch(hl.dsp.focus({{ window = hl.get_window('address:0x{handle.ToInt64():x}') }}))") != null) ||
+                      (LinuxCommand.Run("hyprctl", "dispatch", "focuswindow", "address:0x" + handle.ToInt64().ToString("x")) != null),
         "sway" => LinuxCommand.Run("swaymsg", "[con_id=" + handle.ToInt64() + "]", "focus") != null,
         "X11" => LinuxX11.Activate(handle),
         _ => false

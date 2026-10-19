@@ -232,7 +232,20 @@ internal static class Program
                 window.UpdateLayout();
                 using RenderTargetBitmap bitmap = new(new PixelSize(Math.Max(1, (int)window.Bounds.Width), Math.Max(1, (int)window.Bounds.Height)), new Vector(96, 96));
                 bitmap.Render(window);
-                bitmap.Save(Path.Combine(Root, type.Name + (Live ? "-live" : "-headless") + ".png"));
+                bitmap.Save(Path.Combine(Root, type.Name + (Live ? "-live" : "-headless") + ".png"), PngBitmapEncoderOptions.Default);
+                if (Live)
+                {
+                    try
+                    {
+                        var own = DesktopTools.GetWindows().FirstOrDefault(w => w.ProcessId == Environment.ProcessId && w.Text == window.Title);
+                        if (own != null && own.Rectangle.Width > 0 && own.Rectangle.Height > 0)
+                        {
+                            ToolProcess.RunAsync("grim", ["-g", $"{own.Rectangle.X},{own.Rectangle.Y} {own.Rectangle.Width}x{own.Rectangle.Height}",
+                                Path.Combine(Root, type.Name + "-grim.png")]).GetAwaiter().GetResult();
+                        }
+                    }
+                    catch { }
+                }
                 Console.WriteLine("  window " + type.Name);
             }
             catch (Exception ex) { Failures.Add(type.Name + ": " + ex); }
@@ -251,7 +264,7 @@ internal static class Program
         await Task.Delay(600);
         using (RenderTargetBitmap bitmap = new(new PixelSize(1000, 700), new Vector(96, 96)))
         {
-            bitmap.Render(ocr); bitmap.Save(Path.Combine(Root, "OCR-result.png"));
+            bitmap.Render(ocr); bitmap.Save(Path.Combine(Root, "OCR-result.png"), PngBitmapEncoderOptions.Default);
         }
         ocr.Close();
     }
@@ -285,11 +298,11 @@ internal static class Program
             await Task.Delay(200);
             Require(position > .99, "Frame step failed");
             window.UpdateLayout();
-            Console.WriteLine($"  playback bounds: window={window.Bounds}, player={player.Bounds}, visible={player.IsVisible}, attached={player.GetVisualRoot() != null}");
+            Console.WriteLine($"  playback bounds: window={window.Bounds}, player={player.Bounds}, visible={player.IsVisible}, attached={player.IsAttachedToVisualTree()}");
             if (!Live) AvaloniaHeadlessPlatform.ForceRenderTimerTick();
             using (RenderTargetBitmap bitmap = new(new PixelSize(640, 400), new Vector(96, 96)))
             {
-                bitmap.Render(window); bitmap.Save(Path.Combine(Root, Live ? "playback-live.png" : "playback-headless.png"));
+                bitmap.Render(window); bitmap.Save(Path.Combine(Root, Live ? "playback-live.png" : "playback-headless.png"), PngBitmapEncoderOptions.Default);
             }
             player.SaveFrame(Path.Combine(Root, "mpv-raw.png"));
             using (var rendered = SKBitmap.Decode(Path.Combine(Root, Live ? "playback-live.png" : "playback-headless.png")))

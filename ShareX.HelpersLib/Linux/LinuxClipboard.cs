@@ -24,6 +24,7 @@ public static class LinuxClipboard
 
     public static byte[] Read(string mime)
     {
+        if (string.IsNullOrWhiteSpace(mime)) return null;
         using Process process = new();
         process.StartInfo = new ProcessStartInfo(LinuxWindowSystem.IsWayland ? "wl-paste" : "xclip")
         { UseShellExecute = false, RedirectStandardOutput = true, RedirectStandardError = true };
@@ -34,7 +35,8 @@ public static class LinuxClipboard
             process.Start();
             using MemoryStream output = new();
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
-            Task copy = CopyBoundedAsync(process.StandardOutput.BaseStream, output, timeout.Token);
+            using var reg = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch { } });
+            Task copy = Task.Run(() => CopyBounded(process.StandardOutput.BaseStream, output), timeout.Token);
             _ = process.StandardError.ReadToEndAsync();
             copy.GetAwaiter().GetResult();
             if (!process.WaitForExit(1000)) { process.Kill(true); return null; }
@@ -47,19 +49,20 @@ public static class LinuxClipboard
         }
     }
 
-    private static async Task CopyBoundedAsync(Stream input, Stream output, CancellationToken token)
+    private static void CopyBounded(Stream input, Stream output)
     {
         byte[] buffer = new byte[65536];
         int count;
-        while ((count = await input.ReadAsync(buffer, token)) > 0)
+        while ((count = input.Read(buffer, 0, buffer.Length)) > 0)
         {
             if (output.Length + count > 128 * 1024 * 1024) throw new IOException("Clipboard data exceeds 128 MiB.");
-            await output.WriteAsync(buffer.AsMemory(0, count), token);
+            output.Write(buffer, 0, count);
         }
     }
 
     public static bool Write(string mime, byte[] bytes)
     {
+        if (string.IsNullOrWhiteSpace(mime) || bytes == null) return false;
         using Process process = new();
         process.StartInfo = new ProcessStartInfo(LinuxWindowSystem.IsWayland ? "wl-copy" : "xclip")
         { UseShellExecute = false, RedirectStandardInput = true, RedirectStandardError = true };
@@ -70,7 +73,8 @@ public static class LinuxClipboard
             process.Start();
             _ = process.StandardError.ReadToEndAsync();
             using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(5));
-            process.StandardInput.BaseStream.WriteAsync(bytes, timeout.Token).AsTask().GetAwaiter().GetResult();
+            using var reg = timeout.Token.Register(() => { try { if (!process.HasExited) process.Kill(true); } catch { } });
+            process.StandardInput.BaseStream.Write(bytes, 0, bytes.Length);
             process.StandardInput.Close();
             // xclip stays alive as the selection owner. wl-copy forks its owner before returning.
             if (!LinuxWindowSystem.IsWayland) return !process.WaitForExit(150) || process.ExitCode == 0;
