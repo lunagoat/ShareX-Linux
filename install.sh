@@ -103,7 +103,7 @@ install_from_dir() {
     "$dir/scripts/linux/install-user.sh" --no-publish "${qflag[@]}"
 }
 
-if [ "$from_source" -eq 1 ]; then
+build_from_source() {
     need git
     need curl
     if ! { command -v dotnet >/dev/null 2>&1 && dotnet --list-sdks 2>/dev/null | grep -q '^10\.'; } && [ ! -x "$HOME/.dotnet/dotnet" ]; then
@@ -116,10 +116,18 @@ if [ "$from_source" -eq 1 ]; then
     log "Building (this takes a few minutes) ..."
     "$work/src/scripts/linux/install-user.sh" "${qflag[@]}"
     report_missing_tools
+}
+
+if [ "$from_source" -eq 1 ]; then
+    build_from_source
     exit 0
 fi
 
-[ "$(uname -m)" = "x86_64" ] || die "prebuilt releases are x86-64 only; on $(uname -m) run again with --from-source"
+if [ "$(uname -m)" != "x86_64" ]; then
+    log "Prebuilt releases are x86-64 only; building from source for $(uname -m)."
+    build_from_source
+    exit 0
+fi
 
 need tar
 need sha256sum
@@ -138,8 +146,12 @@ else
         base="https://github.com/$REPO/releases/latest/download"
     fi
     log "Downloading $base/$ASSET"
-    curl -fL --retry 3 --progress-bar -o "$work/$ASSET" "$base/$ASSET" \
-        || die "download failed. No release published yet? Try: install.sh --from-source"
+    if ! curl -fL --retry 3 --progress-bar -o "$work/$ASSET" "$base/$ASSET"; then
+        [ -z "$version" ] && [ -z "${SHAREX_BASE_URL:-}" ] || die "download failed: $base/$ASSET"
+        log "No prebuilt release is published yet - building from source instead."
+        build_from_source
+        exit 0
+    fi
     curl -fsSL -o "$work/$ASSET.sha256" "$base/$ASSET.sha256" || rm -f "$work/$ASSET.sha256"
 fi
 
