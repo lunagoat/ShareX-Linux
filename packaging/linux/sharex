@@ -54,6 +54,7 @@ Most useful actions:
 Wrapper options:
   -h, --help            show this help
       --version         show the ShareX version
+      --doctor              check why a hotkey does nothing (session, hotkeys, key binds, last capture)
       --install-binds       add your ShareX hotkeys to your Hyprland/sway config (backup first)
       --remove-binds        take them out again
       --print-binds [hyprland|hyprland-conf|sway|niri|gnome|kde] [--global]

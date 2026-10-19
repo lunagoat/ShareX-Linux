@@ -61,6 +61,12 @@ internal static class Program
         SystemOptions.UpdateSystemOptions();
         PersonalPathManager.Initialize();
 
+        if (Array.IndexOf(args, "--doctor") >= 0)
+        {
+            Environment.ExitCode = Doctor.Execute();
+            return;
+        }
+
         int printBinds = Array.IndexOf(args, "--print-binds");
         int installBinds = Array.IndexOf(args, "--install-binds");
         int removeBinds = Array.IndexOf(args, "--remove-binds");

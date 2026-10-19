@@ -66,9 +66,12 @@ internal static class CompositorBinds
     }
 
     /// <summary>Key combinations bound in the config outside ShareX's own block.</summary>
-    private static HashSet<string> BoundKeys(string[] lines, BindDialect dialect)
+    private static HashSet<string> BoundKeys(string[] lines, BindDialect dialect) => new(FindBinds(lines, dialect).Keys);
+
+    /// <summary>Normalized key combination -> the config line that binds it (outside ShareX's own block).</summary>
+    internal static Dictionary<string, string> FindBinds(string[] lines, BindDialect dialect)
     {
-        HashSet<string> keys = new();
+        Dictionary<string, string> keys = new();
         (int start, int end) = FindBlock(lines, dialect);
 
         for (int i = 0; i < lines.Length; i++)
@@ -83,25 +86,25 @@ internal static class CompositorBinds
                 if ((m = Regex.Match(line, "^hl\\.bind\\(\\s*\"([^\"]*)\"")).Success)
                 {
                     string[] parts = m.Groups[1].Value.Split('+');
-                    keys.Add(HotkeyBindText.Normalize(parts[..^1], parts[^1]));
+                    keys[HotkeyBindText.Normalize(parts[..^1], parts[^1])] = line;
                 }
                 else if ((m = Regex.Match(line, "^hl\\.bind\\(\\s*\\w+\\s*\\.\\.\\s*\"([^\"]*)\"")).Success)
                 {
                     string[] parts = ("SUPER" + m.Groups[1].Value).Split('+');
-                    keys.Add(HotkeyBindText.Normalize(parts[..^1], parts[^1]));
+                    keys[HotkeyBindText.Normalize(parts[..^1], parts[^1])] = line;
                 }
             }
             else if (dialect == BindDialect.HyprlandConf)
             {
                 if ((m = Regex.Match(line, "^bind[a-z]*\\s*=\\s*([^,]*),\\s*([^,]+),")).Success)
                 {
-                    keys.Add(HotkeyBindText.Normalize(m.Groups[1].Value.Split(new[] { ' ', '+' }, StringSplitOptions.RemoveEmptyEntries), m.Groups[2].Value));
+                    keys[HotkeyBindText.Normalize(m.Groups[1].Value.Split(new[] { ' ', '+' }, StringSplitOptions.RemoveEmptyEntries), m.Groups[2].Value)] = line;
                 }
             }
             else if ((m = Regex.Match(line, "^bindsym\\s+(\\S+)\\s")).Success)
             {
                 string[] parts = m.Groups[1].Value.Split('+');
-                keys.Add(HotkeyBindText.Normalize(parts[..^1], parts[^1]));
+                keys[HotkeyBindText.Normalize(parts[..^1], parts[^1])] = line;
             }
         }
 

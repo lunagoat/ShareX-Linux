@@ -12,7 +12,8 @@ unit tests, but nobody has run it on the real desktop yet. **Only Hyprland has b
 | Screenshot | `grim` | `grim` | `grim` | desktop portal | desktop portal | built-in (X11) |
 | Monitor layout / scale | `hyprctl` | `swaymsg` | `niri msg` | `kscreen-doctor` | XWayland (RandR) | RandR |
 | Window capture (window list) | `hyprctl` | `swaymsg` | `niri msg` (experimental) | — (XWayland windows only) | — (XWayland windows only) | EWMH |
-| Region / fullscreen / monitor capture | yes | yes | yes | yes | yes | yes |
+| Region selection | ShareX overlay (annotations, magnifier) | `slurp` | `slurp` | ShareX overlay (unverified) | ShareX overlay (unverified) | ShareX overlay |
+| Fullscreen / monitor capture | yes | yes | yes | yes | yes | yes |
 | Hotkeys | portal binds **or** `sharex --install-binds` | `sharex --install-binds` | `sharex --print-binds niri` (add to `config.kdl`) | portal: shortcuts show up in System Settings | `sharex --print-binds gnome \| sh`, or the portal on GNOME 48+ | built-in key grabs |
 | Screen recording | `grim` frames / `gpu-screen-recorder` | same | portal via `gpu-screen-recorder` | portal via `gpu-screen-recorder` | portal via `gpu-screen-recorder` | ffmpeg `x11grab` |
 | Tray icon | yes | needs a bar with a tray | needs a bar with a tray | yes | needs the *AppIndicator* extension | depends on the panel |
@@ -29,6 +30,14 @@ unit tests, but nobody has run it on the real desktop yet. **Only Hyprland has b
 * **GNOME:** the tray icon needs the *AppIndicator and KStatusNotifierItem* extension. Screen capture goes through the portal (permission prompt first time).
   Recording asks which screen to share each time (the portal's picker).
 * **X11 sessions:** nothing special; `xclip`/`xdotool` help.
+
+## Region selection on niri and sway
+
+ShareX's own selection overlay is a window that has to be placed exactly over every monitor, which only Hyprland allows. On niri and sway
+ShareX therefore uses **`slurp`** (the compositor's own selection overlay; install it): drag a region, or click a window to take that
+window. You get ShareX's normal after-capture tasks, but not the overlay's built-in annotation tools or magnifier. Force a mode with
+`SHAREX_REGION_SELECTOR=slurp` or `=overlay` in the environment. The other overlay-style tools (scrolling capture, recording region,
+colour picker) are not adapted to niri/sway yet.
 
 ## Known limits
 

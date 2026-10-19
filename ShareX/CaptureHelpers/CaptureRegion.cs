@@ -28,7 +28,9 @@ using ShareX.ScreenCaptureLib;
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using SkiaSharp;
 using System;
+using System.Collections.Generic;
 using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
 using Bitmap = SkiaSharp.SKBitmap;
 
@@ -46,10 +48,44 @@ namespace ShareX
             return await ExecuteRegionCaptureAvaloniaAsync(taskSettings);
         }
 
+        /// <summary>Region selection by the compositor's own overlay (slurp), for desktops where a window cannot be placed over every monitor.</summary>
+        private static async Task<TaskMetadata> ExecuteNativeSelectorCaptureAsync(Screenshot screenshot)
+        {
+            Rectangle? region = await Task.Run(() =>
+            {
+                IEnumerable<Rectangle> windows;
+                try
+                {
+                    windows = ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows().Select(w => w.Rectangle).ToArray();
+                }
+                catch (Exception)
+                {
+                    windows = [];
+                }
+
+                return ShareX.AvaloniaUI.Linux.NativeRegionSelector.Select(windows);
+            });
+
+            if (region == null)
+            {
+                return null;
+            }
+
+            // Give the compositor a moment to take slurp's overlay off the screen before capturing.
+            await Task.Delay(150);
+            SKBitmap image = await Task.Run(() => screenshot.CaptureRectangle(region.Value));
+            return image == null || image.Handle == IntPtr.Zero ? null : new TaskMetadata(image);
+        }
+
         protected async Task<TaskMetadata> ExecuteRegionCaptureAvaloniaAsync(TaskSettings taskSettings)
         {
             Screenshot screenshot = TaskHelpers.GetScreenshot(taskSettings);
             screenshot.CaptureCursor = System.OperatingSystem.IsLinux() && taskSettings.CaptureSettings.ShowCursor;
+
+            if (System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NativeRegionSelector.ShouldUse)
+            {
+                return await ExecuteNativeSelectorCaptureAsync(screenshot);
+            }
 
             bool activeMonitorMode = taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode;
             Rectangle screenBounds = activeMonitorMode
