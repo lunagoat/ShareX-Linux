@@ -54,6 +54,8 @@ Most useful actions:
 Wrapper options:
   -h, --help            show this help
       --version         show the ShareX version
+      --print-binds [hyprland|hyprland-conf|sway] [--global]
+                        print compositor key-bind lines for your ShareX hotkeys
 
 Anything else is passed to ShareX unchanged. The complete reference of every
 action is in docs/CLI.md in the ShareX source tree.

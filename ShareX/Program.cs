@@ -60,6 +60,23 @@ internal static class Program
 
         SystemOptions.UpdateSystemOptions();
         PersonalPathManager.Initialize();
+
+        int printBinds = Array.IndexOf(args, "--print-binds");
+        if (printBinds >= 0)
+        {
+            try
+            {
+                Environment.ExitCode = HotkeyBindText.PrintBinds(args[(printBinds + 1)..]);
+            }
+            catch (ArgumentException e)
+            {
+                Console.Error.WriteLine(e.Message);
+                Environment.ExitCode = 2;
+            }
+
+            return;
+        }
+
         DebugHelper.Init(AppPaths.LogsFilePath);
 
         StartupOptions.IsAdmin = Helpers.IsAdministrator();

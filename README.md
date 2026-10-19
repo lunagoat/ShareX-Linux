@@ -29,20 +29,29 @@ Arch / CachyOS users can also build a package: `cd packaging/arch && makepkg -si
 
 ## Hotkeys
 
-ShareX registers its hotkeys with the desktop's **GlobalShortcuts portal** (Hyprland, KDE, GNOME 48+): they show up in
-`hyprctl globalshortcuts` as `sharex:N`. Compositors that do not offer that portal can bind keys to the command line
-instead — every action is a flag on the running instance:
+**Hyprland, sway and other wlroots compositors never bind keys on their own** — an app can only ask. So after installing,
+add key binds that run ShareX. ShareX prints them for you, based on your own hotkey settings:
+
+```bash
+sharex --print-binds hyprland         # hyprland.lua  (Lua config, Hyprland 0.55+)
+sharex --print-binds hyprland-conf    # hyprland.conf
+sharex --print-binds sway
+```
 
 ```lua
--- Hyprland (hyprland.lua)
-hl.bind("PRINT", hl.dsp.exec_cmd("~/.local/bin/sharex -RectangleRegion"))
-hl.bind("ALT + SHIFT + PRINT", hl.dsp.exec_cmd("~/.local/bin/sharex -ActiveWindow"))
+-- example output: paste into hyprland.lua, drop the keys you already use, reload
+hl.bind("CTRL + Print", hl.dsp.exec_cmd("~/.local/bin/sharex -RectangleRegion"))  -- Capture region
+hl.bind("Print", hl.dsp.exec_cmd("~/.local/bin/sharex -PrintScreen"))             -- Capture entire screen
 ```
 
-```ini
-# sway
-bindsym Print exec sharex -RectangleRegion
-```
+The same text (with a copy button) is in ShareX → Hotkey settings → *Linux global shortcuts*. Command binds work on every
+compositor and start ShareX if it isn't running yet.
+
+Optional: ShareX also registers its hotkeys with the desktop **GlobalShortcuts portal** (KDE and GNOME show them in their
+shortcut settings; on Hyprland they are listed by `hyprctl globalshortcuts` as `sharex:RectangleRegion`, `sharex:PrintScreen`, …).
+Hyprland ignores the key an app asks for, so there you bind them yourself with `sharex --print-binds hyprland --global`
+(`hl.dsp.global("sharex:RectangleRegion")`). Use one method per key, not both. These binds only do something while ShareX is
+running; Hyprland keeps old entries listed until it restarts, which is harmless.
 
 The full command reference and more compositor examples are in [docs/CLI.md](docs/CLI.md).
 

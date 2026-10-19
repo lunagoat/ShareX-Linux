@@ -62,6 +62,16 @@ fi
 work="$(mktemp -d "${TMPDIR:-/tmp}/sharex-install.XXXXXX")"
 trap 'rm -rf "$work"' EXIT
 
+hotkey_hint() {
+    case "${XDG_CURRENT_DESKTOP:-}${XDG_SESSION_DESKTOP:-}" in
+        *yprland*|*sway*)
+            log
+            log "Hotkeys: your compositor does not bind keys by itself. Print ready-made lines with:"
+            log "  sharex --print-binds hyprland     (or: hyprland-conf, sway)"
+            log "and add them to your compositor config." ;;
+    esac
+}
+
 report_missing_tools() {
     local missing=() tool
     command -v grim >/dev/null 2>&1 || command -v gnome-screenshot >/dev/null 2>&1 || [ "${XDG_SESSION_TYPE:-}" = "x11" ] || missing+=(grim)
@@ -116,6 +126,7 @@ build_from_source() {
     log "Building (this takes a few minutes) ..."
     "$work/src/scripts/linux/install-user.sh" "${qflag[@]}"
     report_missing_tools
+    hotkey_hint
 }
 
 if [ "$from_source" -eq 1 ]; then
@@ -165,3 +176,4 @@ fi
 tar -C "$work" -xzf "$work/$ASSET"
 install_from_dir "$work/sharex-linux-x64"
 report_missing_tools
+hotkey_hint

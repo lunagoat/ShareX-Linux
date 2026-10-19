@@ -61,7 +61,7 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
             (_, _) => true, notification => { if (notification.HasValue) SessionClosed?.Invoke(); }, emitOnCapturedContext: false);
     }
 
-    public async Task<HashSet<string>> BindAsync(IReadOnlyList<HotkeyInfo> hotkeys)
+    public async Task<HashSet<string>> BindAsync(IReadOnlyList<(string Id, HotkeyInfo Info)> hotkeys)
     {
         if (session == null) await CreateAsync();
         var result = await RequestAsync("BindShortcuts", session, hotkeys);
@@ -71,7 +71,7 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         return accepted;
     }
 
-    private async Task<Dictionary<string, VariantValue>> RequestAsync(string method, string sessionHandle, IReadOnlyList<HotkeyInfo> hotkeys)
+    private async Task<Dictionary<string, VariantValue>> RequestAsync(string method, string sessionHandle, IReadOnlyList<(string Id, HotkeyInfo Info)> hotkeys)
     {
         string token = "sharex_" + Guid.NewGuid().ToString("N");
         string expected = Path + "/request/" + connection.UniqueName.TrimStart(':').Replace('.', '_') + "/" + token;
@@ -96,7 +96,7 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         }
     }
 
-    private MessageBuffer BuildRequest(string method, string token, string sessionHandle, IReadOnlyList<HotkeyInfo> hotkeys)
+    private MessageBuffer BuildRequest(string method, string token, string sessionHandle, IReadOnlyList<(string Id, HotkeyInfo Info)> hotkeys)
     {
         using var writer = connection.GetMessageWriter();
         writer.WriteMethodCallHeader(destination: Destination, path: Path, @interface: Interface, member: method,
@@ -105,12 +105,13 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         {
             writer.WriteObjectPath(sessionHandle);
             var array = writer.WriteArrayStart(DBusType.Struct);
-            foreach (HotkeyInfo hotkey in hotkeys)
+            foreach ((string id, HotkeyInfo hotkey) in hotkeys)
             {
                 writer.WriteStructureStart();
-                writer.WriteString(hotkey.ID.ToString());
+                writer.WriteString(id);
                 writer.WriteDictionary(new Dictionary<string, VariantValue> {
-                    ["description"] = "ShareX: " + hotkey,
+                    // Compositors list this text, so name the action, not just the keys.
+                    ["description"] = "ShareX: " + (string.IsNullOrEmpty(hotkey.Description) ? hotkey.ToString() : hotkey.Description + " (" + hotkey + ")"),
                     ["preferred_trigger"] = LinuxKeyNames.PortalTrigger(hotkey)
                 });
             }
@@ -154,6 +155,13 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         disposed = true;
         activation?.Dispose();
         closed?.Dispose();
+        // Close the session explicitly: compositors (Hyprland) keep the session's shortcuts listed until told it is gone,
+        // which showed up as stale `sharex:N` entries after every re-registration.
+        if (session != null && connection != null)
+        {
+            try { Task.WhenAny(CloseObjectAsync(session, "org.freedesktop.portal.Session"), Task.Delay(800)).GetAwaiter().GetResult(); }
+            catch { }
+        }
         // Disconnecting also destroys all sessions and outstanding requests owned by this connection.
         connection?.Dispose();
         session = null;

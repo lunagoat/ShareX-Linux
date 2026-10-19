@@ -102,6 +102,8 @@ namespace ShareX
 
         public void RegisterHotkey(HotkeySettings hotkeySetting)
         {
+            HotkeyNames.Assign(Hotkeys != null && !Hotkeys.Contains(hotkeySetting) ? Hotkeys.Append(hotkeySetting) : (Hotkeys ?? new List<HotkeySettings> { hotkeySetting }));
+
             if (!ApplicationState.Settings.DisableHotkeys || hotkeySetting.TaskSettings.Job == HotkeyType.DisableHotkeys)
             {
                 UnregisterHotkey(hotkeySetting, false);

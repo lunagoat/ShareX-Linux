@@ -96,7 +96,16 @@ public sealed class LinuxHotkeyHost : IHotkeyHost
         LinuxGlobalShortcutsPortal current = new();
         portal = current;
         using var cancelled = token.Register(current.Dispose);
-        current.Activated += id => dispatch(() => { if (ushort.TryParse(id, out ushort value) && hotkeys.TryGetValue(value, out HotkeyInfo info)) HotkeyActivated(info); });
+        // Portal ids are the hotkey's action name ("RectangleRegion"), stable across launches and re-registration, so that
+        // compositor binds such as `global, sharex:RectangleRegion` keep working. Hotkeys without a name fall back to their number.
+        Dictionary<string, HotkeyInfo> portalIds = new();
+        foreach (HotkeyInfo info in snapshot.OrderBy(x => x.ID))
+        {
+            string id = string.IsNullOrEmpty(info.Name) ? info.ID.ToString() : info.Name;
+            for (int n = 2; portalIds.ContainsKey(id); n++) id = (string.IsNullOrEmpty(info.Name) ? info.ID.ToString() : info.Name) + "-" + n;
+            portalIds[id] = info;
+        }
+        current.Activated += id => dispatch(() => { if (portalIds.TryGetValue(id, out HotkeyInfo info)) HotkeyActivated(info); });
         current.SessionClosed += () => dispatch(() =>
         {
             if (portal != current) return;
@@ -106,11 +115,11 @@ public sealed class LinuxHotkeyHost : IHotkeyHost
         });
         try
         {
-            var accepted = await current.BindAsync(snapshot);
+            var accepted = await current.BindAsync(portalIds.Select(x => (x.Key, x.Value)).ToList());
             dispatch(() =>
             {
                 if (token.IsCancellationRequested || portal != current || IsDisposed) return;
-                foreach (HotkeyInfo info in snapshot) info.Status = accepted.Contains(info.ID.ToString()) ? HotkeyStatus.Registered : HotkeyStatus.Failed;
+                foreach (HotkeyInfo info in snapshot) info.Status = portalIds.Any(x => x.Value == info && accepted.Contains(x.Key)) ? HotkeyStatus.Registered : HotkeyStatus.Failed;
                 StatusMessage = "Desktop portal shortcuts are active. The desktop may assign a different trigger than the requested keys.";
                 RegistrationChanged?.Invoke(this, EventArgs.Empty);
             });

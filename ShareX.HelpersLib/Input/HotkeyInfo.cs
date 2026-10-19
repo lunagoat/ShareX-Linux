@@ -38,6 +38,14 @@ namespace ShareX.HelpersLib
         [JsonIgnore]
         public HotkeyStatus Status { get; set; }
 
+        /// <summary>Stable identifier of the action this hotkey runs (for example "RectangleRegion"). Used as the portal shortcut id.</summary>
+        [JsonIgnore]
+        public string Name { get; set; }
+
+        /// <summary>Human readable label of the action, shown by the desktop's shortcut list.</summary>
+        [JsonIgnore]
+        public string Description { get; set; }
+
         public InputKey KeyCode => Hotkey & InputKey.KeyCode;
 
         public InputKey ModifiersKeys => Hotkey & InputKey.Modifiers;
