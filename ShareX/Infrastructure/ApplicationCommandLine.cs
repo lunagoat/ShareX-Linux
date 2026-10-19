@@ -64,7 +64,11 @@ internal static class ApplicationCommandLine
         return true;
     }
 
-    internal static Task ExecuteInitialAsync() => Initial.UseCommandLineArgs();
+    internal static Task ExecuteInitialAsync()
+    {
+        if (IsCommandPresent("exit", "quit")) { ApplicationLifecycle.Exit(); return Task.CompletedTask; }
+        return Initial.UseCommandLineArgs();
+    }
 
     internal static async Task ExecuteReceivedAsync(string[]? args)
     {
@@ -88,6 +92,7 @@ internal static class ApplicationCommandLine
 
         ShareXCLIManager commandLine = new(args);
         commandLine.ParseCommands();
+        if (commandLine.IsCommandExist("exit", "quit")) { ApplicationLifecycle.Exit(); return; }
         await commandLine.UseCommandLineArgs();
     }
 }

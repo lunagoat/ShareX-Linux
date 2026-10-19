@@ -30,8 +30,10 @@ namespace ShareX.HelpersLib
 {
     public class DPAPIEncryptedStringValueProvider : IValueProvider
     {
-        private const string encryptedTag = "$DPAPIEncrypted$";
+        private const string encryptedTag = "$ShareXEncrypted$";
+        private const string legacyTag = "$DPAPIEncrypted$";
 
+        private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<object, System.Collections.Generic.Dictionary<string, string>> Unavailable = new();
         private PropertyInfo targetProperty;
 
         public DPAPIEncryptedStringValueProvider(PropertyInfo targetProperty)
@@ -43,14 +45,18 @@ namespace ShareX.HelpersLib
         {
             string value = (string)targetProperty.GetValue(target);
 
+            var unavailable = Unavailable.GetOrCreateValue(target);
+            if (string.IsNullOrEmpty(value) && unavailable.TryGetValue(targetProperty.Name, out string retained)) return retained;
             if (!string.IsNullOrEmpty(value))
             {
+                unavailable.Remove(targetProperty.Name);
                 try
                 {
                     value = encryptedTag + DPAPI.Encrypt(value);
                 }
-                catch
+                catch (System.Exception ex)
                 {
+                    throw new Newtonsoft.Json.JsonSerializationException("Unable to encrypt ShareX credentials.", ex);
                 }
             }
 
@@ -61,15 +67,17 @@ namespace ShareX.HelpersLib
         {
             string text = (string)value;
 
-            if (!string.IsNullOrEmpty(text) && text.StartsWith(encryptedTag))
+            if (!string.IsNullOrEmpty(text) && (text.StartsWith(encryptedTag) || text.StartsWith(legacyTag)))
             {
                 try
                 {
-                    string encryptedString = text.Substring(encryptedTag.Length);
+                    string encryptedString = text.Substring(text.StartsWith(encryptedTag) ? encryptedTag.Length : legacyTag.Length);
                     text = DPAPI.Decrypt(encryptedString);
                 }
-                catch
+                catch (System.Exception ex)
                 {
+                    DebugHelper.WriteException(ex, "ShareX credentials unavailable; preserving encrypted value. Restore settings.key or unlock the keyring. Windows DPAPI imports must first be decrypted on Windows.");
+                    Unavailable.GetOrCreateValue(target)[targetProperty.Name] = text;
                     text = null;
                 }
             }

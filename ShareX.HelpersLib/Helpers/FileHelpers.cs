@@ -89,7 +89,7 @@ namespace ShareX.HelpersLib
         {
             if (!string.IsNullOrEmpty(filePath))
             {
-                int pos = filePath.LastIndexOf('\\');
+                int pos = filePath.LastIndexOf(Path.DirectorySeparatorChar);
 
                 if (pos < 0)
                 {
@@ -208,14 +208,7 @@ namespace ShareX.HelpersLib
 
         public static string GetPathRoot(string path)
         {
-            int separator = path.IndexOf(":\\");
-
-            if (separator > 0)
-            {
-                return path.Substring(0, separator + 2);
-            }
-
-            return "";
+            return Path.GetPathRoot(path) ?? "";
         }
 
         public static string SanitizeFileName(string fileName, string replaceWith = "")
@@ -257,21 +250,7 @@ namespace ShareX.HelpersLib
             {
                 try
                 {
-                    using (Process process = new Process())
-                    {
-                        ProcessStartInfo psi = new ProcessStartInfo()
-                        {
-                            FileName = filePath,
-                            UseShellExecute = true
-                        };
-
-                        process.StartInfo = psi;
-                        process.Start();
-                    }
-
-                    DebugHelper.WriteLine("File opened: " + filePath);
-
-                    return true;
+                    return LinuxDesktop.Open(Path.GetFullPath(filePath));
                 }
                 catch (Exception e)
                 {
@@ -291,28 +270,9 @@ namespace ShareX.HelpersLib
         {
             if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
             {
-                if (!folderPath.EndsWith(@"\"))
-                {
-                    folderPath += @"\";
-                }
-
                 try
                 {
-                    using (Process process = new Process())
-                    {
-                        ProcessStartInfo psi = new ProcessStartInfo()
-                        {
-                            FileName = folderPath,
-                            UseShellExecute = true
-                        };
-
-                        process.StartInfo = psi;
-                        process.Start();
-                    }
-
-                    DebugHelper.WriteLine("Folder opened: " + folderPath);
-
-                    return true;
+                    return LinuxDesktop.Open(Path.GetFullPath(folderPath));
                 }
                 catch (Exception e)
                 {
@@ -334,11 +294,8 @@ namespace ShareX.HelpersLib
             {
                 try
                 {
-                    NativeMethods.OpenFolderAndSelectFile(filePath);
+                    return LinuxDesktop.ShowItem(filePath);
 
-                    DebugHelper.WriteLine("Folder opened with file: " + filePath);
-
-                    return true;
                 }
                 catch (Exception e)
                 {
@@ -403,13 +360,14 @@ namespace ShareX.HelpersLib
                     {
                         foreach (KeyValuePair<string, string> specialFolder in HelpersOptions.ShareXSpecialFolders)
                         {
-                            path = path.Replace(specialFolder.Value, $"%{specialFolder.Key}%", StringComparison.OrdinalIgnoreCase);
+                            if (!string.IsNullOrEmpty(specialFolder.Value)) path = path.Replace(specialFolder.Value, $"%{specialFolder.Key}%", StringComparison.Ordinal);
                         }
                     }
 
                     foreach (Environment.SpecialFolder specialFolder in Helpers.GetEnums<Environment.SpecialFolder>())
                     {
-                        path = path.Replace(Environment.GetFolderPath(specialFolder), $"%{specialFolder}%", StringComparison.OrdinalIgnoreCase);
+                        string folder = Environment.GetFolderPath(specialFolder);
+                        if (!string.IsNullOrEmpty(folder)) path = path.Replace(folder, $"%{specialFolder}%", StringComparison.Ordinal);
                     }
                 }
                 catch (Exception e)
@@ -441,6 +399,9 @@ namespace ShareX.HelpersLib
                     }
 
                     path = Environment.ExpandEnvironmentVariables(path);
+                    if (path == "~" || path.StartsWith("~/", StringComparison.Ordinal)) path = LinuxPaths.Home + path[1..];
+                    path = System.Text.RegularExpressions.Regex.Replace(path, @"\$\{([A-Za-z_][A-Za-z0-9_]*)\}|\$([A-Za-z_][A-Za-z0-9_]*)",
+                        match => Environment.GetEnvironmentVariable(match.Groups[1].Success ? match.Groups[1].Value : match.Groups[2].Value) ?? match.Value);
                 }
                 catch (Exception e)
                 {
@@ -595,7 +556,7 @@ namespace ShareX.HelpersLib
                 {
                     string fileName = Path.GetFileName(file);
 
-                    if (ignoreFiles.All(x => !fileName.Equals(x, StringComparison.OrdinalIgnoreCase)))
+                    if (ignoreFiles.All(x => !fileName.Equals(x, StringComparison.Ordinal)))
                     {
                         newFiles.Add(file);
                     }

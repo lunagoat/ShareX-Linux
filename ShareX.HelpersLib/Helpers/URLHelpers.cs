@@ -60,24 +60,13 @@ namespace ShareX.HelpersLib
                             throw new Exception(Localization.Strings.URLHelpers_Invalid_URL);
                         }
 
-                        using (Process process = new Process())
+                        if (!string.IsNullOrEmpty(HelpersOptions.BrowserPath))
                         {
-                            ProcessStartInfo psi = new ProcessStartInfo();
-                            psi.UseShellExecute = true;
-
-                            if (!string.IsNullOrEmpty(HelpersOptions.BrowserPath))
-                            {
-                                psi.FileName = HelpersOptions.BrowserPath;
-                                psi.Arguments = url;
-                            }
-                            else
-                            {
-                                psi.FileName = url;
-                            }
-
-                            process.StartInfo = psi;
-                            process.Start();
+                            ProcessStartInfo start = new(HelpersOptions.BrowserPath) { UseShellExecute = false };
+                            start.ArgumentList.Add(url);
+                            Process.Start(start)?.Dispose();
                         }
+                        else if (!LinuxDesktop.Open(url)) throw new Exception("xdg-open could not open the URL.");
 
                         DebugHelper.WriteLine("URL opened: " + url);
                     }

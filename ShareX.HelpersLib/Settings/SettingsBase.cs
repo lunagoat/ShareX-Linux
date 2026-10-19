@@ -133,9 +133,11 @@ namespace ShareX.HelpersLib
                     {
                         FileHelpers.CreateDirectoryFromFilePath(filePath);
 
-                        string tempFilePath = filePath + ".temp";
+                        string tempFilePath = filePath + "." + Guid.NewGuid().ToString("N") + ".temp";
 
-                        using (FileStream fileStream = new FileStream(tempFilePath, FileMode.Create, FileAccess.Write, FileShare.Read, 4096, FileOptions.WriteThrough))
+                        using (FileStream fileStream = new FileStream(tempFilePath, new FileStreamOptions {
+                            Mode = FileMode.Create, Access = FileAccess.Write, Share = FileShare.Read,
+                            Options = FileOptions.WriteThrough, UnixCreateMode = UnixFileMode.UserRead | UnixFileMode.UserWrite }))
                         {
                             SaveToStream(fileStream, SupportDPAPIEncryption);
                         }
@@ -217,7 +219,7 @@ namespace ShareX.HelpersLib
 
             if (fallbackSupport && !string.IsNullOrEmpty(filePath))
             {
-                string tempFilePath = filePath + ".temp";
+                string tempFilePath = filePath + "." + Guid.NewGuid().ToString("N") + ".temp";
                 fallbackFilePaths.Add(tempFilePath);
 
                 if (!string.IsNullOrEmpty(backupFolder) && Directory.Exists(backupFolder))

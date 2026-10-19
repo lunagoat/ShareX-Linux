@@ -46,6 +46,7 @@ internal static class Program
     [STAThread]
     private static void Main(string[] args)
     {
+        LinuxPaths.InitializeSandbox();
         ApplicationDiagnostics.Initialize();
         _startTimer = Stopwatch.StartNew();
         ApplicationCommandLine.Initialize(args);
@@ -63,6 +64,11 @@ internal static class Program
 
         StartupOptions.IsAdmin = Helpers.IsAdministrator();
         StartupOptions.MultiInstance = ApplicationCommandLine.IsCommandPresent("multi", "m");
+
+        using var termination = System.Runtime.InteropServices.PosixSignalRegistration.Create(
+            System.Runtime.InteropServices.PosixSignal.SIGTERM, context => { context.Cancel = true; ApplicationLifecycle.Exit(); });
+        using var interrupt = System.Runtime.InteropServices.PosixSignalRegistration.Create(
+            System.Runtime.InteropServices.PosixSignal.SIGINT, context => { context.Cancel = true; ApplicationLifecycle.Exit(); });
 
         using (SingleInstanceManager singleInstanceManager = new(
             ApplicationInfo.MutexName, ApplicationInfo.PipeName, !StartupOptions.MultiInstance, args))

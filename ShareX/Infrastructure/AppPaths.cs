@@ -38,7 +38,7 @@ internal static class AppPaths
     internal const string LogsFolderName = "Logs";
 
     internal static readonly string DefaultPersonalFolder =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), ApplicationInfo.Name);
+        LinuxPaths.ConfigDirectory;
     internal static readonly string PortablePersonalFolder = FileHelpers.GetAbsolutePath(ApplicationInfo.Name);
     internal static readonly string PortableCheckFilePath = FileHelpers.GetAbsolutePath("Portable");
     internal static readonly string SteamInAppFilePath = FileHelpers.GetAbsolutePath("Steam");
@@ -47,15 +47,18 @@ internal static class AppPaths
         ? DefaultPersonalFolder
         : FileHelpers.ExpandFolderVariables(PersonalPathManager.CustomPersonalPath);
 
-    internal static string? HistoryFilePath => StartupOptions.Sandbox ? null : Path.Combine(PersonalFolder, HistoryFileName);
-    internal static string? HistoryFilePathOld => StartupOptions.Sandbox ? null : Path.Combine(PersonalFolder, HistoryFileNameOld);
-    internal static string LogsFolder => Path.Combine(PersonalFolder, LogsFolderName);
+    internal static string DataFolder => string.IsNullOrEmpty(PersonalPathManager.CustomPersonalPath)
+        ? LinuxPaths.DataDirectory : PersonalFolder;
+
+    internal static string? HistoryFilePath => StartupOptions.Sandbox ? null : Path.Combine(DataFolder, HistoryFileName);
+    internal static string? HistoryFilePathOld => StartupOptions.Sandbox ? null : Path.Combine(DataFolder, HistoryFileNameOld);
+    internal static string LogsFolder => Path.Combine(DataFolder, LogsFolderName);
 
     internal static string? LogsFilePath
     {
         get
         {
-            if (SystemOptions.DisableLogging)
+            if (StartupOptions.Sandbox || SystemOptions.DisableLogging)
             {
                 return null;
             }
@@ -93,10 +96,10 @@ internal static class AppPaths
                 }
             }
 
-            return Path.Combine(PersonalFolder, "Screenshots");
+            return Path.Combine(DataFolder, "Screenshots");
         }
     }
 
-    internal static string ImageEffectsFolder => Path.Combine(PersonalFolder, "ImageEffects");
-    internal static string ModelsFolder => Path.Combine(PersonalFolder, "Models");
+    internal static string ImageEffectsFolder => Path.Combine(DataFolder, "ImageEffects");
+    internal static string ModelsFolder => Path.Combine(DataFolder, "Models");
 }

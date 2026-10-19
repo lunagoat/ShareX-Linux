@@ -84,6 +84,7 @@ internal static class ApplicationLifecycle
         }
 
         DebugHelper.WriteLine("ShareX closing.");
+        LinuxNotifications.CloseAll();
         ApplicationState.WatchFolderManager?.Dispose();
         ApplicationState.WatchFolderManager = null;
         SettingManager.HistoryClose();

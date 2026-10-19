@@ -305,53 +305,53 @@ namespace ShareX.HelpersLib
 
         public static bool IsWindowsXP()
         {
-            return OSVersion.Major == 5 && OSVersion.Minor == 1;
+            return OperatingSystem.IsWindows() && (OSVersion.Major == 5 && OSVersion.Minor == 1);
         }
 
         public static bool IsWindowsXPOrGreater()
         {
-            return (OSVersion.Major == 5 && OSVersion.Minor >= 1) || OSVersion.Major > 5;
+            return OperatingSystem.IsWindows() && ((OSVersion.Major == 5 && OSVersion.Minor >= 1) || OSVersion.Major > 5);
         }
 
         public static bool IsWindowsVista()
         {
-            return OSVersion.Major == 6;
+            return OperatingSystem.IsWindows() && (OSVersion.Major == 6);
         }
 
         public static bool IsWindowsVistaOrGreater()
         {
-            return OSVersion.Major >= 6;
+            return OperatingSystem.IsWindows() && (OSVersion.Major >= 6);
         }
 
         public static bool IsWindows7()
         {
-            return OSVersion.Major == 6 && OSVersion.Minor == 1;
+            return OperatingSystem.IsWindows() && (OSVersion.Major == 6 && OSVersion.Minor == 1);
         }
 
         public static bool IsWindows7OrGreater()
         {
-            return (OSVersion.Major == 6 && OSVersion.Minor >= 1) || OSVersion.Major > 6;
+            return OperatingSystem.IsWindows() && ((OSVersion.Major == 6 && OSVersion.Minor >= 1) || OSVersion.Major > 6);
         }
 
         public static bool IsWindows8()
         {
-            return OSVersion.Major == 6 && OSVersion.Minor == 2;
+            return OperatingSystem.IsWindows() && (OSVersion.Major == 6 && OSVersion.Minor == 2);
         }
 
         public static bool IsWindows8OrGreater()
         {
-            return (OSVersion.Major == 6 && OSVersion.Minor >= 2) || OSVersion.Major > 6;
+            return OperatingSystem.IsWindows() && ((OSVersion.Major == 6 && OSVersion.Minor >= 2) || OSVersion.Major > 6);
         }
 
         public static bool IsWindows10OrGreater(int build = -1)
         {
-            return OSVersion.Major >= 10 && OSVersion.Build >= build;
+            return OperatingSystem.IsWindows() && (OSVersion.Major >= 10 && OSVersion.Build >= build);
         }
 
         public static bool IsWindows11OrGreater(int build = -1)
         {
             build = Math.Max(22000, build);
-            return OSVersion.Major >= 10 && OSVersion.Build >= build;
+            return OperatingSystem.IsWindows() && (OSVersion.Major >= 10 && OSVersion.Build >= build);
         }
 
         public static bool IsDefaultInstallDir()
@@ -590,37 +590,10 @@ namespace ShareX.HelpersLib
 
         public static bool IsAdministrator()
         {
-            try
-            {
-                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
-                {
-                    WindowsPrincipal principal = new WindowsPrincipal(identity);
-                    return principal.IsInRole(WindowsBuiltInRole.Administrator);
-                }
-            }
-            catch
-            {
-                return false;
-            }
+            return LinuxUser.IsAdministrator;
         }
 
-        public static bool IsMemberOfAdministratorsGroup()
-        {
-            try
-            {
-                using (WindowsIdentity identity = WindowsIdentity.GetCurrent())
-                {
-                    WindowsPrincipal principal = new WindowsPrincipal(identity);
-                    SecurityIdentifier sid = new SecurityIdentifier(WellKnownSidType.BuiltinAdministratorsSid, null);
-                    return principal.UserClaims.Any(x => x.Value.Contains(sid.Value));
-                }
-            }
-            catch
-            {
-            }
-
-            return false;
-        }
+        public static bool IsMemberOfAdministratorsGroup() => LinuxUser.IsAdministrator;
 
         public static string RepeatGenerator(int count, Func<string> generator)
         {
@@ -663,12 +636,7 @@ namespace ShareX.HelpersLib
 
         public static string GetOperatingSystemProductName(bool includeBit = false)
         {
-            string productName = RegistryHelpers.GetValueString(@"SOFTWARE\Microsoft\Windows NT\CurrentVersion", "ProductName", RegistryHive.LocalMachine);
-
-            if (string.IsNullOrEmpty(productName))
-            {
-                productName = Environment.OSVersion.VersionString;
-            }
+            string productName = RuntimeInformation.OSDescription;
 
             if (includeBit)
             {
@@ -818,18 +786,6 @@ namespace ShareX.HelpersLib
 
         public static bool IsTabletMode()
         {
-            //int state = NativeMethods.GetSystemMetrics(SystemMetric.SM_CONVERTIBLESLATEMODE);
-            //return state == 0;
-
-            try
-            {
-                int result = (int)Registry.GetValue(@"HKEY_CURRENT_USER\SOFTWARE\Microsoft\Windows\CurrentVersion\ImmersiveShell", "TabletMode", 0);
-                return result > 0;
-            }
-            catch
-            {
-            }
-
             return false;
         }
 

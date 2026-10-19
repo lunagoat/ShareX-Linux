@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -23,51 +23,30 @@
 
 #endregion License Information (GPL v3)
 
+using ShareX.HelpersLib;
 using System;
+using System.IO;
 
-namespace ShareX.HelpersLib
+namespace ShareX;
+
+public static class StartupManager
 {
-    public class DWMManager : IDisposable
+    public static string StartupTargetPath => Environment.ProcessPath;
+    public static string AutostartPath => Path.Combine(LinuxPaths.ConfigHome, "autostart", "sharex.desktop");
+    public static StartupState State
     {
-        private bool isDWMEnabled;
-        private bool autoEnable;
-
-        public DWMManager()
+        get => File.Exists(AutostartPath) && !File.ReadAllText(AutostartPath).Contains("Hidden=true", StringComparison.OrdinalIgnoreCase)
+            ? StartupState.Enabled : StartupState.Disabled;
+        set
         {
-            isDWMEnabled = NativeMethods.IsDWMEnabled();
-        }
-
-        public bool AutoDisable()
-        {
-            if (isDWMEnabled)
+            if (LinuxPaths.Ephemeral) return;
+            if (value == StartupState.Enabled)
             {
-                ChangeComposition(false);
-                autoEnable = true;
-                return true;
+                LinuxPaths.WritePrivateFile(AutostartPath, "[Desktop Entry]\nType=Application\nName=ShareX\nExec=" +
+                    DesktopEntry.Quote(StartupTargetPath) + " -silent\nIcon=sharex\nTerminal=false\nX-GNOME-Autostart-enabled=true\n");
             }
-
-            return false;
-        }
-
-        public void ChangeComposition(bool enable)
-        {
-            try
-            {
-                NativeMethods.DwmEnableComposition(enable ? DWM_EC.DWM_EC_ENABLECOMPOSITION : DWM_EC.DWM_EC_DISABLECOMPOSITION);
-            }
-            catch (Exception e)
-            {
-                DebugHelper.WriteException(e);
-            }
-        }
-
-        public void Dispose()
-        {
-            if (isDWMEnabled && autoEnable)
-            {
-                ChangeComposition(true);
-                autoEnable = false;
-            }
+            else if (value == StartupState.Disabled) File.Delete(AutostartPath);
+            else throw new NotSupportedException();
         }
     }
 }

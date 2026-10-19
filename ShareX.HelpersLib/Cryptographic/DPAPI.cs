@@ -50,14 +50,12 @@ namespace ShareX.HelpersLib
 
         public static string Encrypt(byte[] data, byte[] optionalEntropy = null, DataProtectionScope scope = DataProtectionScope.CurrentUser)
         {
-            byte[] encryptedData = ProtectedData.Protect(data, optionalEntropy, scope);
-            return Convert.ToBase64String(encryptedData);
+            return LinuxSettingsProtector.Encrypt(data, optionalEntropy);
         }
 
         public static string Decrypt(string encryptedString, string optionalEntropy = null, DataProtectionScope scope = DataProtectionScope.CurrentUser)
         {
-            byte[] encryptedData = Convert.FromBase64String(encryptedString);
-            return Decrypt(encryptedData, optionalEntropy, scope);
+            return LinuxSettingsProtector.Decrypt(encryptedString, optionalEntropy == null ? null : Encoding.UTF8.GetBytes(optionalEntropy));
         }
 
         public static string Decrypt(byte[] encryptedData, string optionalEntropy = null, DataProtectionScope scope = DataProtectionScope.CurrentUser)
@@ -72,8 +70,7 @@ namespace ShareX.HelpersLib
 
         public static string Decrypt(byte[] encryptedData, byte[] optionalEntropy = null, DataProtectionScope scope = DataProtectionScope.CurrentUser)
         {
-            byte[] decryptedData = ProtectedData.Unprotect(encryptedData, optionalEntropy, scope);
-            return Encoding.UTF8.GetString(decryptedData);
+            return LinuxSettingsProtector.Decrypt(Encoding.UTF8.GetString(encryptedData), optionalEntropy);
         }
     }
 }

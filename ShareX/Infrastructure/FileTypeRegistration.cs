@@ -30,7 +30,7 @@ internal static class FileTypeRegistration
     internal static void RegisterMissingExtensions()
     {
 #if !MicrosoftStore
-        if (StartupOptions.Portable)
+        if (StartupOptions.Portable || StartupOptions.Sandbox)
         {
             return;
         }

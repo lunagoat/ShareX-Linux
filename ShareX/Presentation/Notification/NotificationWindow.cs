@@ -92,6 +92,13 @@ public partial class NotificationWindow : Window
 
     public static void Show(NotificationWindowConfig config)
     {
+        if (config == null || !config.IsValid) { config?.Dispose(); return; }
+        _ = NativeNotificationPresenter.ShowAsync(config, () => ShowAvalonia(config),
+            action => ExecuteAction(action, config), action => CanExecute(action, config));
+    }
+
+    private static void ShowAvalonia(NotificationWindowConfig config)
+    {
         if (config == null || !config.IsValid)
         {
             config?.Dispose();

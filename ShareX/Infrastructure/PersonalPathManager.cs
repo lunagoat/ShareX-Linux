@@ -58,6 +58,7 @@ internal static class PersonalPathManager
         StartupOptions.Sandbox = ApplicationCommandLine.IsCommandPresent("sandbox");
         if (StartupOptions.Sandbox)
         {
+            LinuxPaths.Ephemeral = true;
             return;
         }
 
@@ -76,7 +77,7 @@ internal static class PersonalPathManager
         else if (!string.IsNullOrEmpty(SystemOptions.PersonalPath))
         {
             CustomPersonalPath = SystemOptions.PersonalPath;
-            DetectionMethod = "Registry";
+            DetectionMethod = "SystemOptions.json";
         }
         else
         {
@@ -91,6 +92,7 @@ internal static class PersonalPathManager
             }
         }
 
+        LinuxPaths.CredentialDirectory = AppPaths.PersonalFolder;
         EnsurePersonalFolder();
     }
 
@@ -115,7 +117,7 @@ internal static class PersonalPathManager
     {
         path = path?.Trim() ?? string.Empty;
         bool isDefaultPath = string.IsNullOrEmpty(path) && !File.Exists(ConfigFilePath);
-        if (isDefaultPath || path.Equals(ReadConfig(), StringComparison.OrdinalIgnoreCase))
+        if (isDefaultPath || path.Equals(ReadConfig(), StringComparison.Ordinal))
         {
             return false;
         }
@@ -186,7 +188,7 @@ internal static class PersonalPathManager
             }
 
             File.Delete(PreviousConfigFilePath);
-            Directory.Delete(Path.GetDirectoryName(PreviousConfigFilePath)!);
+
         }
         catch (Exception exception)
         {
