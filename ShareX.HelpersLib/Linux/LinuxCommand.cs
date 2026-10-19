@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace ShareX.HelpersLib;
 
-internal static class LinuxCommand
+public static class LinuxCommand
 {
     public static bool Exists(string name) => (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator)
         .Any(path => File.Exists(Path.Combine(path, name)));
