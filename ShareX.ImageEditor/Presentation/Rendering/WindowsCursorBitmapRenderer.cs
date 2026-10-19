@@ -78,11 +78,6 @@ namespace ShareX.ImageEditor.Presentation.Rendering
 
         public static SKBitmap? CreateAnnotationBitmap(CursorType cursorType)
         {
-            if (!OperatingSystem.IsWindows() && !BundledCursors.ContainsKey(cursorType))
-            {
-                return null;
-            }
-
             lock (SyncRoot)
             {
                 if (!AnnotationBitmapCache.TryGetValue(cursorType, out SKBitmap? cachedBitmap))
@@ -97,11 +92,6 @@ namespace ShareX.ImageEditor.Presentation.Rendering
 
         public static Bitmap? GetPreviewBitmap(CursorType cursorType, int previewSize = 28)
         {
-            if (!OperatingSystem.IsWindows() && !BundledCursors.ContainsKey(cursorType))
-            {
-                return null;
-            }
-
             lock (SyncRoot)
             {
                 var cacheKey = (cursorType, previewSize);
@@ -170,6 +160,8 @@ namespace ShareX.ImageEditor.Presentation.Rendering
                 BinaryPrimitives.WriteInt16LittleEndian(data.AsSpan(12), BinaryPrimitives.ReadInt16LittleEndian(data.AsSpan(offset + 14)));
                 return SKBitmap.Decode(data);
             }
+
+            if (OperatingSystem.IsLinux()) return ShareX.ImageEditor.Linux.CursorBitmapRenderer.Create(cursorType);
 
             IntPtr cursorHandle = TryLoadFallbackCursorHandle(cursorType);
 

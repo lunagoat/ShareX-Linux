@@ -279,6 +279,8 @@ namespace ShareX
 
         public static bool CheckChromeExtensionSupport()
         {
+            if (OperatingSystem.IsLinux()) { return Linux.BrowserIntegration.IsRegistered(false); }
+
             try
             {
                 return RegistryHelpers.CheckStringValue(ChromeNativeMessagingHosts, null, ChromeHostManifestFilePath) && File.Exists(ChromeHostManifestFilePath);
@@ -293,6 +295,8 @@ namespace ShareX
 
         public static void CreateChromeExtensionSupport(bool create)
         {
+            if (OperatingSystem.IsLinux()) { Linux.BrowserIntegration.Register(false, create); return; }
+
             try
             {
                 if (create)
@@ -323,6 +327,8 @@ namespace ShareX
 
         public static bool CheckFirefoxAddonSupport()
         {
+            if (OperatingSystem.IsLinux()) { return Linux.BrowserIntegration.IsRegistered(true); }
+
             try
             {
                 return RegistryHelpers.CheckStringValue(FirefoxNativeMessagingHosts, null, FirefoxHostManifestFilePath) && File.Exists(FirefoxHostManifestFilePath);
@@ -337,6 +343,8 @@ namespace ShareX
 
         public static void CreateFirefoxAddonSupport(bool create)
         {
+            if (OperatingSystem.IsLinux()) { Linux.BrowserIntegration.Register(true, create); return; }
+
             try
             {
                 if (create)
@@ -414,8 +422,8 @@ namespace ShareX
             CreateCustomUploaderExtension(false);
             CreateImageEffectExtension(false);
             CreateSendToMenuButton(false);
-            UnregisterChromeExtensionSupport();
-            UnregisterFirefoxAddonSupport();
+            CreateChromeExtensionSupport(false);
+            CreateFirefoxAddonSupport(false);
         }
     }
 }

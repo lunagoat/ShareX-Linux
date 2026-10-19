@@ -34,6 +34,7 @@ namespace ShareX.HistoryLib
     public class HistoryManagerSQLite : HistoryManager, IDisposable
     {
         private SqliteConnection connection;
+        private readonly object connectionLock = new object();
 
         public HistoryManagerSQLite(string filePath) : base(filePath)
         {
@@ -45,7 +46,7 @@ namespace ShareX.HistoryLib
         {
             FileHelpers.CreateDirectoryFromFilePath(filePath);
 
-            string connectionString = $"Data Source={filePath}";
+            string connectionString = new SqliteConnectionStringBuilder { DataSource = filePath }.ToString();
             connection = new SqliteConnection(connectionString);
             connection.Open();
 
@@ -86,144 +87,162 @@ CREATE TABLE IF NOT EXISTS History (
 
         internal override List<HistoryItem> Load(string dbPath)
         {
-            List<HistoryItem> items = new List<HistoryItem>();
-
-            using (SqliteCommand cmd = new SqliteCommand("SELECT * FROM History;", connection))
-            using (SqliteDataReader reader = cmd.ExecuteReader())
+            lock (connectionLock)
             {
-                while (reader.Read())
+                List<HistoryItem> items = new List<HistoryItem>();
+
+                using (SqliteCommand cmd = new SqliteCommand("SELECT * FROM History;", connection))
+                using (SqliteDataReader reader = cmd.ExecuteReader())
                 {
-                    HistoryItem item = new HistoryItem()
+                    while (reader.Read())
                     {
-                        Id = (long)reader["Id"],
-                        FileName = reader["FileName"].ToString(),
-                        FilePath = reader["FilePath"].ToString(),
-                        DateTime = DateTime.Parse(reader["DateTime"].ToString()),
-                        Type = reader["Type"].ToString(),
-                        Host = reader["Host"].ToString(),
-                        URL = reader["URL"].ToString(),
-                        ThumbnailURL = reader["ThumbnailURL"].ToString(),
-                        DeletionURL = reader["DeletionURL"].ToString(),
-                        ShortenedURL = reader["ShortenedURL"].ToString(),
-                        Tags = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader["Tags"]?.ToString() ?? "{}")
-                    };
+                        HistoryItem item = new HistoryItem()
+                        {
+                            Id = (long)reader["Id"],
+                            FileName = reader["FileName"].ToString(),
+                            FilePath = reader["FilePath"].ToString(),
+                            DateTime = DateTime.Parse(reader["DateTime"].ToString(), System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind),
+                            Type = reader["Type"].ToString(),
+                            Host = reader["Host"].ToString(),
+                            URL = reader["URL"].ToString(),
+                            ThumbnailURL = reader["ThumbnailURL"].ToString(),
+                            DeletionURL = reader["DeletionURL"].ToString(),
+                            ShortenedURL = reader["ShortenedURL"].ToString(),
+                            Tags = JsonConvert.DeserializeObject<Dictionary<string, string>>(reader["Tags"]?.ToString() ?? "{}")
+                        };
 
-                    items.Add(item);
+                        items.Add(item);
+                    }
                 }
-            }
 
-            return items;
+                return items;
+            }
         }
 
         protected override bool Append(string dbPath, IEnumerable<HistoryItem> historyItems)
         {
-            using (SqliteTransaction transaction = connection.BeginTransaction())
+            lock (connectionLock)
             {
-                foreach (HistoryItem item in historyItems)
+                using (SqliteTransaction transaction = connection.BeginTransaction())
                 {
-                    using (SqliteCommand cmd = connection.CreateCommand())
+                    foreach (HistoryItem item in historyItems)
                     {
-                        cmd.CommandText = @"
-INSERT INTO History
-(FileName, FilePath, DateTime, Type, Host, URL, ThumbnailURL, DeletionURL, ShortenedURL, Tags)
-VALUES (@FileName, @FilePath, @DateTime, @Type, @Host, @URL, @ThumbnailURL, @DeletionURL, @ShortenedURL, @Tags);
-SELECT last_insert_rowid();";
-                        cmd.Parameters.AddWithValue("@FileName", item.FileName ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@FilePath", item.FilePath ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@DateTime", item.DateTime.ToString("o") ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Type", item.Type ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Host", item.Host ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@URL", item.URL ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@ThumbnailURL", item.ThumbnailURL ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@DeletionURL", item.DeletionURL ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@ShortenedURL", item.ShortenedURL ?? (object)DBNull.Value);
-                        cmd.Parameters.AddWithValue("@Tags", item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value);
-                        item.Id = (long)cmd.ExecuteScalar();
+                        using (SqliteCommand cmd = connection.CreateCommand())
+                        {
+                            cmd.CommandText = @"
+    INSERT INTO History
+    (FileName, FilePath, DateTime, Type, Host, URL, ThumbnailURL, DeletionURL, ShortenedURL, Tags)
+    VALUES (@FileName, @FilePath, @DateTime, @Type, @Host, @URL, @ThumbnailURL, @DeletionURL, @ShortenedURL, @Tags);
+    SELECT last_insert_rowid();";
+                            cmd.Parameters.AddWithValue("@FileName", item.FileName ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@FilePath", item.FilePath ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@DateTime", item.DateTime.ToString("o") ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Type", item.Type ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Host", item.Host ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@URL", item.URL ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@ThumbnailURL", item.ThumbnailURL ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@DeletionURL", item.DeletionURL ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@ShortenedURL", item.ShortenedURL ?? (object)DBNull.Value);
+                            cmd.Parameters.AddWithValue("@Tags", item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value);
+                            item.Id = (long)cmd.ExecuteScalar();
+                        }
                     }
+
+                    transaction.Commit();
                 }
 
-                transaction.Commit();
+                return true;
             }
-
-            return true;
         }
 
         public void Edit(HistoryItem item)
         {
-            using (SqliteTransaction transaction = connection.BeginTransaction())
-            using (SqliteCommand cmd = connection.CreateCommand())
-            {
-                cmd.CommandText = @"
-UPDATE History SET
-FileName = @FileName,
-FilePath = @FilePath,
-DateTime = @DateTime,
-Type = @Type,
-Host = @Host,
-URL = @URL,
-ThumbnailURL = @ThumbnailURL,
-DeletionURL = @DeletionURL,
-ShortenedURL = @ShortenedURL,
-Tags = @Tags
-WHERE Id = @Id;";
-                cmd.Parameters.AddWithValue("@FileName", item.FileName ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@FilePath", item.FilePath ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DateTime", item.DateTime.ToString("o") ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Type", item.Type ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Host", item.Host ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@URL", item.URL ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ThumbnailURL", item.ThumbnailURL ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@DeletionURL", item.DeletionURL ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@ShortenedURL", item.ShortenedURL ?? (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Tags", item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value);
-                cmd.Parameters.AddWithValue("@Id", item.Id);
-                cmd.ExecuteNonQuery();
-
-                transaction.Commit();
-            }
-        }
-
-        public void Delete(params HistoryItem[] items)
-        {
-            if (items != null && items.Length > 0)
+            lock (connectionLock)
             {
                 using (SqliteTransaction transaction = connection.BeginTransaction())
                 using (SqliteCommand cmd = connection.CreateCommand())
                 {
-                    cmd.CommandText = "DELETE FROM History WHERE Id = @Id;";
-                    SqliteParameter idParam = cmd.CreateParameter();
-                    idParam.ParameterName = "@Id";
-                    cmd.Parameters.Add(idParam);
-
-                    foreach (HistoryItem item in items)
-                    {
-                        idParam.Value = item.Id;
-                        cmd.ExecuteNonQuery();
-                    }
+                    cmd.CommandText = @"
+    UPDATE History SET
+    FileName = @FileName,
+    FilePath = @FilePath,
+    DateTime = @DateTime,
+    Type = @Type,
+    Host = @Host,
+    URL = @URL,
+    ThumbnailURL = @ThumbnailURL,
+    DeletionURL = @DeletionURL,
+    ShortenedURL = @ShortenedURL,
+    Tags = @Tags
+    WHERE Id = @Id;";
+                    cmd.Parameters.AddWithValue("@FileName", item.FileName ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@FilePath", item.FilePath ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DateTime", item.DateTime.ToString("o") ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Type", item.Type ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Host", item.Host ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@URL", item.URL ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ThumbnailURL", item.ThumbnailURL ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@DeletionURL", item.DeletionURL ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@ShortenedURL", item.ShortenedURL ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Tags", item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@Id", item.Id);
+                    cmd.ExecuteNonQuery();
 
                     transaction.Commit();
                 }
             }
         }
 
+        public void Delete(params HistoryItem[] items)
+        {
+            lock (connectionLock)
+            {
+                if (items != null && items.Length > 0)
+                {
+                    using (SqliteTransaction transaction = connection.BeginTransaction())
+                    using (SqliteCommand cmd = connection.CreateCommand())
+                    {
+                        cmd.CommandText = "DELETE FROM History WHERE Id = @Id;";
+                        SqliteParameter idParam = cmd.CreateParameter();
+                        idParam.ParameterName = "@Id";
+                        cmd.Parameters.Add(idParam);
+
+                        foreach (HistoryItem item in items)
+                        {
+                            idParam.Value = item.Id;
+                            cmd.ExecuteNonQuery();
+                        }
+
+                        transaction.Commit();
+                    }
+                }
+            }
+        }
+
         public void MigrateFromJSON(string jsonFilePath)
         {
-            HistoryManagerJSON jsonManager = new HistoryManagerJSON(jsonFilePath);
-            List<HistoryItem> items = jsonManager.Load(jsonFilePath);
-
-            if (items.Count > 0)
+            lock (connectionLock)
             {
-                Append(items);
+                HistoryManagerJSON jsonManager = new HistoryManagerJSON(jsonFilePath);
+                List<HistoryItem> items = jsonManager.Load(jsonFilePath);
+
+                if (items.Count > 0)
+                {
+                    Append(items);
+                }
             }
         }
 
         public void Dispose()
         {
-            if (connection != null)
+            lock (connectionLock)
             {
-                connection.Close();
-                connection.Dispose();
-                SqliteConnection.ClearPool(connection);
+                if (connection != null)
+                {
+                    connection.Close();
+                    connection.Dispose();
+                    SqliteConnection.ClearPool(connection);
+                }
             }
         }
     }

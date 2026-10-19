@@ -56,7 +56,7 @@ namespace ShareX.HelpersLib
 
         public string GetFullPath()
         {
-            return FileHelpers.ExpandFolderVariables(Path);
+            return Linux.ActionCommand.FindExecutable(FileHelpers.ExpandFolderVariables(Path));
         }
 
         public string Run(string inputPath)
@@ -102,7 +102,7 @@ namespace ShareX.HelpersLib
                             ProcessStartInfo psi = new ProcessStartInfo()
                             {
                                 FileName = path,
-                                Arguments = arguments,
+                                
                                 UseShellExecute = false,
                                 CreateNoWindow = HiddenWindow
                             };
@@ -110,16 +110,18 @@ namespace ShareX.HelpersLib
                             DebugHelper.WriteLine($"Action input: \"{inputPath}\" [{FileHelpers.GetFileSizeReadable(inputPath)}]");
                             DebugHelper.WriteLine($"Action run: \"{psi.FileName}\" {psi.Arguments}");
 
+                            foreach (string argument in Linux.ActionCommand.Arguments(Args, inputPath, outputPath)) psi.ArgumentList.Add(argument);
                             process.StartInfo = psi;
                             process.Start();
                             process.WaitForExit();
+                            if (process.ExitCode != 0) throw new InvalidOperationException($"Action exited with code {process.ExitCode}.");
                         }
 
                         if (!string.IsNullOrEmpty(outputPath) && File.Exists(outputPath))
                         {
                             DebugHelper.WriteLine($"Action output: \"{outputPath}\" [{FileHelpers.GetFileSizeReadable(outputPath)}]");
 
-                            if (DeleteInputFile && !inputPath.Equals(outputPath, StringComparison.OrdinalIgnoreCase))
+                            if (DeleteInputFile && !inputPath.Equals(outputPath, StringComparison.Ordinal))
                             {
                                 pendingInputFilePath = inputPath;
                             }
@@ -168,7 +170,7 @@ namespace ShareX.HelpersLib
                         {
                             string extension = "." + extensions.Substring(index, i - index);
 
-                            if (path.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
+                            if (path.EndsWith(extension, StringComparison.Ordinal))
                             {
                                 return true;
                             }

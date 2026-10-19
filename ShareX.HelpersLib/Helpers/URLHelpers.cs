@@ -55,7 +55,8 @@ namespace ShareX.HelpersLib
                 {
                     try
                     {
-                        if (!IsValidURL(url))
+                        if (!Uri.TryCreate(url, UriKind.Absolute, out Uri target) ||
+                            (target.Scheme != "http" && target.Scheme != "https" && target.Scheme != "ftp"))
                         {
                             throw new Exception(Localization.Strings.URLHelpers_Invalid_URL);
                         }
@@ -68,7 +69,7 @@ namespace ShareX.HelpersLib
                             if (!string.IsNullOrEmpty(HelpersOptions.BrowserPath))
                             {
                                 psi.FileName = HelpersOptions.BrowserPath;
-                                psi.Arguments = url;
+                                psi.ArgumentList.Add(url);
                             }
                             else
                             {

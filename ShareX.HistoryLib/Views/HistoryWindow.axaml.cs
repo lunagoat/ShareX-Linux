@@ -520,7 +520,7 @@ public partial class HistoryWindow : Window
 
         string[] files = GetSelectedItems().Select(item => item.FilePath)
             .Where(path => !string.IsNullOrWhiteSpace(path) && File.Exists(path))
-            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Distinct(StringComparer.Ordinal)
             .ToArray()!;
 
         if (files.Length == 0)
@@ -652,7 +652,7 @@ public partial class HistoryWindow : Window
             bool skipDuplicates = ImportSkipDuplicatesCheckBox.IsChecked == true;
             HashSet<string> existing = skipDuplicates
                 ? _allHistoryItems.Where(item => !string.IsNullOrWhiteSpace(item.FilePath))
-                    .Select(item => item.FilePath).ToHashSet(StringComparer.OrdinalIgnoreCase)!
+                    .Select(item => item.FilePath).ToHashSet(StringComparer.Ordinal)!
                 : [];
 
             int imported = await Task.Run(() => ImportFolder(folder, imagesOnly, existing));
@@ -852,7 +852,7 @@ public partial class HistoryWindow : Window
         ShowPrompt(Strings.HistoryWindow_RenameFile, Strings.HistoryWindow_EnterNewFileName, Strings.HistoryWindow_Rename, () =>
         {
             string newName = PromptTextBox.Text?.Trim() ?? string.Empty;
-            if (!string.IsNullOrWhiteSpace(newName) && !newName.Equals(oldName, StringComparison.OrdinalIgnoreCase))
+            if (!string.IsNullOrWhiteSpace(newName) && !newName.Equals(oldName, StringComparison.Ordinal))
             {
                 if (Path.HasExtension(item.FilePath)) newName += Path.GetExtension(item.FilePath);
                 item.FileName = newName;

@@ -5594,5 +5594,9 @@ namespace ShareX.Localization {
         public static string ScreenRecorderBar_StartDelay_4Seconds => ResourceManager.GetString("ScreenRecorderBar_StartDelay_4Seconds", resourceCulture);
         public static string ScreenRecorderBar_StartDelay_5Seconds => ResourceManager.GetString("ScreenRecorderBar_StartDelay_5Seconds", resourceCulture);
         public static string MainMenuBuilder_VideoPlayer => ResourceManager.GetString("MainMenuBuilder_VideoPlayer", resourceCulture);
+        public static string LinuxIntegration_DesktopSession => ResourceManager.GetString("LinuxIntegration_DesktopSession", resourceCulture);
+        public static string LinuxIntegration_StartOnLogin => ResourceManager.GetString("LinuxIntegration_StartOnLogin", resourceCulture);
+        public static string LinuxIntegration_PrintDirectly => ResourceManager.GetString("LinuxIntegration_PrintDirectly", resourceCulture);
+        public static string LinuxIntegration_PlatformNote => ResourceManager.GetString("LinuxIntegration_PlatformNote", resourceCulture);
     }
 }

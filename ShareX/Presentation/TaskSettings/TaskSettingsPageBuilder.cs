@@ -133,6 +133,12 @@ internal sealed class TaskSettingsPageBuilder
         });
     }
 
+    private static Control WindowsOnly(Control control)
+    {
+        control.IsVisible = OperatingSystem.IsWindows();
+        return control;
+    }
+
     public IReadOnlyDictionary<string, Control> BuildPages()
     {
         Dictionary<string, Control> pages = [];
@@ -408,6 +414,7 @@ internal sealed class TaskSettingsPageBuilder
         NumericUpDown shadowOffset = Number(() => capture.CaptureShadowOffset, value => capture.CaptureShadowOffset = (int)value, 0, 1000);
         BindEnabled(shadow, transparent);
         BindEnabled(shadowOffset, transparent);
+        shadow.IsVisible = OperatingSystem.IsWindows();
 
         BoundValue<decimal?> regionX = NumericValue(capture.CaptureCustomRegion.X, value =>
             capture.CaptureCustomRegion = new DrawingRectangle((int)(value ?? 0), capture.CaptureCustomRegion.Y, capture.CaptureCustomRegion.Width, capture.CaptureCustomRegion.Height));
@@ -452,12 +459,12 @@ internal sealed class TaskSettingsPageBuilder
             EnabledCard(_captureOverride, Strings.TaskSettingsWindow_Screenshots,
                 Check(Strings.TaskSettingsWindow_ShowCursorInScreenshots, () => capture.ShowCursor, value => capture.ShowCursor = value),
                 Row(Strings.TaskSettingsWindow_ScreenshotDelaySeconds, Number(() => capture.ScreenshotDelay, value => capture.ScreenshotDelay = value, 0, 60, 0.1m)),
-                Check(Strings.TaskSettingsWindow_CaptureWindowWithTransparency, transparent), shadow,
-                Row(Strings.TaskSettingsWindow_ShadowOffset, shadowOffset),
+                WindowsOnly(Check(Strings.TaskSettingsWindow_CaptureWindowWithTransparency, transparent)), shadow,
+                WindowsOnly(Row(Strings.TaskSettingsWindow_ShadowOffset, shadowOffset)),
                 Check(Strings.TaskSettingsWindow_CaptureClientAreaForWindowCaptures, () => capture.CaptureClientArea, value => capture.CaptureClientArea = value),
-                Check(Strings.TaskSettingsWindow_HideTaskbarWhenItIntersectsACapturedWindow, () => capture.CaptureAutoHideTaskbar, value => capture.CaptureAutoHideTaskbar = value),
-                Check(Strings.TaskSettingsWindow_AutomaticallyHideDesktopIcons, () => capture.CaptureAutoHideDesktopIcons, value => capture.CaptureAutoHideDesktopIcons = value),
-                Check(Strings.TaskSettingsWindow_HDRScreenshotColorCorrector, () => capture.HDRScreenshotColorCorrection, value => capture.HDRScreenshotColorCorrection = value)),
+                WindowsOnly(Check(Strings.TaskSettingsWindow_HideTaskbarWhenItIntersectsACapturedWindow, () => capture.CaptureAutoHideTaskbar, value => capture.CaptureAutoHideTaskbar = value)),
+                WindowsOnly(Check(Strings.TaskSettingsWindow_AutomaticallyHideDesktopIcons, () => capture.CaptureAutoHideDesktopIcons, value => capture.CaptureAutoHideDesktopIcons = value)),
+                WindowsOnly(Check(Strings.TaskSettingsWindow_HDRScreenshotColorCorrector, () => capture.HDRScreenshotColorCorrection, value => capture.HDRScreenshotColorCorrection = value))),
             EnabledCard(_captureOverride, Strings.TaskSettingsWindow_PreconfiguredRegion, regionGrid, selectRegion),
             EnabledCard(_captureOverride, Strings.TaskSettingsWindow_PreconfiguredWindow,
                 Row(Strings.TaskSettingsWindow_WindowTitle, Text(() => capture.CaptureCustomWindow, value => capture.CaptureCustomWindow = value))));
@@ -469,6 +476,7 @@ internal sealed class TaskSettingsPageBuilder
         BoundValue<bool> detectWindows = new(options.DetectWindows, value => options.DetectWindows = value);
         CheckBox detectControls = Check(Strings.TaskSettingsWindow_AlsoDetectControlsInsideWindows, () => options.DetectControls, value => options.DetectControls = value);
         BindEnabled(detectControls, detectWindows);
+        detectControls.IsVisible = OperatingSystem.IsWindows();
 
         BoundValue<bool> customInfo = new(options.UseCustomInfoText, value => options.UseCustomInfoText = value);
         TextBox customInfoText = PixelInfoText(new(options.CustomInfoText,

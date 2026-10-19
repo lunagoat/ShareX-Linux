@@ -30,7 +30,8 @@ internal static class FileTypeRegistration
     internal static void RegisterMissingExtensions()
     {
 #if !MicrosoftStore
-        if (StartupOptions.Portable)
+        // WP1 supplies desktop/MIME registration on Linux. Never invoke shell32 here.
+        if (System.OperatingSystem.IsLinux() || StartupOptions.Portable)
         {
             return;
         }

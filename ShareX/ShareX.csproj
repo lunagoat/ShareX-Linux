@@ -9,6 +9,9 @@
     <CETCompat>false</CETCompat>
   </PropertyGroup>
   <ItemGroup>
+    <InternalsVisibleTo Include="ShareX.Integration.Tests" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="SkiaSharp" />

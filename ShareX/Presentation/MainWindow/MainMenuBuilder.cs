@@ -174,6 +174,7 @@ internal sealed class MainMenuBuilder
 
     private static byte[]? GetWindowIcon(WindowInfo window)
     {
+        if (!OperatingSystem.IsWindows()) return null;
         using Icon? icon = window.Icon;
         if (icon == null)
         {

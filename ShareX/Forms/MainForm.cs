@@ -43,7 +43,7 @@ internal sealed class MainForm
 
     public MainForm()
     {
-        _hotkeyHost = new WindowsHotkeyHost();
+        _hotkeyHost = OperatingSystem.IsLinux() ? new Linux.ApplicationHost() : new WindowsHotkeyHost();
         _hotkeyHost.NativeMessageReceived += OnNativeMessage;
         _hotkeyHost.Closed += OnHostClosed;
 
@@ -77,7 +77,7 @@ internal sealed class MainForm
             ApplicationState.HotkeyManager = hotkeyManager;
         }
 
-        hotkeyManager.UpdateHotkeys(ApplicationState.HotkeysConfig.Hotkeys, !StartupOptions.IgnoreHotkeyWarning);
+        hotkeyManager.UpdateHotkeys(ApplicationState.HotkeysConfig.Hotkeys, !StartupOptions.IgnoreHotkeyWarning && _hotkeyHost is not Linux.ApplicationHost);
         DebugHelper.WriteLine("HotkeyManager started.");
     }
 
