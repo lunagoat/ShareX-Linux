@@ -324,6 +324,12 @@ namespace ShareX
                     }
                 }
             }
+            catch (Exception ex)
+            {
+                DebugHelper.WriteException(ex);
+                Console.Error.WriteLine($"[WorkerTask.ThreadDoWork] Exception: {ex}");
+                AddErrorMessage(ex.Message);
+            }
             finally
             {
                 KeepImage = Image != null && Info.TaskSettings.GeneralSettings.ShowToastNotificationAfterTaskCompleted;

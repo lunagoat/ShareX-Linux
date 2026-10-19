@@ -1,4 +1,4 @@
-﻿#region License Information (GPL v3)
+#region License Information (GPL v3)
 
 /*
     ShareX - A program that allows you to take screenshots and share any file type
@@ -54,8 +54,19 @@ namespace ShareX.HelpersLib
 
         private void WorkThread()
         {
-            OnDoWork();
-            OnCompleted();
+            try
+            {
+                OnDoWork();
+            }
+            catch (Exception ex)
+            {
+                DebugHelper.WriteException(ex);
+                Console.Error.WriteLine($"[ThreadWorker] Exception in OnDoWork: {ex}");
+            }
+            finally
+            {
+                OnCompleted();
+            }
         }
 
         private void OnDoWork()
