@@ -52,12 +52,12 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
                 }
             }
         }
-        activation = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Sender = Destination, Path = Path, Interface = Interface, Member = "Activated" },
+        activation = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Path = Path, Interface = Interface, Member = "Activated" },
             (message, _) => { var reader = message.GetBodyReader(); return (reader.ReadObjectPathAsString(), reader.ReadString()); },
             notification => { if (notification.HasValue && notification.Value.Item1 == session) Activated?.Invoke(notification.Value.Item2); }, emitOnCapturedContext: false);
         var response = await RequestAsync("CreateSession", null, []);
         session = response.TryGetValue("session_handle", out VariantValue handle) ? handle.GetString() : throw new InvalidOperationException("Portal returned no session handle.");
-        closed = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Sender = Destination, Path = session, Interface = "org.freedesktop.portal.Session", Member = "Closed" },
+        closed = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Path = session, Interface = "org.freedesktop.portal.Session", Member = "Closed" },
             (_, _) => true, notification => { if (notification.HasValue) SessionClosed?.Invoke(); }, emitOnCapturedContext: false);
     }
 
@@ -76,9 +76,10 @@ public sealed class LinuxGlobalShortcutsPortal : IDisposable
         string token = "sharex_" + Guid.NewGuid().ToString("N");
         string expected = Path + "/request/" + connection.UniqueName.TrimStart(':').Replace('.', '_') + "/" + token;
         TaskCompletionSource<(uint Code, Dictionary<string, VariantValue> Values)> completion = new(TaskCreationOptions.RunContinuationsAsynchronously);
-        using IDisposable response = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Sender = Destination, Path = expected, Interface = "org.freedesktop.portal.Request", Member = "Response" },
+        // NOTE: Notification<T>.Exception throws on a notification that carries a value, so always test HasValue first.
+        using IDisposable response = await connection.AddMatchAsync(new MatchRule { Type = MessageType.Signal, Path = expected, Interface = "org.freedesktop.portal.Request", Member = "Response" },
             (message, _) => { var reader = message.GetBodyReader(); return (reader.ReadUInt32(), reader.ReadDictionaryOfStringToVariantValue()); },
-            notification => { if (notification.Exception != null) completion.TrySetException(notification.Exception); else if (notification.HasValue) completion.TrySetResult(notification.Value); }, flags: ObserverFlags.EmitOnConnectionClosed | ObserverFlags.EmitOnReaderFailed, emitOnCapturedContext: false);
+            notification => { if (notification.HasValue) completion.TrySetResult(notification.Value); else completion.TrySetException(notification.Exception); }, flags: ObserverFlags.EmitOnConnectionClosed | ObserverFlags.EmitOnReaderFailed, emitOnCapturedContext: false);
         string request = await connection.CallMethodAsync(BuildRequest(method, token, sessionHandle, hotkeys),
             (message, _) => message.GetBodyReader().ReadObjectPathAsString());
         if (request != expected) throw new InvalidOperationException("Portal returned an unexpected request path.");

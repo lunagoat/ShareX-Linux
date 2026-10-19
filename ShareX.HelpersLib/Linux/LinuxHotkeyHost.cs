@@ -45,6 +45,7 @@ public sealed class LinuxHotkeyHost : IHotkeyHost
     {
         ObjectDisposedException.ThrowIf(IsDisposed || closing, this);
         if (hotkey == null || hotkey.Status == HotkeyStatus.Registered) return;
+        DebugHelper.WriteLine($"Hotkey register requested: {hotkey} valid={hotkey.IsValidHotkey} wayland={LinuxWindowSystem.IsWayland}");
         if (!hotkey.IsValidHotkey) { hotkey.Status = HotkeyStatus.NotConfigured; return; }
         Initialize();
         if (hotkey.ID != 0) UnregisterHotkey(hotkey);
@@ -90,6 +91,7 @@ public sealed class LinuxHotkeyHost : IHotkeyHost
         portal?.Dispose();
         portal = null;
         HotkeyInfo[] snapshot = hotkeys.Values.ToArray();
+        DebugHelper.WriteLine($"Binding {snapshot.Length} shortcut(s) through the desktop portal.");
         if (snapshot.Length == 0) return;
         LinuxGlobalShortcutsPortal current = new();
         portal = current;
