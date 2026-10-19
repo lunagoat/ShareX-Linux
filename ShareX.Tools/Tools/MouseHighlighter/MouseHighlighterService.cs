@@ -62,7 +62,10 @@ internal sealed class MouseHighlighterService : IDisposable
     {
         Options = options;
         options.Validate();
-        CursorPosition = CaptureHelpers.GetCursorPosition();
+        if (Linux.DesktopTools.Wayland && (options.Mode != MouseHighlightMode.Circle || options.AlwaysColor.A == 0))
+            throw new NotSupportedException("Wayland does not expose global mouse clicks. Select Circle mode and a visible Always color for a cursor halo, or use X11 for click ripples.");
+        var cursor = Linux.DesktopTools.CursorPosition() ?? default;
+        CursorPosition = new(cursor.X, cursor.Y);
         _input = new MouseHighlighterInputBuffer(CursorPosition);
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(1000d / 60) };
         _timer.Tick += OnTick;
@@ -83,6 +86,8 @@ internal sealed class MouseHighlighterService : IDisposable
     public void UpdateOptions(MouseHighlighterOptions options)
     {
         options.Validate();
+        if (Linux.DesktopTools.Wayland && (options.Mode != MouseHighlightMode.Circle || options.AlwaysColor.A == 0))
+            throw new NotSupportedException("Wayland does not expose global mouse clicks. Select Circle mode and a visible Always color for a cursor halo, or use X11 for click ripples.");
         Options = options;
         _highlights.Clear();
         Array.Clear(_heldHighlights);

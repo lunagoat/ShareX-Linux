@@ -39,7 +39,7 @@
                                     <TextBlock Text="{x:Static localization:Strings.InspectWindowWindow_Pick_window}"/>
                                 </StackPanel>
                             </Button>
-                            <Button Grid.Column="1" Click="OnPickControlClick">
+                            <Button Grid.Column="1" Click="OnPickControlClick" IsEnabled="False" ToolTip.Tip="Child controls are not exposed by Linux compositors.">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <TextBlock Text="{x:Static theming:LucideIcons.mouse_pointer_2}"
                                                FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
@@ -83,6 +83,7 @@
 
                 <Grid Grid.Row="1" ColumnDefinitions="300,*" ColumnSpacing="12">
                     <StackPanel Grid.Column="0" Spacing="12">
+                        <TextBlock Text="{Binding SupportMessage}" TextWrapping="Wrap"/>
                         <Border Classes="tool-panel" Padding="16">
                             <Grid RowDefinitions="Auto,Auto" RowSpacing="8">
                                 <Grid Grid.Row="0" ColumnDefinitions="16,*" ColumnSpacing="8">
@@ -125,7 +126,7 @@
                             </Grid>
                         </Border>
 
-                        <Border Classes="tool-panel" Padding="16" IsVisible="{Binding IsTopLevelWindow}">
+                        <Border Classes="tool-panel" Padding="16" IsVisible="{Binding CanModifyWindow}">
                             <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="12">
                                 <TextBlock Grid.Row="0" Classes="section-heading" Text="{x:Static localization:Strings.InspectWindowWindow_Window_settings}"/>
                                 <ToggleSwitch Grid.Row="1"

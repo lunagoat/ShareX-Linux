@@ -13,11 +13,8 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" />
     <PackageReference Include="SkiaSharp" />
-    <PackageReference Include="Vortice.Direct3D11" />
-    <PackageReference Include="Vortice.DXGI" VersionOverride="3.8.3" />
-    <PackageReference Include="Vortice.MediaFoundation" />
   </ItemGroup>
 
   <ItemGroup>
@@ -26,6 +23,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <InternalsVisibleTo Include="ShareX.Linux.Tools.Tests" />
     <Using Include="ShareX.AvaloniaUI.Imaging" />
     <Using Include="ShareX.Tools.Infrastructure" />
   </ItemGroup>

@@ -35,7 +35,7 @@ public sealed record VideoTrimmerThumbnail(double Position, Bitmap Image);
 public sealed partial class VideoTrimmerViewModel : ViewModelBase, IDisposable
 {
     private readonly VideoTrimmerService _service;
-    private readonly WindowsMediaPlayer _player;
+    private readonly MediaPlayer _player;
     private readonly Func<string?>? _resolveFFmpegPath;
     private readonly Action? _playNotificationSound;
     private readonly CancellationTokenSource _lifetime = new();
@@ -58,7 +58,7 @@ public sealed partial class VideoTrimmerViewModel : ViewModelBase, IDisposable
     [ObservableProperty] private bool _isExporting;
     [ObservableProperty] private double _progress;
 
-    public VideoTrimmerViewModel(string ffmpegPath, WindowsMediaPlayer player, Action? playNotificationSound = null,
+    public VideoTrimmerViewModel(string ffmpegPath, MediaPlayer player, Action? playNotificationSound = null,
         Func<string?>? resolveFFmpegPath = null)
     {
         _service = new(ffmpegPath);

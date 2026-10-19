@@ -98,10 +98,17 @@ public partial class PinToScreenWindow : Window
         {
             System.Drawing.Size size = new((int)Math.Ceiling(Width), (int)Math.Ceiling(Height));
             location = Helpers.GetPosition(Options.Placement, Options.PlacementOffset,
-                CaptureHelpers.GetActiveScreenWorkingArea(), size);
+                GetWorkingArea(), size);
         }
 
         Position = new PixelPoint(location.X, location.Y);
+    }
+
+    private System.Drawing.Rectangle GetWorkingArea()
+    {
+        var screen = Screens.ScreenFromPoint(Linux.DesktopTools.CursorPosition() ?? Position) ?? Screens.Primary;
+        var area = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
+        return new(area.X, area.Y, area.Width, area.Height);
     }
 
     private void ApplyOptions(bool resize = true)

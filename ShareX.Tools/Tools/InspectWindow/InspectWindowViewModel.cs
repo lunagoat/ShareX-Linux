@@ -36,7 +36,7 @@ public sealed record InspectWindowProperty(string Name, string Value, bool IsMul
 
 public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
 {
-    private WindowInfo? _selectedWindow;
+    private Linux.DesktopWindow? _selectedWindow;
     private bool _updating;
     private IntPtr _ignoredWindowHandle;
 
@@ -74,6 +74,8 @@ public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private double _opacity = 100;
 
+    public string SupportMessage => InspectWindowService.SupportMessage;
+    public bool CanModifyWindow => false;
     public bool CanRefresh => HasSelection;
     public bool HasSelectedIcon => SelectedIcon != null;
     public string ClipboardText => string.Join(Environment.NewLine + Environment.NewLine,
@@ -92,7 +94,7 @@ public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
             return;
         }
 
-        _selectedWindow = new WindowInfo(handle);
+        _selectedWindow = Linux.DesktopTools.GetWindows().FirstOrDefault(w => w.Handle == handle);
         IsTopLevelWindow = isTopLevelWindow;
         SelectedListItem = null;
         UpdateWindowInfo();
@@ -130,7 +132,7 @@ public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
     {
         if (_selectedWindow != null)
         {
-            _selectedWindow = new WindowInfo(_selectedWindow.Handle);
+            _selectedWindow = Linux.DesktopTools.GetWindows().FirstOrDefault(w => w.Handle == _selectedWindow.Handle);
             UpdateWindowInfo();
         }
     }
@@ -144,7 +146,7 @@ public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
 
         try
         {
-            new WindowInfo(_selectedWindow.Handle).TopMost = value;
+            _selectedWindow.TopMost = value;
             Refresh();
         }
         catch (Exception ex)
@@ -163,7 +165,7 @@ public sealed partial class InspectWindowViewModel : ViewModelBase, IDisposable
         try
         {
             double percentage = Math.Clamp(value, 10, 100);
-            new WindowInfo(_selectedWindow.Handle).Opacity = (byte)Math.Round(percentage / 100d * 255d);
+            _selectedWindow.Opacity = (byte)Math.Round(percentage / 100d * 255d);
         }
         catch (Exception ex)
         {

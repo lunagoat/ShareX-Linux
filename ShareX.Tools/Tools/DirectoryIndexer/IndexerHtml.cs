@@ -52,7 +52,7 @@ namespace ShareX.Tools
             sbHtmlIndex.AppendLine(HtmlHelper.EndTag("head"));
             sbHtmlIndex.AppendLine(HtmlHelper.StartTag("body"));
 
-            folderPath = Path.GetFullPath(folderPath).TrimEnd('\\');
+            folderPath = Path.GetFullPath(folderPath).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             prePathTrim = folderPath.LastIndexOf(@"\") + 1;
 
             FolderInfo folderInfo = GetFolderInfo(folderPath);

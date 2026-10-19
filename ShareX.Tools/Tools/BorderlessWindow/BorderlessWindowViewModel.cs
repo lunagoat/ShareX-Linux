@@ -60,6 +60,7 @@ public sealed partial class BorderlessWindowViewModel : ViewModelBase, IDisposab
     private string _errorMessage = string.Empty;
 
     public Action? CloseRequested { get; set; }
+    public string SupportMessage => BorderlessWindowManager.SupportMessage;
     public bool CanToggle => !string.IsNullOrWhiteSpace(WindowTitle);
     public bool HasError => !string.IsNullOrWhiteSpace(ErrorMessage);
 

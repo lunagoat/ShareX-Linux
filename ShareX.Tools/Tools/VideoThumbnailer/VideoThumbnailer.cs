@@ -44,7 +44,7 @@ namespace ShareX.Tools
 
         public VideoThumbnailer(string ffmpegPath, VideoThumbnailOptions options)
         {
-            FFmpegPath = ffmpegPath;
+            FFmpegPath = Linux.ToolProcess.Resolve("ffmpeg", ffmpegPath);
             Options = options;
         }
 
@@ -73,34 +73,14 @@ namespace ShareX.Tools
             {
                 string mediaFileName = Path.GetFileNameWithoutExtension(MediaPath);
 
-                int timeSliceElapsed;
-
-                if (Options.RandomFrame)
-                {
-                    timeSliceElapsed = GetRandomTimeSlice(i);
-                }
-                else
-                {
-                    timeSliceElapsed = GetTimeSlice(Options.ThumbnailCount) * (i + 1);
-                }
-
-                string fileName = string.Format("{0}-{1}.{2}", mediaFileName, timeSliceElapsed, Options.ImageFormat.GetDescription());
+                double interval = VideoInfo.Duration.TotalSeconds / (Options.ThumbnailCount + 1d);
+                double timeSliceElapsed = Options.RandomFrame
+                    ? interval * (i + 0.25 + RandomFast.NextDouble() * 0.5)
+                    : interval * (i + 1);
+                string fileName = $"{mediaFileName}-{i + 1:000}-{timeSliceElapsed.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)}.{Options.ImageFormat.GetDescription()}";
                 string tempThumbnailPath = Path.Combine(GetOutputDirectory(), fileName);
-
-                using (Process process = new Process())
-                {
-                    ProcessStartInfo psi = new ProcessStartInfo()
-                    {
-                        FileName = FFmpegPath,
-                        Arguments = $"-ss {timeSliceElapsed} -i \"{MediaPath}\" -f image2 -vframes 1 -y \"{tempThumbnailPath}\"",
-                        UseShellExecute = false,
-                        CreateNoWindow = true
-                    };
-
-                    process.StartInfo = psi;
-                    process.Start();
-                    process.WaitForExit(1000 * 30);
-                }
+                Linux.ToolProcess.RunAsync(FFmpegPath, ["-v", "error", "-nostdin", "-ss", timeSliceElapsed.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
+                    "-i", Path.GetFullPath(MediaPath), "-frames:v", "1", "-threads", "1", "-y", tempThumbnailPath]).GetAwaiter().GetResult();
 
                 if (File.Exists(tempThumbnailPath))
                 {
@@ -180,23 +160,6 @@ namespace ShareX.Tools
             return directory;
         }
 
-        private int GetTimeSlice(int count)
-        {
-            return (int)(VideoInfo.Duration.TotalSeconds / count);
-        }
-
-        private int GetRandomTimeSlice(int start)
-        {
-            List<int> mediaSeekTimes = new List<int>();
-
-            for (int i = 1; i < Options.ThumbnailCount + 2; i++)
-            {
-                mediaSeekTimes.Add(GetTimeSlice(Options.ThumbnailCount + 2) * i);
-            }
-
-            return (int)((RandomFast.NextDouble() * (mediaSeekTimes[start + 1] - mediaSeekTimes[start])) + mediaSeekTimes[start]);
-        }
-
         private SKBitmap CombineScreenshots(List<VideoThumbnailInfo> thumbnails)
         {
             List<SKBitmap> images = new List<SKBitmap>();
@@ -224,13 +187,15 @@ namespace ShareX.Tools
                     if (Options.MaxThumbnailWidth > 0 && bmp.Width > Options.MaxThumbnailWidth)
                     {
                         int maxThumbnailHeight = (int)((float)Options.MaxThumbnailWidth / bmp.Width * bmp.Height);
-                        bmp = SkiaImageHelpers.ResizeImage(bmp, Options.MaxThumbnailWidth, maxThumbnailHeight);
+                        SKBitmap resized = SkiaImageHelpers.ResizeImage(bmp, Options.MaxThumbnailWidth, Math.Max(1, maxThumbnailHeight));
+                        bmp.Dispose();
+                        bmp = resized;
                     }
 
                     images.Add(bmp);
                 }
 
-                int columnCount = Options.ColumnCount;
+                int columnCount = Math.Max(1, Options.ColumnCount);
 
                 int thumbWidth = images[0].Width;
 

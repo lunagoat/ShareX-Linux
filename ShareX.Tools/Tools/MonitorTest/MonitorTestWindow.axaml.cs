@@ -50,7 +50,7 @@ public partial class MonitorTestWindow : Window
     private void OnOpened(object? sender, EventArgs e)
     {
         Screen? screen = null;
-        if (NativeMethods.GetCursorPos(out POINT cursorPosition))
+        if (Linux.DesktopTools.CursorPosition() is PixelPoint cursorPosition)
         {
             screen = Screens.ScreenFromPoint(new PixelPoint(cursorPosition.X, cursorPosition.Y));
         }

@@ -58,97 +58,23 @@ public sealed class InspectWindowListItem : IDisposable
 
 public static class InspectWindowService
 {
-    private const uint GA_ROOT = 2;
-    private static readonly string[] IgnoredClasses = ["Progman", "Button"];
-
-    public static IntPtr GetWindowAtPoint(int x, int y, bool topLevel)
-    {
-        IntPtr handle = WindowFromPoint(new POINT(x, y));
-        return topLevel && handle != IntPtr.Zero ? GetAncestor(handle, GA_ROOT) : handle;
-    }
+    public static string SupportMessage => Linux.DesktopTools.WindowSupport;
+    public static IntPtr GetWindowAtPoint(int x, int y, bool topLevel) =>
+        Linux.DesktopTools.GetWindows().LastOrDefault(w => w.Rectangle.Contains(x, y))?.Handle ?? IntPtr.Zero;
 
     public static IReadOnlyList<InspectWindowListItem> GetVisibleWindows(IntPtr ignoredHandle)
     {
-        List<InspectWindowListItem> windows = [];
-
-        NativeMethods.EnumWindows((handle, _) =>
-        {
-            if (handle == ignoredHandle)
-            {
-                return true;
-            }
-
-            try
-            {
-                WindowInfo window = new(handle);
-                string title = window.Text;
-                string className = window.ClassName;
-                System.Drawing.Rectangle rectangle = window.Rectangle;
-
-                if (window.IsVisible && !window.IsCloaked && !string.IsNullOrWhiteSpace(title) &&
-                    rectangle.Width > 0 && rectangle.Height > 0 &&
-                    !IgnoredClasses.Contains(className, StringComparer.OrdinalIgnoreCase))
-                {
-                    windows.Add(new InspectWindowListItem(
-                        handle,
-                        title,
-                        TryGet(() => window.ProcessName),
-                        GetWindowIcon(window)));
-                }
-            }
-            catch (Exception ex)
-            {
-                ToolsDiagnostics.ReportWarning(nameof(InspectWindowService), "Failed to inspect a window while building the window list.", ex);
-            }
-
-            return true;
-        }, IntPtr.Zero);
-
-        return windows.OrderBy(x => x.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
-    }
-
-    private static string TryGet(Func<string> valueFactory)
-    {
         try
         {
-            return valueFactory() ?? string.Empty;
+            return Linux.DesktopTools.GetWindows().Where(w => w.Handle != ignoredHandle && !string.IsNullOrWhiteSpace(w.Text))
+                .Select(w => new InspectWindowListItem(w.Handle, w.Text, w.ProcessName, null))
+                .OrderBy(w => w.Title, StringComparer.CurrentCultureIgnoreCase).ToArray();
         }
-        catch
+        catch (Exception ex)
         {
-            return string.Empty;
+            ToolsDiagnostics.ReportWarning(nameof(InspectWindowService), "Window enumeration is unavailable.", ex);
+            return [];
         }
     }
-
-    public static AvaloniaBitmap? GetWindowIcon(IntPtr handle)
-    {
-        return handle == IntPtr.Zero ? null : GetWindowIcon(new WindowInfo(handle));
-    }
-
-    private static AvaloniaBitmap? GetWindowIcon(WindowInfo window)
-    {
-        try
-        {
-            using System.Drawing.Icon? icon = window.Icon;
-            if (icon == null || icon.Width <= 0 || icon.Height <= 0)
-            {
-                return null;
-            }
-
-            using SKBitmap bitmap = WindowsImageInterop.FromIcon(icon.Handle);
-            using MemoryStream stream = new();
-            bitmap.Save(stream, ImageFormat.Png);
-            stream.Position = 0;
-            return new AvaloniaBitmap(stream);
-        }
-        catch
-        {
-            return null;
-        }
-    }
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr WindowFromPoint(POINT point);
-
-    [DllImport("user32.dll")]
-    private static extern IntPtr GetAncestor(IntPtr handle, uint flags);
+    public static AvaloniaBitmap? GetWindowIcon(IntPtr handle) => null;
 }
