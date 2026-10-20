@@ -1,5 +1,6 @@
 // ShareX - GPL v3 or later. Copyright (c) 2007-2026 ShareX Team.
 using Newtonsoft.Json.Linq;
+using ShareX.AvaloniaUI.Linux;
 using ShareX.HelpersLib;
 using System;
 using System.Collections.Generic;
@@ -222,6 +223,13 @@ internal static class Doctor
             }
         }
         catch (Exception e) { Info("could not read the log: " + e.Message); }
+
+        Section("Displays");
+        try
+        {
+            DoctorDisplays.Print(Info);
+        }
+        catch (Exception e) { Info("could not inspect displays: " + e.Message); }
 
         Console.WriteLine();
         Console.WriteLine(problems == 0 ? "No problems found." : problems + " problem(s) found.");
