@@ -65,6 +65,21 @@ public sealed class MonitorRenderer : IDisposable
         Copy(_dimmed, _frame, Surface);
     }
 
+    /// <summary>Caller-owned native-resolution crop of the frozen screenshot, without overlay chrome.
+    /// Coordinates are output-local physical pixels. Call on the renderer owner thread.</summary>
+    public SKBitmap CapturePixels(SKRectI pixels)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        if (pixels.Width <= 0 || pixels.Height <= 0 || pixels.Left < 0 || pixels.Top < 0 ||
+            pixels.Right > _original.Width || pixels.Bottom > _original.Height)
+            throw new ArgumentOutOfRangeException(nameof(pixels));
+        var result = new SKBitmap(new SKImageInfo(pixels.Width, pixels.Height, SKColorType.Bgra8888, SKAlphaType.Premul));
+        using var canvas = new SKCanvas(result);
+        canvas.DrawBitmap(_original, new SKRect(pixels.Left, pixels.Top, pixels.Right, pixels.Bottom),
+            new SKRect(0, 0, pixels.Width, pixels.Height));
+        return result;
+    }
+
     /// <summary>Full cache rebuild only at startup or when dim strength changes.</summary>
     private void BuildDimCache(int strength)
     {

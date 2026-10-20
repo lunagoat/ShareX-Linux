@@ -104,3 +104,24 @@ GNOME's Mutter does not implement wlr-layer-shell, so layer surfaces are not ava
 
 All backends will share the C scene renderer, frame cache and input path (the benchmark-selected fallback; small Avalonia toolbar/text/dialog surfaces remain separate). Only surface creation and input plumbing differ. Step 3 of the work plan must verify the KDE and GNOME rows by experiment before relying on them.
 
+
+## Step 4a: controller and host logic (2026-10-20)
+
+Implemented in [ShareX.OverlayHost](../../ShareX.OverlayHost/README.md): pure controller,
+extension seam, paced/coalesced session host, independent watchdog, lock-free dispatch
+Esc cancellation, and native-resolution capture tiles. Native keyboard focus waits for
+first-frame callbacks on all outputs. Scripted fake-session/fake-clock tests and a guarded
+synthetic-screenshot smoke executable accompany the library. See the README for the
+explicit RegionCaptureWindow behavior list, ownership/threading contracts and differences.
+
+This is library work, not application activation or approval to test a real compositor.
+Application fallback, a parent-enforced process hard timeout, annotation/toolbar worker,
+final capture composition and compositor validation remain separate integration work.
+
+Validation: 119 scripted host checks and the existing retained-renderer correctness
+suite pass headlessly. Release `dotnet build ShareX.sln` passes; the final incremental
+build reports zero warnings/errors (the earlier clean compilation reported existing
+application warnings). The smoke executable's refusal path was checked with both an
+unset display and a non-sx socket, returning 9 before opening a session. No real or
+nested display connection/window was attempted. Git checkpointing failed because
+`.git/index.lock` cannot be created on the read-only Git directory; changes are uncommitted.

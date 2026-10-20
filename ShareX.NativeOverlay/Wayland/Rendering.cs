@@ -16,6 +16,7 @@ public sealed partial class WaylandOverlaySession
         public WpViewport? Viewport;
         public WpFractionalScaleV1? FractionalScale;
         public int Width, Height;
+        public bool FirstFrameRequested, FirstFrameShown;
         public byte[]? Frame;
         public int FrameStride, PixelWidth, PixelHeight;
         public readonly List<Buffer> Buffers = new();
@@ -83,7 +84,7 @@ public sealed partial class WaylandOverlaySession
         s.Layer.SetSize(0, 0);
         s.Layer.SetAnchor(ZwlrLayerSurfaceV1.AnchorEnum.Top | ZwlrLayerSurfaceV1.AnchorEnum.Bottom | ZwlrLayerSurfaceV1.AnchorEnum.Left | ZwlrLayerSurfaceV1.AnchorEnum.Right);
         s.Layer.SetExclusiveZone(-1);
-        s.Layer.SetKeyboardInteractivity(ZwlrLayerSurfaceV1.KeyboardInteractivityEnum.Exclusive);
+        s.Layer.SetKeyboardInteractivity(ZwlrLayerSurfaceV1.KeyboardInteractivityEnum.None);
         s.Proxy.Commit();
     }
 
@@ -94,7 +95,7 @@ public sealed partial class WaylandOverlaySession
     }
 
     private static OverlayRect? Merge(OverlayRect? a, OverlayRect b) => a.HasValue ? OverlayRect.Union(a.Value, b) : b;
-    private static int Pixels(int logical, double scale) => Math.Max(1, checked((int)Math.Round(logical * scale, MidpointRounding.AwayFromZero)));
+    private static int Pixels(int logical, double scale) => Math.Max(1, checked((int)Math.Ceiling(logical * scale)));
 
     public (int Width, int Height) PixelSize(int output)
     {
@@ -172,6 +173,20 @@ public sealed partial class WaylandOverlaySession
         }
         var damage = s.Pending.Value;
         s.Pending = null; b.Busy = true;
+        if (!s.FirstFrameRequested)
+        {
+            s.FirstFrameRequested = true;
+            s.Proxy.Frame(new WlCallback.Listener.Relay { OnDone = (callback, _) =>
+            {
+                s.FirstFrameShown = true;
+                if (surfaces.All(surface => surface.FirstFrameShown))
+                    foreach (var surface in surfaces)
+                    {
+                        surface.Layer.SetKeyboardInteractivity(ZwlrLayerSurfaceV1.KeyboardInteractivityEnum.Exclusive);
+                        surface.Proxy.Commit();
+                    }
+            } }, null);
+        }
         s.Proxy.Attach(b.Proxy, 0, 0);
         s.Proxy.DamageBuffer(damage.X, damage.Y, damage.Width, damage.Height);
         s.Proxy.Commit();

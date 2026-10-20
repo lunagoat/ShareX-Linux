@@ -26,7 +26,7 @@ public abstract record OverlayEvent;
 
 /// <summary>Coordinates are GLOBAL logical coordinates (output origin + surface-local position), doubles, can lie outside every output during a drag.</summary>
 public sealed record PointerMoved(double X, double Y, OverlayModifiers Modifiers) : OverlayEvent;
-public sealed record PointerButton(int Button, bool Pressed, double X, double Y, OverlayModifiers Modifiers) : OverlayEvent;
+public sealed record PointerButton(int Button, bool Pressed, double X, double Y, OverlayModifiers Modifiers, int ClickCount = 1) : OverlayEvent;
 /// <summary>Wheel deltas in "notches" (1.0 = one click); positive Y = scroll up like Avalonia's Delta.</summary>
 public sealed record PointerWheel(double DeltaX, double DeltaY, double X, double Y, OverlayModifiers Modifiers) : OverlayEvent;
 public sealed record PointerLeft : OverlayEvent;
@@ -41,7 +41,7 @@ public sealed record OverlayClosed : OverlayEvent;
 public sealed record LayoutChanged : OverlayEvent;
 
 /// <summary>
-/// A full-desktop overlay made of one wlr-layer-shell surface (layer overlay, anchored to all edges, exclusive zone -1, exclusive keyboard focus) per output.
+/// A full-desktop overlay made of one wlr-layer-shell surface (layer overlay, anchored to all edges, exclusive zone -1, exclusive keyboard focus after the first frame callbacks) per output.
 /// Input events are global-desktop based so the consumer can treat the desktop as ONE space of size <see cref="Desktop"/>.
 /// Pixels are per output: each output has its own retained frame of <see cref="PixelSize"/> physical pixels, so a monitor that is not touched by an event costs nothing.
 /// </summary>
@@ -49,13 +49,16 @@ public interface IOverlaySession : IDisposable
 {
     IReadOnlyList<OverlayOutput> Outputs { get; }
 
+    /// <summary>Lock-free emergency flag set by dispatch before host rendering. Escape also unmaps on dispatch.</summary>
+    bool CancelRequested => false;
+
     /// <summary>Union of all output logical rectangles.</summary>
     OverlayRect Desktop { get; }
 
     /// <summary>Events in arrival order. Completes (OverlayClosed is the last item) when the session ends. Safe to read from any one thread.</summary>
     System.Threading.Channels.ChannelReader<OverlayEvent> Events { get; }
 
-    /// <summary>Physical pixel size of the frame for output <paramref name="output"/>: logical size times its (possibly fractional) scale, rounded.</summary>
+    /// <summary>Physical pixel size of the frame for output <paramref name="output"/>: logical size times its (possibly fractional) scale, rounded up (matching the scene renderer).</summary>
     (int Width, int Height) PixelSize(int output);
 
     /// <summary>

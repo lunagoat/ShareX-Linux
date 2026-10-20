@@ -35,12 +35,25 @@ public sealed partial class WaylandOverlaySession
                     enterSerial = serial;
                     Move(x, y); ApplyCursor();
                 },
-                OnLeave = (_, _, _) => { focus = null; enterSerial = 0; events.Writer.TryWrite(new PointerLeft()); },
+                OnLeave = (_, _, _) => { focus = null; enterSerial = 0; events.TryWrite(new PointerLeft()); },
                 OnMotion = (_, _, x, y) => Move(x, y),
                 OnButton = (_, _, _, button, state) =>
                 {
                     int mapped = button switch { 0x110 => 1, 0x112 => 2, 0x111 => 3, 0x113 or 0x116 => 4, 0x114 or 0x115 => 5, _ => 0 };
-                    if (mapped != 0) events.Writer.TryWrite(new PointerButton(mapped, state == WlPointer.ButtonStateEnum.Pressed, pointerX, pointerY, modifiers));
+                    if (mapped != 0)
+                    {
+                        bool pressed = state == WlPointer.ButtonStateEnum.Pressed;
+                        int clicks = 1;
+                        if (pressed)
+                        {
+                            long now = Environment.TickCount64;
+                            clicks = mapped == lastClickButton && now - lastClickAt <= 500 &&
+                                Math.Abs(pointerX - lastClickX) <= 4 && Math.Abs(pointerY - lastClickY) <= 4 ? lastClickCount + 1 : 1;
+                            lastClickAt = now; lastClickButton = mapped; lastClickCount = clicks;
+                            lastClickX = pointerX; lastClickY = pointerY;
+                        }
+                        events.TryWrite(new PointerButton(mapped, pressed, pointerX, pointerY, modifiers, clicks));
+                    }
                 },
                 OnAxis = (_, _, direction, value) => { axis[(int)direction] += (double)value / 10; if (!pointer!.IsFrameEventAvailable) Wheel(); },
                 OnAxisDiscrete = (_, direction, steps) => discrete[(int)direction] = steps,
@@ -63,6 +76,14 @@ public sealed partial class WaylandOverlaySession
                 OnKey = (_, _, _, key, state) =>
                 {
                     bool pressed = state == WlKeyboard.KeyStateEnum.Pressed;
+                    // Dispatch owns teardown. Escape never waits for the host/render queue or xkb.
+                    if (key == 1 && pressed)
+                    {
+                        Interlocked.Exchange(ref cancelRequested, 1);
+                        stopping = true;
+                        events.TryWrite(new KeyEvent(1, 0xff1b, true, false, null, modifiers));
+                        return;
+                    }
                     EmitKey(key, pressed, false);
                     if (pressed && keymap != 0 && repeatRate > 0 && Native.xkb_keymap_key_repeats(keymap, key + 8) != 0)
                     { repeatKey = key; repeatAt = Environment.TickCount64 + repeatDelay; }
@@ -84,17 +105,21 @@ public sealed partial class WaylandOverlaySession
         }
     }
 
+    private long lastClickAt;
+    private int lastClickButton, lastClickCount;
+    private double lastClickX, lastClickY;
+
     private void Move(WlFixed x, WlFixed y)
     {
         if (focus == null) return;
         pointerX = focus.Output.Rect.X + (double)x; pointerY = focus.Output.Rect.Y + (double)y;
-        events.Writer.TryWrite(new PointerMoved(pointerX, pointerY, modifiers));
+        events.TryWrite(new PointerMoved(pointerX, pointerY, modifiers));
     }
 
     private void Wheel()
     {
         double y = value120[0] ?? discrete[0] ?? axis[0], x = value120[1] ?? discrete[1] ?? axis[1];
-        if (x != 0 || y != 0) events.Writer.TryWrite(new PointerWheel(-x, -y, pointerX, pointerY, modifiers));
+        if (x != 0 || y != 0) events.TryWrite(new PointerWheel(-x, -y, pointerX, pointerY, modifiers));
         Array.Clear(axis); Array.Clear(discrete); Array.Clear(value120);
     }
 
@@ -166,7 +191,7 @@ public sealed partial class WaylandOverlaySession
                 if (!decoded.Any(char.IsControl)) text = decoded;
             }
         }
-        events.Writer.TryWrite(new KeyEvent(key, symbol, pressed, repeat, text, modifiers));
+        events.TryWrite(new KeyEvent(key, symbol, pressed, repeat, text, modifiers));
     }
 
     private int RepeatTimeout() => repeatKey.HasValue ? (int)Math.Clamp(repeatAt - Environment.TickCount64, 0, 1000) : 1000;

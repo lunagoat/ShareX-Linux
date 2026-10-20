@@ -20,14 +20,16 @@ public sealed partial class WaylandOverlaySession : IOverlaySession
     private Layout layout = new(Array.Empty<OverlayOutput>(), default);
     public IReadOnlyList<OverlayOutput> Outputs => Volatile.Read(ref layout).Outputs;
     public OverlayRect Desktop => Volatile.Read(ref layout).Desktop;
-    private readonly Channel<OverlayEvent> events = Channel.CreateUnbounded<OverlayEvent>(new() { SingleReader = true, SingleWriter = true, AllowSynchronousContinuations = false });
-    public ChannelReader<OverlayEvent> Events => events.Reader;
+    private readonly OverlayEventQueue events = new();
+    public ChannelReader<OverlayEvent> Events => events;
     private readonly ConcurrentQueue<Action> work = new();
     private readonly object lifetime = new();
     private readonly Thread thread;
     private readonly TaskCompletionSource ready = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private int wake;
     private volatile bool stopping;
+    private int cancelRequested;
+    public bool CancelRequested => Volatile.Read(ref cancelRequested) != 0;
     private bool initialized;
     private WlDisplay display = null!;
     private WlRegistry registry = null!;
@@ -134,8 +136,8 @@ public sealed partial class WaylandOverlaySession : IOverlaySession
                 display?.Dispose();
                 lock (lifetime) { Native.close(wake); wake = -1; }
                 while (work.TryDequeue(out _)) { }
-                events.Writer.TryWrite(new OverlayClosed());
-                events.Writer.TryComplete();
+                events.TryWrite(new OverlayClosed());
+                events.TryComplete();
             }
         }
     }
@@ -240,7 +242,7 @@ public sealed partial class WaylandOverlaySession : IOverlaySession
                 s.Pending = null;
             }
             Volatile.Write(ref layout, next);
-            if (initialized) events.Writer.TryWrite(new LayoutChanged());
+            if (initialized) events.TryWrite(new LayoutChanged());
         }
     }
 
