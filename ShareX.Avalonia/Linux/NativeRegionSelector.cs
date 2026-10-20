@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Drawing;
 using System.Globalization;
+using System.Text.Json;
 
 namespace ShareX.AvaloniaUI.Linux;
 
@@ -19,10 +20,39 @@ public static class NativeRegionSelector
             if (!OperatingSystem.IsLinux() || !LinuxScreenCapture.IsWayland) return false;
             string choice = Environment.GetEnvironmentVariable("SHAREX_REGION_SELECTOR")?.Trim().ToLowerInvariant() ?? "";
             if (choice == "overlay") return false;
-            // niri and sway: the overlay is placed through the compositor's IPC (see LinuxCaptureOverlay), so slurp is only used when asked for.
-            if (choice != "slurp") return false;
+            // niri and sway: the overlay is placed through the compositor's IPC (see LinuxCaptureOverlay), so slurp is only used when asked for...
+            if (choice != "slurp")
+            {
+                // ...except on an empty niri workspace: the overlay would be that workspace's first window, so niri adds a new empty workspace
+                // below it, which stays until you leave the workspace. slurp is a layer-shell surface, not a window, so it causes no such churn.
+                if (choice != "" || !NiriIpc.IsAvailable || !NiriFocusedWorkspaceIsEmpty()) return false;
+            }
+
             return FindExecutable("slurp") != null;
         }
+    }
+
+    private static bool NiriFocusedWorkspaceIsEmpty()
+    {
+        try
+        {
+            using JsonDocument workspaces = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "workspaces"));
+            using JsonDocument windows = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "windows"));
+
+            foreach (JsonElement ws in workspaces.RootElement.EnumerateArray())
+            {
+                if (ws.TryGetProperty("is_focused", out var focused) && focused.ValueKind == JsonValueKind.True)
+                {
+                    long id = ws.GetProperty("id").GetInt64();
+                    return !windows.RootElement.EnumerateArray().Any(w => w.TryGetProperty("workspace_id", out var wid) && wid.ValueKind == JsonValueKind.Number && wid.GetInt64() == id);
+                }
+            }
+        }
+        catch (Exception)
+        {
+        }
+
+        return false;
     }
 
     private static string? FindExecutable(string name) =>

@@ -39,7 +39,10 @@ told where to put them. Hyprland, sway and niri are all handled through their IP
 * **Hyprland:** positioned over every monitor.
 * **sway:** the overlay is floated and placed over the whole desktop (floating windows may span outputs).
 * **niri:** a niri window cannot span monitors, so the overlay is made fullscreen on the **focused monitor** and region capture works within it.
-  For a selection that crosses monitors use `SHAREX_REGION_SELECTOR=slurp`.
+  For a selection that crosses monitors use `SHAREX_REGION_SELECTOR=slurp`. If the keybind is pressed on an **empty workspace**, ShareX uses
+  `slurp` automatically: a window there would be the workspace's first window, and niri would add a new empty workspace below it
+  (which stays until you leave) — `slurp` is a layer-shell surface, not a window, so it causes no such churn. Force the overlay anyway with
+  `SHAREX_REGION_SELECTOR=overlay`.
 * Panels such as waybar are drawn above ordinary windows, so ShareX's toolbar is moved out from under them: exactly on Hyprland and sway,
   and by a default of 48 px on niri (niri does not report a bar's size; set `SHAREX_TOOLBAR_INSET=<pixels>` to change it, `0` to disable).
 * `SHAREX_REGION_SELECTOR=slurp` swaps the overlay for `slurp`, the compositor's own selector (drag a region or click a window); you keep
