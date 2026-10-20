@@ -50,6 +50,12 @@ namespace ShareX
 
         protected async Task<TaskMetadata> ExecuteRegionCaptureAvaloniaAsync(TaskSettings taskSettings)
         {
+            // Start the native overlay helper first: its startup then overlaps the screenshot below.
+            using NativeRegionCapture.PrewarmedHelper prewarmed = NativeRegionCapture.Prewarm(
+                taskSettings.CaptureSettingsReference.RegionCaptureOptions,
+                taskSettings.ToolsSettingsReference.ImageEditorOptions,
+                !taskSettings.AdvancedSettings.RegionCaptureDisableAnnotation);
+
             Screenshot screenshot = TaskHelpers.GetScreenshot(taskSettings);
             screenshot.CaptureCursor = System.OperatingSystem.IsLinux() && taskSettings.CaptureSettings.ShowCursor;
 
@@ -96,7 +102,7 @@ namespace ShareX
                 CursorPosition = cursorPosition
             };
 
-            AvaloniaRegionCaptureResult result = await NativeRegionCapture.CaptureAsync(request);
+            AvaloniaRegionCaptureResult result = await NativeRegionCapture.CaptureAsync(request, prewarmed);
             if (result == null)
             {
                 return null;

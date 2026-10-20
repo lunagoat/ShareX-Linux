@@ -5,6 +5,18 @@ using ShareX.AvaloniaUI.Linux;
 int failures = 0;
 void Check(bool ok, string name) { Console.WriteLine((ok ? "PASS: " : "FAIL: ") + name); if (!ok) failures++; }
 
+// ---- grim -t ppm decoding (the screenshot fast path)
+{
+    byte[] header = System.Text.Encoding.ASCII.GetBytes("P6\n# comment\n3 2\n255\n");
+    byte[] pixels = [255, 0, 0,  0, 255, 0,  0, 0, 255,   10, 20, 30,  40, 50, 60,  70, 80, 90];
+    using var decoded = LinuxScreenCapture.DecodePpm([.. header, .. pixels]);
+    Check(decoded != null && decoded.Width == 3 && decoded.Height == 2, "ppm: size parsed (comment skipped)");
+    Check(decoded != null && decoded.GetPixel(0, 0) == new SkiaSharp.SKColor(255, 0, 0) && decoded.GetPixel(2, 0) == new SkiaSharp.SKColor(0, 0, 255)
+        && decoded.GetPixel(1, 1) == new SkiaSharp.SKColor(40, 50, 60) && decoded.GetPixel(2, 1).Alpha == 255, "ppm: RGB mapped to opaque BGRA");
+    Check(LinuxScreenCapture.DecodePpm([.. header, 1, 2, 3]) == null, "ppm: truncated data is rejected");
+    Check(LinuxScreenCapture.DecodePpm(System.Text.Encoding.ASCII.GetBytes("P5\n1 1\n255\nx")) == null && LinuxScreenCapture.DecodePpm([]) == null, "ppm: other formats and empty input are rejected");
+}
+
 // ---- niri outputs: a 4K panel at 1.5 scale and a 1080p monitor to its right; a disabled output has no "logical"
 const string niriOutputs = """
 {

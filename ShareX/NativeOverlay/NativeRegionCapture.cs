@@ -4,6 +4,7 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -26,15 +27,91 @@ internal static class NativeRegionCapture
         if (choice == "window") { reason = "SHAREX_OVERLAY=window"; return false; }
         if (!OperatingSystem.IsLinux() || !LinuxScreenCapture.IsWayland) { reason = "not a Wayland session"; return false; }
         WaylandOverlay.Register();
-        if (!OverlaySessionFactory.IsSupported()) { reason = "layer-shell unavailable"; return false; }
+        if (!Supported()) { reason = "layer-shell unavailable"; return false; }
         reason = choice == "native" ? "SHAREX_OVERLAY=native" : "layer-shell available";
         return true;
     }
 
-    internal static async Task<AvaloniaRegionCaptureResult?> CaptureAsync(AvaloniaRegionCaptureRequest request)
+    // The probe connects to the compositor (tens of milliseconds) and the answer cannot change within a session.
+    private static (string Display, bool Supported)? probe;
+    private static bool Supported()
+    {
+        string display = Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") ?? "";
+        if (probe is { } known && known.Display == display) return known.Supported;
+        bool result = OverlaySessionFactory.IsSupported();
+        probe = (display, result);
+        return result;
+    }
+
+    /// <summary>A helper process started before the screenshot exists, so its startup overlaps the capture.</summary>
+    internal sealed class PrewarmedHelper : IDisposable
+    {
+        public string Directory = "";
+        public Process Child = null!;
+        public (int Parent, string Birth) Identity;
+        public Task Errors = Task.CompletedTask;
+        public IReadOnlyList<OverlayOutput> Outputs = [];
+        public bool Consumed;
+        public void Dispose()
+        {
+            if (Consumed) return;
+            Consumed = true;
+            KillVerified(Child, Identity);
+            try { Child.WaitForExit(3000); } catch (Exception) { }
+            Child.Dispose();
+            try { System.IO.Directory.Delete(Directory, true); } catch (Exception) { }
+        }
+    }
+
+    /// <summary>Starts the helper and writes everything it needs except the screenshot. Null when the native overlay is not used or cannot be prepared.</summary>
+    internal static PrewarmedHelper? Prewarm(ShareX.ScreenCaptureLib.RegionCaptureOptions options, ShareX.ImageEditor.Integration.ImageEditorOptions editorOptions, bool enableAnnotations, string test = "")
+    {
+        PrewarmedHelper? helper = null;
+        try
+        {
+            if (!Choose(out _)) return null;
+            string directory = OverlayPixels.CreateDirectory();
+            helper = new PrewarmedHelper { Directory = directory };
+            (helper.Child, helper.Identity, helper.Errors) = StartChild(directory, test);
+            var outputs = WaylandOverlay.GetOutputs();
+            helper.Outputs = outputs;
+            var (windows, pointer) = Discover(outputs);
+            var last = RegionCaptureIntegration.LastRegionRectangle;
+            var message = new OverlayHelperRequest { Outputs = outputs.Select((o, i) => new FrozenOutput(o, i + ".shm")).ToArray(), Options = options,
+                EditorOptions = editorOptions, EnableAnnotations = enableAnnotations, Windows = windows,
+                LastRegion = new(last.X, last.Y, last.Width, last.Height), InitialPointer = pointer, TilesPending = true, Test = test };
+            // The helper polls for request.json, so publish it complete: write a temporary file, then rename.
+            string temporary = Path.Combine(directory, "request.json.tmp");
+            using (var stream = OverlayPixels.Create(temporary))
+            using (var writer = new StreamWriter(stream)) writer.Write(JsonConvert.SerializeObject(message));
+            File.Move(temporary, Path.Combine(directory, "request.json"));
+            return helper;
+        }
+        catch (Exception e)
+        {
+            Log("Native overlay prewarm failed (continuing without it): " + e.Message);
+            helper?.Dispose();
+            return null;
+        }
+    }
+
+    private static (WindowRect[] Windows, LogicalPoint Pointer) Discover(IReadOnlyList<OverlayOutput> outputs)
+    {
+        WindowRect[] windows = [];
+        try { windows = LinuxCaptureWindows.GetWindows().Select(w => new WindowRect(new(w.Rectangle.X, w.Rectangle.Y, w.Rectangle.Width, w.Rectangle.Height), Metadata: w.Handle.ToInt64())).ToArray(); }
+        catch (Exception e) { Log("Native overlay window discovery: " + e.Message); }
+        var initial = outputs[0].Logical;
+        var pointer = new LogicalPoint(initial.X + initial.Width / 2, initial.Y + initial.Height / 2);
+        try { var position = LinuxScreenCapture.CursorPosition; pointer = new(position.X, position.Y); }
+        catch (Exception e) { Log("Native overlay pointer discovery: " + e.Message); }
+        return (windows, pointer);
+    }
+
+    internal static async Task<AvaloniaRegionCaptureResult?> CaptureAsync(AvaloniaRegionCaptureRequest request, PrewarmedHelper? prewarmed = null)
     {
         bool native = Choose(out string reason);
-        return await CaptureWithFallbackAsync(request, native, reason, () => RunAsync(request), () => RegionCaptureIntegration.CaptureAsync(request));
+        if (!native) prewarmed?.Dispose();
+        return await CaptureWithFallbackAsync(request, native, reason, () => RunAsync(request, "", prewarmed), () => RegionCaptureIntegration.CaptureAsync(request));
     }
     internal static async Task<AvaloniaRegionCaptureResult?> CaptureWithFallbackAsync(AvaloniaRegionCaptureRequest request,
         bool native, string reason, Func<Task<AvaloniaRegionCaptureResult?>> run, Func<Task<AvaloniaRegionCaptureResult?>> window)
@@ -59,12 +136,16 @@ internal static class NativeRegionCapture
         if (LinuxCaptureOverlay.Diagnostic is { } diagnostic) diagnostic(message);
         else ShareX.HelpersLib.DebugHelper.WriteLine(message);
     }
-    internal static async Task<AvaloniaRegionCaptureResult?> RunAsync(AvaloniaRegionCaptureRequest request, string test = "")
+    internal static async Task<AvaloniaRegionCaptureResult?> RunAsync(AvaloniaRegionCaptureRequest request, string test = "", PrewarmedHelper? prewarmed = null)
     {
-        string directory = OverlayPixels.CreateDirectory();
+        var timer = Stopwatch.StartNew();
+        bool timing = Environment.GetEnvironmentVariable("SHAREX_OVERLAY_TIMING") == "1";
+        void Mark(string stage) { if (timing) Log($"timing +{timer.ElapsedMilliseconds} ms since native capture start: {stage}"); }
+        string directory = prewarmed?.Directory ?? OverlayPixels.CreateDirectory();
         try
         {
-            var outputs = WaylandOverlay.GetOutputs();
+            var outputs = prewarmed?.Outputs ?? WaylandOverlay.GetOutputs();
+            Mark("outputs queried");
             var frozen = outputs.Select((output, i) =>
             {
                 using var tile = SplitScreenshot(request.Screenshot, request.ScreenBounds, output);
@@ -72,13 +153,17 @@ internal static class NativeRegionCapture
                 OverlayPixels.Write(Path.Combine(directory, name), tile);
                 return new FrozenOutput(output, name);
             }).ToArray();
-            WindowRect[] windows = [];
-            try { windows = LinuxCaptureWindows.GetWindows().Select(w => new WindowRect(new(w.Rectangle.X, w.Rectangle.Y, w.Rectangle.Width, w.Rectangle.Height), Metadata: w.Handle.ToInt64())).ToArray(); }
-            catch (Exception e) { Log("Native overlay window discovery: " + e.Message); }
-            var initial = outputs[0].Logical;
-            var pointer = new LogicalPoint(initial.X + initial.Width / 2, initial.Y + initial.Height / 2);
-            try { var position = LinuxScreenCapture.CursorPosition; pointer = new(position.X, position.Y); }
-            catch (Exception e) { Log("Native overlay pointer discovery: " + e.Message); }
+            Mark("screenshot tiles written");
+            if (prewarmed != null)
+            {
+                // The helper has been starting up since before the screenshot; tell it the tiles are complete.
+                using (OverlayPixels.Create(Path.Combine(directory, "tiles.ready"))) { }
+                prewarmed.Consumed = true;
+                Mark("helper told the screenshot is ready");
+                return await SuperviseChildAsync(prewarmed.Child, prewarmed.Identity, prewarmed.Errors, directory, null).ConfigureAwait(false);
+            }
+            var (windows, pointer) = Discover(outputs);
+            Mark("windows and pointer discovered");
             var last = RegionCaptureIntegration.LastRegionRectangle;
             var message = new OverlayHelperRequest { Outputs = frozen, Options = request.RegionCaptureOptions,
                 EditorOptions = request.ImageEditorOptions, EnableAnnotations = request.EnableAnnotations, Windows = windows,
@@ -86,9 +171,10 @@ internal static class NativeRegionCapture
             using var stream = OverlayPixels.Create(Path.Combine(directory, "request.json"));
             using (var writer = new StreamWriter(stream, leaveOpen: true)) writer.Write(JsonConvert.SerializeObject(message));
             stream.Close();
+            Mark("request written, starting helper");
             return await SuperviseAsync(directory, test).ConfigureAwait(false);
         }
-        finally { Directory.Delete(directory, true); }
+        finally { try { Directory.Delete(directory, true); } catch (DirectoryNotFoundException) { } }
     }
 
     internal static SKBitmap SplitScreenshot(SKBitmap screenshot, Rectangle bounds, OverlayOutput output)
@@ -123,12 +209,34 @@ internal static class NativeRegionCapture
         string[] fields = stat[(stat.LastIndexOf(')') + 2)..].Split(' ');
         return (int.Parse(fields[1]), fields[19]); // ppid and kernel process start ticks
     }
-    internal static async Task<AvaloniaRegionCaptureResult?> SuperviseAsync(string directory, string test, TimeSpan? hardTimeout = null)
+    internal static (Process Child, (int Parent, string Birth) Identity, Task Errors) StartChild(string directory, string test)
     {
-        using var child = Process.Start(StartInfo(directory, test)) ?? throw new IOException("Helper failed to start.");
+        var child = Process.Start(StartInfo(directory, test)) ?? throw new IOException("Helper failed to start.");
         var identity = ChildIdentity(child.Id);
         // Drain stderr independently so a full diagnostics pipe can never stop rendering/heartbeats.
         Task errors = Task.Run(async () => { while (await child.StandardError.ReadLineAsync() is { } line) Log("overlay-helper: " + line); });
+        return (child, identity, errors);
+    }
+    /// <summary>Only a Process.Start child, with the same kernel start ticks and a verified parent PID.
+    /// Never target a process name or kill a compositor/application process tree.</summary>
+    internal static void KillVerified(Process child, (int Parent, string Birth) identity)
+    {
+        if (child.HasExited) return;
+        try
+        {
+            var current = ChildIdentity(child.Id);
+            if (current.Parent == Environment.ProcessId && current.Birth == identity.Birth) child.Kill();
+        }
+        catch (Exception) when (child.HasExited) { }
+    }
+    internal static async Task<AvaloniaRegionCaptureResult?> SuperviseAsync(string directory, string test, TimeSpan? hardTimeout = null)
+    {
+        var (child, identity, errors) = StartChild(directory, test);
+        return await SuperviseChildAsync(child, identity, errors, directory, hardTimeout).ConfigureAwait(false);
+    }
+    internal static async Task<AvaloniaRegionCaptureResult?> SuperviseChildAsync(Process child, (int Parent, string Birth) identity, Task errors, string directory, TimeSpan? hardTimeout)
+    {
+        using var owned = child;
         using var hard = new CancellationTokenSource(hardTimeout ?? TimeSpan.FromSeconds(120));
         try
         {
@@ -152,17 +260,7 @@ internal static class NativeRegionCapture
         }
         finally
         {
-            // Only this Process.Start child, with the same kernel start ticks and a verified parent PID.
-            // Never target a process name or kill a compositor/application process tree.
-            if (!child.HasExited)
-            {
-                try
-                {
-                    var current = ChildIdentity(child.Id);
-                    if (current.Parent == Environment.ProcessId && current.Birth == identity.Birth) child.Kill();
-                }
-                catch (Exception) when (child.HasExited) { }
-            }
+            KillVerified(child, identity);
             await child.WaitForExitAsync().WaitAsync(TimeSpan.FromSeconds(3)).ConfigureAwait(false);
             await errors.ConfigureAwait(false);
         }

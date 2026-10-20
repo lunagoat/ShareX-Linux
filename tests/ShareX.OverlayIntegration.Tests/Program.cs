@@ -173,15 +173,19 @@ static async Task Nested()
                 Options = new() { QuickCapture = false, DetectWindows = false }, Test = test })); }
         void Move(int x, int y) => injection.Move(x, y, desktop.Width, desktop.Height);
         async Task Drag(int x, int y, int x2, int y2) { Move(x,y); injection.Button(true); await Task.Delay(30); Move(x2,y2); await Task.Delay(30); injection.Button(false); await Task.Delay(100); }
-        Write("toolbar");
-        Task<AvaloniaRegionCaptureResult?> capture = NativeRegionCapture.SuperviseAsync(directory, "toolbar");
-        string toolbar = Path.Combine(directory, "toolbar.json");
+        // First scenario: the production flow. The helper is started BEFORE the screenshot exists (Prewarm), RunAsync then supplies the tiles.
+        var prewarmed = NativeRegionCapture.Prewarm(request.RegionCaptureOptions, request.ImageEditorOptions, true, "toolbar") ?? throw new Exception("Prewarm unavailable in the nested compositor.");
+        await Task.Delay(400); // the helper must wait for the screenshot, not fail or hang
+        Task<AvaloniaRegionCaptureResult?> capture = NativeRegionCapture.RunAsync(request, "toolbar", prewarmed);
+        string toolbar = Path.Combine(prewarmed.Directory, "toolbar.json");
         var deadline = Stopwatch.StartNew();
         while (!File.Exists(toolbar) && deadline.Elapsed < TimeSpan.FromSeconds(15)) await Task.Delay(50);
-        Check(File.Exists(toolbar), "helper mapped native scene and actual toolbar");
+        Check(File.Exists(toolbar), "prewarmed helper mapped native scene and actual toolbar");
+        string firstToolbar = toolbar;
+        toolbar = Path.Combine(directory, "toolbar.json");
         await Task.Delay(700);
         await Drag(100, 120, 500, 370); // must fit the smallest logical output (445 px tall at 1.6x)
-        int[] point = Newtonsoft.Json.JsonConvert.DeserializeObject<int[]>(File.ReadAllText(toolbar))!;
+        int[] point = Newtonsoft.Json.JsonConvert.DeserializeObject<int[]>(File.ReadAllText(firstToolbar))!;
         await Drag(point[0], point[1], point[0], point[1]);
         await Drag(140, 160, 450, 330);
         injection.Key(28, true); injection.Key(28, false);
@@ -196,6 +200,14 @@ static async Task Nested()
             var elapsed = Stopwatch.StartNew();
             injection.Key(1, true); injection.Key(1, false);
             Check(await cancel == null && elapsed.Elapsed < TimeSpan.FromSeconds(3), mode + ": Esc cancels, including stalled render worker");
+        }
+        {   // An aborted capture (screenshot failed) must not leave a prewarmed helper or its directory behind.
+            var abandoned = NativeRegionCapture.Prewarm(request.RegionCaptureOptions, request.ImageEditorOptions, true) ?? throw new Exception("Prewarm unavailable.");
+            int pid = abandoned.Child.Id; string abandonedDirectory = abandoned.Directory;
+            await Task.Delay(500);
+            abandoned.Dispose();
+            await Task.Delay(300);
+            Check(!Directory.Exists(abandonedDirectory) && !Directory.Exists("/proc/" + pid), "abandoned prewarm: helper killed and directory removed");
         }
         Write("stall");
         var timer = Stopwatch.StartNew();

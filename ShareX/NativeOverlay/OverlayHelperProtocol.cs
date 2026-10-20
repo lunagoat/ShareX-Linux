@@ -22,6 +22,8 @@ internal sealed class OverlayHelperRequest
     public LogicalCapture LastRegion = new(0, 0, 0, 0);
     public ShareX.OverlayRender.LogicalPoint InitialPointer;
     public string Test = "";
+    /// <summary>True when the parent starts the helper before the screenshot exists: tiles are written afterwards and announced by the file <c>tiles.ready</c>.</summary>
+    public bool TilesPending;
 }
 internal sealed record LogicalCapture(int X, int Y, int Width, int Height);
 internal sealed record OverlayHelperResponse(string Status, string? Reason = null, LogicalCapture? Selection = null, bool Modified = false, long Window = 0);

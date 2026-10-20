@@ -40,7 +40,8 @@ as "region selection: native layer-shell overlay".
 
 * Esc cancels at any time, also if the overlay's drawing thread is stuck. After 45 seconds without input the overlay closes by itself.
 * If the helper cannot start, crashes or stops answering, ShareX logs why and falls back to the window overlay described below.
-* `SHAREX_OVERLAY=window` forces the window overlay, `SHAREX_OVERLAY=native` forces the native one.
+* `SHAREX_OVERLAY=window` forces the window overlay, `SHAREX_OVERLAY=native` forces the native one. `SHAREX_OVERLAY_TIMING=1` writes a stage-by-stage timeline of the overlay start to the ShareX log (screenshot, helper startup, first frame).
+* Speed: the helper starts while the screenshot is still being taken, the screenshot is read as raw PPM (not PNG), and the build is ReadyToRun-compiled and not compressed. On a three-monitor 22-megapixel desktop, Print to visible overlay went from about 2.4 s to about 0.65 s.
 * **GNOME** has no layer-shell, so it keeps the window overlay for now.
 * Like the Windows version, the selector does not draw over fullscreen games; the fullscreen and active-window hotkeys work there.
 * Tested: nested Hyprland (two outputs, 1.0x and 1.6x, automated end-to-end test) and real Hyprland desktops (3 monitors with a 1.5x one; a laptop
