@@ -53,21 +53,29 @@ public static class LinuxDesktop
         try
         {
             process.Start();
-            if (standardInput != null)
-            {
-                await process.StandardInput.WriteAsync(standardInput).ConfigureAwait(false);
-                process.StandardInput.Close();
-            }
-            Task<string> output = process.StandardOutput.ReadToEndAsync();
-            Task<string> error = process.StandardError.ReadToEndAsync();
             using CancellationTokenSource deadline = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             deadline.CancelAfter(timeout);
-            try { await process.WaitForExitAsync(deadline.Token).ConfigureAwait(false); }
-            catch (OperationCanceledException)
+            // Drain both output pipes while writing input, and apply the same deadline
+            // to all three pipes so a child that does not read stdin cannot block us.
+            Task<string> output = process.StandardOutput.ReadToEndAsync(deadline.Token);
+            Task<string> error = process.StandardError.ReadToEndAsync(deadline.Token);
+            async Task WriteInput()
+            {
+                if (standardInput == null) return;
+                await process.StandardInput.WriteAsync(standardInput.AsMemory(), deadline.Token).ConfigureAwait(false);
+                await process.StandardInput.FlushAsync(deadline.Token).ConfigureAwait(false);
+                process.StandardInput.Close();
+            }
+            try
+            {
+                await Task.WhenAll(WriteInput(), output, error, process.WaitForExitAsync(deadline.Token)).ConfigureAwait(false);
+            }
+            catch (Exception ex)
             {
                 if (!process.HasExited) process.Kill(entireProcessTree: true);
                 await process.WaitForExitAsync().ConfigureAwait(false);
-                return (false, $"{command} was cancelled or timed out.");
+                if (ex is OperationCanceledException) return (false, $"{command} was cancelled or timed out.");
+                throw;
             }
             string stdout = await output.ConfigureAwait(false), stderr = await error.ConfigureAwait(false);
             return (process.ExitCode == 0, process.ExitCode == 0 ? stdout.Trim() : stderr.Trim());

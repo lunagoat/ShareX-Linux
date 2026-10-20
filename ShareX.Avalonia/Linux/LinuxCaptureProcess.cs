@@ -47,16 +47,20 @@ public static class LinuxCaptureProcess
     {
         using Process process = Start(executable, arguments);
         using MemoryStream output = new();
-        Task copy = process.StandardOutput.BaseStream.CopyToAsync(output);
-        Task<string> error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource timeoutCts = new(timeout);
+        // Every pipe operation must share the deadline: WhenAll otherwise waits for
+        // stdout EOF even after the process wait has timed out.
+        Task copy = process.StandardOutput.BaseStream.CopyToAsync(output, timeoutCts.Token);
+        Task<string> error = process.StandardError.ReadToEndAsync(timeoutCts.Token);
+        Task completed = Task.WhenAll(copy, error, process.WaitForExitAsync(timeoutCts.Token));
         try
         {
-            Task.WhenAll(copy, process.WaitForExitAsync(timeoutCts.Token)).GetAwaiter().GetResult();
+            completed.GetAwaiter().GetResult();
         }
         catch
         {
             if (!process.HasExited) process.Kill(true);
+            process.WaitForExit();
             throw;
         }
         if (process.ExitCode != 0) throw new InvalidOperationException($"{executable}: {error.GetAwaiter().GetResult().Trim()} {System.Text.Encoding.UTF8.GetString(output.ToArray()).Trim()}");

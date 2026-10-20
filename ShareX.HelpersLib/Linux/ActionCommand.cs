@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ShareX.HelpersLib.Linux;
 
@@ -28,8 +29,9 @@ public static class ActionCommand
         // backslashes, dollar signs or shell metacharacters remain one literal argument.
         foreach (string argument in Split(string.IsNullOrWhiteSpace(template) ? "$input" : template))
         {
-            yield return argument.Replace("$input", input).Replace("%input", input)
-                .Replace("$output", output).Replace("%output", output);
+            // Match only the template; replacement paths may themselves contain placeholders.
+            yield return Regex.Replace(argument, @"[$%](input|output)",
+                match => match.Groups[1].Value == "input" ? input ?? "" : output ?? "");
         }
     }
 
