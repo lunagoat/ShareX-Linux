@@ -43,16 +43,16 @@ public static class LinuxCaptureProcess
         return Process.Start(info) ?? throw new InvalidOperationException($"Cannot start {executable}.");
     }
 
-    public static byte[] Run(string executable, params string[] arguments)
+    public static byte[] Run(string executable, TimeSpan timeout, params string[] arguments)
     {
         using Process process = Start(executable, arguments);
         using MemoryStream output = new();
         Task copy = process.StandardOutput.BaseStream.CopyToAsync(output);
         Task<string> error = process.StandardError.ReadToEndAsync();
-        using CancellationTokenSource timeout = new(TimeSpan.FromSeconds(15));
+        using CancellationTokenSource timeoutCts = new(timeout);
         try
         {
-            Task.WhenAll(copy, process.WaitForExitAsync(timeout.Token)).GetAwaiter().GetResult();
+            Task.WhenAll(copy, process.WaitForExitAsync(timeoutCts.Token)).GetAwaiter().GetResult();
         }
         catch
         {
@@ -63,6 +63,27 @@ public static class LinuxCaptureProcess
         return output.ToArray();
     }
 
+    public static byte[] Run(string executable, params string[] arguments) =>
+        Run(executable, TimeSpan.FromSeconds(15), arguments);
+
     public static string Text(string executable, params string[] arguments) =>
         System.Text.Encoding.UTF8.GetString(Run(executable, arguments));
+
+    public static string Text(string executable, TimeSpan timeout, params string[] arguments) =>
+        System.Text.Encoding.UTF8.GetString(Run(executable, timeout, arguments));
+
+    public static string? TryText(string executable, TimeSpan timeout, params string[] arguments)
+    {
+        try
+        {
+            return Text(executable, timeout, arguments);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public static string? TryText(string executable, params string[] arguments) =>
+        TryText(executable, TimeSpan.FromSeconds(3), arguments);
 }

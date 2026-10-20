@@ -42,16 +42,37 @@ public static class LinuxScreenCapture
     private static LinuxCaptureMonitor[]? _monitors;
     private static long _monitorTime;
 
+    private static string? _monitorSource;
+
+    public static string? MonitorSource
+    {
+        get
+        {
+            lock (MonitorLock)
+            {
+                if (_monitors == null) GetMonitors();
+                return _monitorSource;
+            }
+        }
+    }
+
     public static LinuxCaptureMonitor[] GetMonitors()
     {
         lock (MonitorLock)
         {
             if (_monitors != null && Environment.TickCount64 - _monitorTime < 1000) return _monitors;
-            LinuxCaptureMonitor[] monitors = ReadMonitors();
+            LinuxCaptureMonitor[] monitors = ReadMonitors(out _monitorSource);
             _monitors = monitors;
             _monitorTime = Environment.TickCount64;
             return monitors;
         }
+    }
+
+    public static LinuxCaptureMonitor[] GetMonitors(out string source)
+    {
+        var monitors = GetMonitors();
+        source = _monitorSource ?? "unknown";
+        return monitors;
     }
 
     public static LinuxCaptureMonitor[] ParseHyprlandMonitors(string json)
@@ -132,8 +153,9 @@ public static class LinuxScreenCapture
         return monitors.ToArray();
     }
 
-    private static LinuxCaptureMonitor[] ReadMonitors()
+    private static LinuxCaptureMonitor[] ReadMonitors(out string source)
     {
+        source = "unknown";
         if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")))
         {
             try
@@ -147,7 +169,11 @@ public static class LinuxScreenCapture
                     catch (Exception) { }
                 }
                 LinuxCaptureMonitor[] monitors = ParseNiriOutputs(LinuxCaptureProcess.Text("niri", "msg", "--json", "outputs"), focused);
-                if (monitors.Length > 0) return monitors;
+                if (monitors.Length > 0)
+                {
+                    source = "niri";
+                    return monitors;
+                }
             }
             catch (Exception) { }
         }
@@ -156,16 +182,24 @@ public static class LinuxScreenCapture
             try
             {
                 LinuxCaptureMonitor[] monitors = ParseKScreenDoctor(LinuxCaptureProcess.Text("kscreen-doctor", "-j"));
-                if (monitors.Length > 0) return monitors;
+                if (monitors.Length > 0)
+                {
+                    source = "kscreen-doctor";
+                    return monitors;
+                }
             }
             catch (Exception) { }
         }
 
         if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
+        {
+            source = "hyprctl";
             return ParseHyprlandMonitors(LinuxCaptureProcess.Text("hyprctl", "monitors", "-j"));
+        }
         if (IsWayland && !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")))
         {
             using JsonDocument doc = JsonDocument.Parse(LinuxCaptureProcess.Text("swaymsg", "-t", "get_outputs", "-r"));
+            source = "swaymsg";
             return doc.RootElement.EnumerateArray().Where(m => m.GetProperty("active").GetBoolean()).Select(m =>
             {
                 var r = m.GetProperty("rect");
@@ -179,11 +213,16 @@ public static class LinuxScreenCapture
         {
             string text = LinuxCaptureProcess.Text("xrandr", "--query");
             var matches = Regex.Matches(text, @"(?m)^(\S+) connected (primary )?(\d+)x(\d+)([+-]\d+)([+-]\d+)");
-            if (matches.Count > 0) return matches.Select(m => new LinuxCaptureMonitor(m.Groups[1].Value,
-                new Rectangle(int.Parse(m.Groups[5].Value, CultureInfo.InvariantCulture), int.Parse(m.Groups[6].Value, CultureInfo.InvariantCulture),
-                    int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture), int.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture)), 1, m.Groups[2].Success)).ToArray();
+            if (matches.Count > 0)
+            {
+                source = "xrandr";
+                return matches.Select(m => new LinuxCaptureMonitor(m.Groups[1].Value,
+                    new Rectangle(int.Parse(m.Groups[5].Value, CultureInfo.InvariantCulture), int.Parse(m.Groups[6].Value, CultureInfo.InvariantCulture),
+                        int.Parse(m.Groups[3].Value, CultureInfo.InvariantCulture), int.Parse(m.Groups[4].Value, CultureInfo.InvariantCulture)), 1, m.Groups[2].Success)).ToArray();
+            }
         }
         catch (Exception) { }
+        source = "none";
         throw new PlatformNotSupportedException("Cannot discover displays. Install xrandr, or use Hyprland/sway compositor IPC.");
     }
 
