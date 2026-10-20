@@ -14,6 +14,7 @@ internal sealed class KWinDbusChecks : IPathMethodHandler
     public int Loads, Runs, Unloads;
     public bool Denied;
     public List<string> Files = [];
+    public List<string> Scripts = [];
 
     public static async Task RunAsync(Action<bool, string> check)
     {
@@ -28,12 +29,25 @@ internal sealed class KWinDbusChecks : IPathMethodHandler
         check(pointer == new Point(3100, 400), "KWin private D-Bus fake: compositor cursor on right monitor, without XQueryPointer");
         check(await KdeCapture.PlaceAsync("ShareX [unique]", new Rectangle(0, 0, 4480, 1440)),
             "KWin private D-Bus fake: loadScript/run/callback/measure/unloadScript sequence");
-        check(fake.Loads == 3 && fake.Runs == 3 && fake.Unloads == 3 && fake.Files.All(f => !File.Exists(f)),
+        check(fake.Loads == 4 && fake.Runs == 4 && fake.Unloads == 4 && fake.Files.All(f => !File.Exists(f)),
             "KWin private D-Bus fake: scripts unloaded and private temporary files deleted");
+        check(fake.Scripts.Any(s => s.Contains("noBorder = true") && s.Contains("keepAbove = true") &&
+            s.Contains("skipSwitcher = true")) && fake.Scripts.Any(s => s.Contains("w.clientGeometry") && s.Contains("workspace.stackingOrder")) &&
+            fake.Scripts.Any(s => s.Contains("workspace.raiseWindow(w)")),
+            "KWin private D-Bus fake: borderless above-panel preparation and client geometry verification reach the bus");
+        var geometry = DoctorDisplays.FormatKdeGeometry(await KdeCapture.DesktopGeometryAsync());
+        check(geometry.Any(l => l.Contains("full 0,0 1920x1080; workarea 0,44 1920x1036")) &&
+            geometry.Any(l => l.Contains("panel: 0,0 1920x44")), "KWin private D-Bus fake: doctor reports full output, reserved workarea and panel");
+        check(fake.Files.All(f => !File.Exists(f)) && fake.Loads == fake.Unloads,
+            "KWin private D-Bus fake: diagnostic scripts also unload and delete files");
         fake.Denied = true;
+        check(await KdeCapture.DesktopGeometryAsync() == null && DoctorDisplays.FormatKdeGeometry(null)[0].Contains("unavailable"),
+            "KWin private D-Bus fake: denied geometry diagnostic fails soft");
         check(await KdeCapture.CursorPositionAsync() == null, "KWin private D-Bus fake: permission denial does not fabricate a cursor");
         check(!await KdeCapture.PlaceAsync("ShareX [unique]", new Rectangle(0, 0, 4480, 1440)),
             "KWin private D-Bus fake: permission denial rejects overlay placement");
+        check(fake.Loads == fake.Unloads && fake.Files.All(f => !File.Exists(f)),
+            "KWin private D-Bus fake: denial paths also unload scripts and remove every temporary file");
     }
 
     public ValueTask HandleMethodAsync(MethodContext context)
@@ -49,6 +63,7 @@ internal sealed class KWinDbusChecks : IPathMethodHandler
             if ((File.GetUnixFileMode(file) & (UnixFileMode.GroupRead | UnixFileMode.OtherRead | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite)) != 0)
                 throw new Exception("KWin script must be private to the user");
             Files.Add(file);
+            Scripts.Add(script);
             Loads++;
             using var reply = context.CreateReplyWriter("i");
             reply.WriteInt32(Denied ? -1 : 7);
@@ -63,8 +78,10 @@ internal sealed class KWinDbusChecks : IPathMethodHandler
             using var call = context.Connection.GetMessageWriter();
             call.WriteMethodCallHeader(destination: destination.Groups[1].Value, path: "/org/sharex/Capture",
                 @interface: "org.sharex.Capture", member: "Result", signature: "s");
-            call.WriteString(script.Contains("workspace.cursorPos") ? "{\"x\":3100,\"y\":400}" :
-                "{\"x\":0,\"y\":0,\"width\":4480,\"height\":1440}");
+            call.WriteString(script.Contains("KWin.MaximizeArea") ?
+                """{"outputs":[{"name":"DP-1","full":{"x":0,"y":0,"width":1920,"height":1080},"work":{"x":0,"y":44,"width":1920,"height":1036}}],"panels":[{"geometry":{"x":0,"y":0,"width":1920,"height":44},"keepAbove":false,"keepBelow":false}]}""" :
+                script.Contains("workspace.cursorPos") ? "{\"x\":3100,\"y\":400}" :
+                "{\"x\":0,\"y\":0,\"width\":4480,\"height\":1440,\"frame\":{\"x\":0,\"y\":0,\"width\":4480,\"height\":1440},\"noBorder\":true,\"keepAbove\":true,\"abovePanels\":true}");
             context.Connection.TrySendMessage(call.CreateMessage());
             using var reply = context.CreateReplyWriter(null);
             context.Reply(reply.CreateMessage());

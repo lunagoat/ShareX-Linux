@@ -81,7 +81,10 @@ internal static class Doctor
         Section("Region selection");
         Info(ShareX.AvaloniaUI.Linux.NativeRegionSelector.Decision.Reason);
         if (ShareX.AvaloniaUI.Linux.KdeCapture.IsSession)
+        {
+            Info(DoctorDisplays.DescribeKdeCapturePath());
             Info("KDE: region capture uses the entire desktop regardless of ActiveMonitorMode; overlay placement is checked through KWin scripting. slurp selects the live desktop without annotations.");
+        }
 
         bool wlroots = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"));

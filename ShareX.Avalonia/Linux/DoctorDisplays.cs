@@ -134,19 +134,56 @@ public static class DoctorDisplays
 
     public static string DetectRegionSelector(out string reason)
     {
-        string? env = Environment.GetEnvironmentVariable("SHAREX_REGION_SELECTOR")?.Trim();
         bool useSlurp = NativeRegionSelector.ShouldUse;
         string choice = useSlurp ? "slurp" : "overlay";
-        reason = !string.IsNullOrEmpty(env) ? $"SHAREX_REGION_SELECTOR={env}" : "default";
+        reason = NativeRegionSelector.Decision.Reason;
         return choice;
     }
 
     public static string DetectWindowPlacementPath()
     {
+        if (KdeCapture.IsSession) return "KWin scripting: borderless, keepAbove + raise over panels, full-desktop frame AND client geometry verified";
         if (NiriIpc.IsAvailable) return "niri";
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return "sway";
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return "hyprland";
         return "none";
+    }
+
+    public static string DescribeKdeCapturePath() => NativeRegionSelector.Decision.UseSlurp
+        ? "KDE selector/placement: slurp (live layer-shell selector; no ShareX overlay window or KWin placement)"
+        : "KDE selector/placement: ShareX overlay via " + DetectWindowPlacementPath();
+
+    public static List<string> FormatKdeGeometry(string? json)
+    {
+        List<string> lines = [];
+        try
+        {
+            using JsonDocument doc = JsonDocument.Parse(json ?? "");
+            foreach (var output in doc.RootElement.GetProperty("outputs").EnumerateArray())
+                lines.Add($"KWin {output.GetProperty("name").GetString()}: full {Rect(output.GetProperty("full"))}; workarea {Rect(output.GetProperty("work"))}");
+            foreach (var panel in doc.RootElement.GetProperty("panels").EnumerateArray())
+                lines.Add($"KWin panel: {Rect(panel.GetProperty("geometry"))}; keepAbove={panel.GetProperty("keepAbove")}; keepBelow={panel.GetProperty("keepBelow")}");
+            if (lines.Count > 0) return lines;
+        }
+        catch (Exception) { }
+        return ["KWin workarea/panels: unavailable (scripting denied, unsupported API, or no session bus); kscreen-doctor reports full outputs only"];
+
+        static string Rect(JsonElement r) => $"{r.GetProperty("x")},{r.GetProperty("y")} {r.GetProperty("width")}x{r.GetProperty("height")}";
+    }
+
+    public static List<string> QueryKdeGeometry()
+    {
+        var lines = FormatKdeGeometry(KdeCapture.DesktopGeometryAsync().GetAwaiter().GetResult());
+        if (!lines[0].Contains("unavailable")) return lines;
+        // KWin has no public qdbus workarea getter. supportInformation can still expose screen geometry
+        // when scripting is forbidden. Never use queryWindowInfo: it starts an interactive picker.
+        string? qdbus = FindExecutable("qdbus6") ?? FindExecutable("qdbus");
+        string? support = qdbus == null ? null : LinuxCaptureProcess.TryText(qdbus, TimeSpan.FromSeconds(2),
+            "org.kde.KWin", "/KWin", "org.kde.KWin.supportInformation");
+        if (!string.IsNullOrWhiteSpace(support))
+            foreach (string line in support.Split('\n').Where(l => l.Contains("Geometry:", StringComparison.OrdinalIgnoreCase)))
+                lines.Add("KWin screen (qdbus supportInformation): " + line.Trim());
+        return lines;
     }
 
     public static string CheckInstalledTools()
@@ -413,6 +450,11 @@ public static class DoctorDisplays
 
         string placement = DetectWindowPlacementPath();
         lines.Add($"overlay window placement: {placement}");
+        if (KdeCapture.IsSession)
+        {
+            lines.Add(DescribeKdeCapturePath());
+            lines.AddRange(QueryKdeGeometry());
+        }
 
         lines.Add($"tools: {CheckInstalledTools()}");
 

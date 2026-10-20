@@ -60,7 +60,9 @@ spanning an Avalonia XWayland window on KWin has not been verified on hardware. 
 across outputs, and retains ShareX's after-capture tasks; it has no frozen preview, magnifier or annotation toolbar.
 
 With `SHAREX_REGION_SELECTOR=overlay`, or without slurp, ShareX loads a temporary KWin script over D-Bus to move/resize its uniquely titled
-capture window to the logical desktop rectangle and keep it above other windows. It checks the geometry after KWin processes the configure,
+capture window to the full logical desktop rectangle, including panel reservations. It requests no decorations, clears maximize/fullscreen,
+skips taskbar/pager/switcher, and explicitly raises the keep-above window (Plasma panels can share its stacking layer). It checks both frame
+and painted client geometry, border/keep-above state and stacking above visible overlapping docks after KWin processes the configure,
 retrying if needed. A persistent single-monitor or misplaced window is rejected and closed: on Wayland it falls back to slurp if installed;
 otherwise capture reports an installation / KWin scripting hint. KDE X11 also uses this whole-desktop placement check. The script is unloaded
 and its private temporary file removed after each request. KWin scripting must be permitted for this overlay path.
@@ -68,13 +70,17 @@ and its private temporary file removed after each request. KWin scripting must b
 KDE Wayland global pointer queries use `workspace.cursorPos` through the same temporary scripting mechanism, never `XQueryPointer`.
 If unavailable, active-monitor screenshot requests use the full desktop, and overlay toolbar initialization uses the primary monitor's centre
 as an anchor. X11 sessions continue using their real X11 pointer. `sharex --doctor` prints the selected region selector and its reason; it does
-not open a test overlay or certify that KWin will allow placement.
+not open a test overlay or certify that KWin will allow placement. It names the selector/placement path and, when scripting is available,
+reports full output vs reserved workarea and panel geometry through a read-only temporary KWin script; qdbus support information provides
+a screen-geometry fallback. Unavailable workareas are reported explicitly. See [top-strip follow-up diagnostics](status/kde-region.md#follow-up-top-strip-not-painted).
 
 **Verified without a desktop:** `tests/ShareX.Compositor.Tests` covers kscreen-doctor JSON for two unequal outputs, fractional scale, primary
 on the right, negative origins, transformed rotation and explicit logical sizes. Fake portal rasters test monitor crops and selections crossing
 monitor boundaries at 1x/2x. Placement fakes reproduce a window on the right output while the frozen rectangle starts on the left, and verify
 retries, rejection of single-monitor geometry, escaped window titles, and scripting denial. A private D-Bus fake tests script loading, running,
-callbacks, cursor queries, unloading and file cleanup. No GUI or live compositor is used.
+callbacks, cursor queries, unloading and file cleanup. A synthetic 44px top-panel reservation verifies full output bounds and top-row portal
+pixels at 1x/2x; placement fakes reject frame-only coverage, workarea clamping, refused borders/stacking and panels above the overlay.
+No GUI or live compositor is used.
 
 **Still needs a real KDE user:** KWin spanning and stacking above panels on X11/XWayland, slurp on the user's Plasma version, and portal PNG
 layout on mixed-DPI / fractional-scale hardware. The crop tests assume a portal PNG is a uniformly scaled raster of the logical desktop;

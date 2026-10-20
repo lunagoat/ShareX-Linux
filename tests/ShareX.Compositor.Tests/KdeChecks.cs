@@ -9,6 +9,7 @@ internal static class KdeChecks
     {
         foreach (var layout in new[]
         {
+            (Name: "top-panel", Left: new Rectangle(0, 0, 1920, 1080), Right: new Rectangle(1920, 0, 2560, 1440)),
             (Name: "dual", Left: new Rectangle(0, 0, 1920, 1080), Right: new Rectangle(1920, 0, 2560, 1440)),
             (Name: "scaled", Left: new Rectangle(0, 0, 1920, 1080), Right: new Rectangle(1920, 0, 1707, 960)),
             (Name: "primary-right", Left: new Rectangle(-1920, -120, 1920, 1080), Right: new Rectangle(0, 0, 2560, 1440))
@@ -22,7 +23,7 @@ internal static class KdeChecks
             Rectangle desktop = monitors.Select(m => m.Bounds).Aggregate(Rectangle.Union);
             Rectangle expected = layout.Name switch
             {
-                "dual" => new Rectangle(0, 0, 4480, 1440),
+                "dual" or "top-panel" => new Rectangle(0, 0, 4480, 1440),
                 "scaled" => new Rectangle(0, 0, 3627, 1080),
                 _ => new Rectangle(-1920, -120, 4480, 1560)
             };
@@ -42,20 +43,33 @@ internal static class KdeChecks
                         canvas.DrawRect((b.X - desktop.X) * rasterScale, (b.Y - desktop.Y) * rasterScale,
                             b.Width * rasterScale, b.Height * rasterScale, paint);
                     }
+                    if (layout.Name == "top-panel")
+                    {
+                        paint.Color = SKColors.Green;
+                        canvas.DrawRect(0, 0, 1920 * rasterScale, 44 * rasterScale, paint);
+                    }
                 }
                 foreach (var monitor in monitors)
                 {
                     using SKBitmap crop = LinuxScreenCapture.CropDesktop(png, desktop, monitor.Bounds);
                     SKColor color = monitor.Name == "DP-1" ? SKColors.Red : SKColors.Blue;
                     check(crop.Width == monitor.Bounds.Width * rasterScale && crop.Height == monitor.Bounds.Height * rasterScale &&
-                        crop.GetPixel(0, 0) == color && crop.GetPixel(crop.Width - 1, crop.Height - 1) == color,
+                        crop.GetPixel(0, 0) == (layout.Name == "top-panel" && monitor.Name == "DP-1" ? SKColors.Green : color) && crop.GetPixel(crop.Width - 1, crop.Height - 1) == color,
                         $"KDE {layout.Name}: {monitor.Name} portal crop at {rasterScale}x has the correct size and both corner pixels");
                 }
                 Rectangle captureBounds = KdeCapture.UseActiveMonitor(true, true, false) ? monitors[0].Bounds : desktop;
                 using SKBitmap frozen = LinuxScreenCapture.CropDesktop(png, desktop, captureBounds);
                 check(frozen.Width == png.Width && frozen.Height == png.Height,
                     $"KDE {layout.Name}: saved active-monitor mode still freezes every output");
-                Rectangle crossing = new(layout.Right.X - 20, 10, 40, 20);
+                if (layout.Name == "top-panel")
+                {
+                    using var fixture = System.Text.Json.JsonDocument.Parse(File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "Fixtures", "kde-top-panel.json")));
+                    check(fixture.RootElement.GetProperty("kwin").GetProperty("workArea").GetProperty("y").GetInt32() == 44 &&
+                        captureBounds.Top == 0 && frozen.GetPixel(0, 0) == SKColors.Green && frozen.GetPixel(0, 44 * rasterScale - 1) == SKColors.Green &&
+                        frozen.GetPixel(0, 44 * rasterScale) == SKColors.Red,
+                        $"KDE top panel: full desktop and frozen raster preserve rows 0..43 at {rasterScale}x despite reserved work area");
+                }
+                Rectangle crossing = new(layout.Right.X - 20, 60, 40, 20);
                 using SKBitmap across = LinuxScreenCapture.CropDesktop(png, desktop, crossing);
                 check(across.GetPixel(0, 0) == SKColors.Red && across.GetPixel(across.Width - 1, 0) == SKColors.Blue,
                     $"KDE {layout.Name}: selection crosses the monitor boundary at {rasterScale}x");
@@ -86,6 +100,10 @@ internal static class KdeChecks
             Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", "KDE");
             Environment.SetEnvironmentVariable("XDG_SESSION_TYPE", "wayland");
             Environment.SetEnvironmentVariable("WAYLAND_DISPLAY", "fixture-only");
+            check(DoctorDisplays.DetectWindowPlacementPath().StartsWith("KWin scripting") &&
+                DoctorDisplays.DescribeKdeCapturePath().Contains("ShareX overlay"),
+                "KDE doctor: missing slurp reports overlay and KWin placement instead of none");
+            check(DoctorDisplays.FormatKdeGeometry("{}")[0].Contains("unavailable"), "KDE doctor: malformed geometry fails soft");
             var monitors = LinuxScreenCapture.GetMonitors();
             check(monitors.Length == 2 && monitors[1].Bounds == new Rectangle(1920, 0, 2560, 1440) &&
                 LinuxScreenCapture.DesktopBounds == new Rectangle(0, 0, 4480, 1440),

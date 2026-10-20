@@ -1,0 +1,65 @@
+{
+  "outputs": [
+    {
+      "id": 1,
+      "name": "DP-1",
+      "enabled": true,
+      "connected": true,
+      "priority": 1,
+      "pos": {
+        "x": 0,
+        "y": 0
+      },
+      "size": {
+        "width": 1920,
+        "height": 1080
+      },
+      "scale": 1,
+      "rotation": 1,
+      "workArea": {
+        "x": 0,
+        "y": 44,
+        "width": 1920,
+        "height": 1036
+      }
+    },
+    {
+      "id": 2,
+      "name": "DP-2",
+      "enabled": true,
+      "connected": true,
+      "priority": 2,
+      "pos": {
+        "x": 1920,
+        "y": 0
+      },
+      "size": {
+        "width": 2560,
+        "height": 1440
+      },
+      "scale": 1,
+      "rotation": 1,
+      "workArea": {
+        "x": 1920,
+        "y": 44,
+        "width": 2560,
+        "height": 1396
+      }
+    }
+  ],
+  "_fixtureNote": "Synthetic KWin workArea metadata alongside real KScreen output fields; kscreen-doctor does not report panel reservations.",
+  "kwin": {
+    "workArea": {
+      "x": 0,
+      "y": 44,
+      "width": 4480,
+      "height": 1396
+    },
+    "panel": {
+      "x": 0,
+      "y": 0,
+      "width": 1920,
+      "height": 44
+    }
+  }
+}
