@@ -111,6 +111,31 @@ log "  application : $libdir"
 log "  launcher    : $bindir/sharex"
 log "  desktop file: $appsdir/$desktop_id"
 
+# A ShareX that is still running keeps its old code in memory but loads parts of itself from the executable again; once the file is
+# replaced it can no longer read forwarded commands, so ShareX would look dead after the update. Stop running instances of THIS
+# installation first (found by their exact executable path, never by name): ask politely, then TERM, then KILL.
+stop_running_instances() {
+    local exe="$libdir/ShareX" d pid link i found
+    [ -e "$exe" ] || return 0
+    exe="$(readlink -f -- "$exe")"
+    is_ours() { [ -O "$1" ] && case "$(readlink "$1/exe" 2>/dev/null)" in "$exe"|"$exe (deleted)") return 0 ;; esac; return 1; }
+    found=0
+    for d in /proc/[0-9]*; do is_ours "$d" && found=1; done
+    [ "$found" = 1 ] || return 0
+    log "Stopping the running ShareX so the update takes effect (start it again afterwards)."
+    timeout 5 "$exe" -ExitShareX >/dev/null 2>&1 || true
+    for i in 1 2 3 4 5 6; do
+        found=0; for d in /proc/[0-9]*; do is_ours "$d" && found=1; done
+        [ "$found" = 0 ] && return 0
+        sleep 0.5
+    done
+    for d in /proc/[0-9]*; do is_ours "$d" && kill -TERM "${d#/proc/}" 2>/dev/null; done
+    sleep 2
+    for d in /proc/[0-9]*; do is_ours "$d" && kill -KILL "${d#/proc/}" 2>/dev/null; done
+    return 0
+}
+stop_running_instances
+
 install -d "$libdir" "$bindir" "$appsdir" "$mimedir" "$metainfodir"
 
 # Application files (everything the publish produced, including the native
