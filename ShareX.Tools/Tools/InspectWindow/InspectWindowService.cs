@@ -23,11 +23,7 @@
 
 #endregion License Information (GPL v3)
 
-using ShareX.HelpersLib;
-using SkiaSharp;
-using System.Runtime.InteropServices;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
-using ImageFormat = SkiaSharp.SKEncodedImageFormat;
 
 namespace ShareX.Tools;
 

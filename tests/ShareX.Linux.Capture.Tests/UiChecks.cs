@@ -1,11 +1,9 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Threading;
 using ShareX.AvaloniaUI.Integration;
 using ShareX.AvaloniaUI.Linux;
 using ShareX.AvaloniaUI.Windows;
-using ShareX.ScreenCaptureLib;
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using ShareX.ImageEditor.Integration;
 using ShareX.ImageEditor.Presentation.Views;

@@ -30,7 +30,6 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform;
 using ShareX.AvaloniaUI.Theming;
-using ShareX.HelpersLib;
 
 namespace ShareX.Tools;
 

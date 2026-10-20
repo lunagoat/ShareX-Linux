@@ -2,7 +2,6 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
-using System;
 using SystemRectangle = System.Drawing.Rectangle;
 
 namespace ShareX.ScreenCaptureLib;

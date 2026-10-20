@@ -38,7 +38,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 using DrawingBitmap = SkiaSharp.SKBitmap;
-using DrawingSize = System.Drawing.Size;
 
 namespace ShareX.HistoryLib;
 

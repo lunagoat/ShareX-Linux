@@ -3,7 +3,6 @@ using System.Reflection;
 using Avalonia.Controls;
 using Avalonia.Threading;
 using ShareX;
-using ShareX.HelpersLib;
 using ShareX.ImageEditor.Core.Annotations;
 using ShareX.ImageEditor.Integration;
 using ShareX.ImageEditor.Presentation.Views;

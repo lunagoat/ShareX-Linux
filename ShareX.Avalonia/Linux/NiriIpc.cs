@@ -40,7 +40,7 @@ public static class NiriIpc
 
             JsonElement layout = w.TryGetProperty("layout", out var l) ? l : default;
             double[] size = Pair(layout, "window_size") ?? Pair(layout, "tile_size") ?? [0, 0];
-            double[] tile = Pair(layout, "tile_pos_in_workspace_view");
+            double[]? tile = Pair(layout, "tile_pos_in_workspace_view");
             double[] offset = Pair(layout, "window_offset_in_tile") ?? [0, 0];
 
             Rectangle bounds = Rectangle.Empty;

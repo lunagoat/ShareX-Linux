@@ -25,7 +25,6 @@
 
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using ShareX.HelpersLib;
 using System.Collections.ObjectModel;
 using System.Drawing;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;

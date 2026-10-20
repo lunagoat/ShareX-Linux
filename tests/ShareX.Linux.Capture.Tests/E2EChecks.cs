@@ -1,11 +1,9 @@
 // ShareX Linux Port - Screen Capture End-to-End Verification
 using ShareX.AvaloniaUI.Linux;
 using ShareX.ScreenCaptureLib;
-using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using SkiaSharp;
 using System.Diagnostics;
 using System.Drawing;
-using System.Globalization;
 using System.Text.Json;
 
 internal static class E2EChecks

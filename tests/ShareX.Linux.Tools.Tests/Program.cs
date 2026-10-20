@@ -13,7 +13,6 @@ using ShareX.Tools;
 using ShareX.Tools.Linux;
 using SkiaSharp;
 using System.Security.Cryptography;
-using System.Text;
 
 internal static class Program
 {

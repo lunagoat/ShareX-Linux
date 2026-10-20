@@ -44,7 +44,6 @@ internal sealed class ScreenColorPicker : Window
     private readonly Border _preview;
     private readonly Canvas _canvas;
     private readonly PixelRect _bounds;
-    private readonly Action<ScreenColorPickerResult?> _complete;
     private readonly Image _magnifier;
 
     internal ScreenColorPicker(SKBitmap pixels, PixelRect bounds, double scaling, ScreenColorPickerOptions options,
@@ -53,7 +52,6 @@ internal sealed class ScreenColorPicker : Window
         _pixels = pixels;
         _bounds = bounds;
         _options = options;
-        _complete = complete;
         using var stream = new MemoryStream();
         pixels.Save(stream, SKEncodedImageFormat.Png);
         stream.Position = 0;

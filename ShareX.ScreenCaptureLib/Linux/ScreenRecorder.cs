@@ -4,7 +4,6 @@ using System;
 using System.Drawing;
 using System.IO;
 using System.Text;
-using Image = SkiaSharp.SKBitmap;
 using NativeRecorder = ShareX.ScreenRecordingLib.ScreenRecorder;
 
 namespace ShareX.ScreenCaptureLib

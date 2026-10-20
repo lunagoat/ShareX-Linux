@@ -29,7 +29,6 @@ using Avalonia.Markup.Xaml;
 using ShareX.ImageEditor.Integration;
 using ShareX.ImageEditor.Presentation.ViewModels;
 using SkiaSharp;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace ShareX.ImageEditor.Presentation.Views
@@ -248,20 +247,6 @@ namespace ShareX.ImageEditor.Presentation.Views
             return string.IsNullOrEmpty(dimensions)
                 ? "ShareX - Image Editor"
                 : $"ShareX - Image Editor - {dimensions}";
-        }
-
-        private static string GetVersionString()
-        {
-            var asm = Assembly.GetEntryAssembly() ?? Assembly.GetExecutingAssembly();
-
-            var info = asm.GetCustomAttribute<AssemblyInformationalVersionAttribute>();
-            if (!string.IsNullOrEmpty(info?.InformationalVersion))
-            {
-                return info.InformationalVersion;
-            }
-
-            var version = asm.GetName().Version;
-            return version?.ToString() ?? string.Empty;
         }
 
         /// <summary>

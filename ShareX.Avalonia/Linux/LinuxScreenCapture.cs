@@ -169,7 +169,7 @@ public static class LinuxScreenCapture
         {
             try
             {
-                string focused = null;
+                string? focused = null;
                 try { focused = ParseNiriFocusedOutput(LinuxCaptureProcess.Text("niri", "msg", "--json", "workspaces")); }
                 catch (Exception) { }
                 if (focused == null)

@@ -24,7 +24,6 @@
 #endregion License Information (GPL v3)
 
 using Avalonia;
-using ShareX.HelpersLib;
 using SkiaSharp;
 
 using System.Runtime.InteropServices;

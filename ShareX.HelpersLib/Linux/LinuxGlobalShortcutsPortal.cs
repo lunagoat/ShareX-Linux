@@ -1,7 +1,6 @@
 // ShareX - GPL v3 or later. Copyright (c) 2007-2026 ShareX Team.
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using Tmds.DBus.Protocol;
 

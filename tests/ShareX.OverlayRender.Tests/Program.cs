@@ -1,7 +1,6 @@
 // ShareX native overlay renderer tests and benchmark. GPL-3.0-or-later.
 using System.Diagnostics;
 using System.Text.Json;
-using ShareX.OverlayRender;
 using SkiaSharp;
 
 namespace ShareX.OverlayRender.Tests;

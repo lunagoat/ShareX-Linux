@@ -230,7 +230,6 @@ namespace ShareX.HelpersLib
             public string upload_url { get; set; }
             public string html_url { get; set; }
             public long id { get; set; }
-            //public GitHubAuthor author { get; set; }
             public string node_id { get; set; }
             public string tag_name { get; set; }
             public string target_commitish { get; set; }
@@ -243,7 +242,6 @@ namespace ShareX.HelpersLib
             public string tarball_url { get; set; }
             public string zipball_url { get; set; }
             public string body { get; set; }
-            //public GitHubReactions reactions { get; set; }
         }
 
         protected class GitHubAsset
@@ -253,7 +251,6 @@ namespace ShareX.HelpersLib
             public string node_id { get; set; }
             public string name { get; set; }
             public string label { get; set; }
-            //public GitHubUploader uploader { get; set; }
             public string content_type { get; set; }
             public string state { get; set; }
             public long size { get; set; }
