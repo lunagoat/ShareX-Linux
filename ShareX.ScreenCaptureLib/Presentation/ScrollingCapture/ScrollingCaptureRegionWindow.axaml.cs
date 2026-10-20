@@ -38,7 +38,6 @@ namespace ShareX.ScreenCaptureLib;
 public partial class ScrollingCaptureRegionWindow : Window
 {
     private const int BorderPixels = 1;
-    private const int RegionDiff = 4;
 
     private readonly int _frameWidth;
     private readonly int _frameHeight;

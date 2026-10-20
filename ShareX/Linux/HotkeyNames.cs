@@ -1,5 +1,4 @@
 // ShareX - GPL v3 or later. Copyright (c) 2007-2026 ShareX Team.
-using ShareX.HelpersLib;
 using System.Collections.Generic;
 
 namespace ShareX;

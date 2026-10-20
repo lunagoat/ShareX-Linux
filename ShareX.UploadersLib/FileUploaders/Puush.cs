@@ -54,8 +54,6 @@ namespace ShareX.UploadersLib.FileUploaders
         private const string PuushAPIAuthenticationURL = PuushAPIURL + "/auth";
         private const string PuushAPIUploadURL = PuushAPIURL + "/up";
         private const string PuushAPIDeletionURL = PuushAPIURL + "/del";
-        private const string PuushAPIHistoryURL = PuushAPIURL + "/hist";
-        private const string PuushAPIThumbnailURL = PuushAPIURL + "/thumb";
 
         public string APIKey { get; set; }
 

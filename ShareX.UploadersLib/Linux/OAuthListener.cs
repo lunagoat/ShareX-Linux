@@ -24,9 +24,6 @@
 #endregion License Information (GPL v3)
 
 using System;
-using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
 using ShareX.HelpersLib;
 using ShareX.UploadersLib.Properties;
 using System.Net;

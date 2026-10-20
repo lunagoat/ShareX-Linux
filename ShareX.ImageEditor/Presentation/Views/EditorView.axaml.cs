@@ -1576,11 +1576,6 @@ namespace ShareX.ImageEditor.Presentation.Views
             this.Focus();
         }
 
-        private Color SKColorToAvalonia(SKColor color)
-        {
-            return Color.FromUInt32((uint)color);
-        }
-
         private Control? CreateControlForAnnotation(Annotation annotation)
         {
             var control = AnnotationVisualFactory.CreateVisualControl(annotation, AnnotationVisualMode.Persisted);

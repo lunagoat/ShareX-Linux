@@ -25,7 +25,6 @@
 
 using ShareX.Tools.Linux;
 using System.Collections.Concurrent;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 

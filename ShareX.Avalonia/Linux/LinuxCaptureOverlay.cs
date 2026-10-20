@@ -23,7 +23,6 @@
 
 #endregion License Information (GPL v3)
 
-using System.Diagnostics;
 using System.Drawing;
 using System.Text.Json;
 using Avalonia.Controls;

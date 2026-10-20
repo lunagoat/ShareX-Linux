@@ -39,7 +39,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Threading;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 using DrawingColor = System.Drawing.Color;
@@ -57,8 +56,6 @@ public partial class ScreenRecordWindow : Window, IDisposable
     private const int ActionButtonCount = 4;
     private const double ToolbarWidth = 461;
     private const double ToolbarHeight = 42;
-    private const int RegionOr = 2;
-    private const int RegionDiff = 4;
 
     private readonly int _captureWidth;
     private readonly int _captureHeight;

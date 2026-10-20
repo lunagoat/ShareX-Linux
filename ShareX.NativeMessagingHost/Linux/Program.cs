@@ -25,9 +25,6 @@
 
 using System;
 using System.IO;
-using System.Threading;
-using System.Threading.Tasks;
-using ShareX.HelpersLib;
 using System.Diagnostics;
 using System.Text;
 

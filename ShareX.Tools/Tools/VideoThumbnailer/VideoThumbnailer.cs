@@ -27,7 +27,6 @@
 
 using ShareX.HelpersLib;
 using SkiaSharp;
-using System.Diagnostics;
 using System.Drawing;
 
 namespace ShareX.Tools

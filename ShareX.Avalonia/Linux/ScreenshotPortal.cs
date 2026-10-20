@@ -48,12 +48,12 @@ public static class ScreenshotPortal
                 var values = reader.ReadDictionaryOfStringToVariantValue();
                 return (response, values.TryGetValue("uri", out var uri) ? uri.GetString() : "");
             },
-            handler: (Exception? error, (uint Code, string Uri) result) =>
+            handler: (Notification<(uint Code, string Uri)> notification) =>
             {
-                if (error != null) completion.TrySetException(error);
-                else if (result.Code == 0 && !string.IsNullOrEmpty(result.Uri)) completion.TrySetResult(result.Uri);
+                if (!notification.HasValue) completion.TrySetException(notification.Exception);
+                else if (notification.Value.Code == 0 && !string.IsNullOrEmpty(notification.Value.Uri)) completion.TrySetResult(notification.Value.Uri);
                 else completion.TrySetException(new OperationCanceledException("Screen capture was cancelled or denied by the desktop portal."));
-            }, readerState: null, emitOnCapturedContext: false, flags: ObserverFlags.None).ConfigureAwait(false);
+            }, state: null, emitOnCapturedContext: false, flags: ObserverFlags.None).ConfigureAwait(false);
         await connection.CallMethodAsync(CreateRequest()).WaitAsync(TimeSpan.FromSeconds(10)).ConfigureAwait(false);
         string uri = await completion.Task.WaitAsync(TimeSpan.FromSeconds(55)).ConfigureAwait(false);
         Uri file = new(uri);

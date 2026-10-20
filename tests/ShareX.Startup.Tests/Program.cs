@@ -6,17 +6,10 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using ShareX;
-using ShareX.AvaloniaUI.Controls;
 using ShareX.AvaloniaUI.Integration;
 using ShareX.AvaloniaUI.Theming;
 using ShareX.HelpersLib;
 using ShareX.UploadersLib;
-using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 
 internal static class Program
 {
@@ -228,7 +221,7 @@ internal static class Program
         {
             using RenderTargetBitmap bitmap = new(new PixelSize(width, height), new Vector(96, 96));
             bitmap.Render(window);
-            bitmap.Save(screenshotPath);
+            bitmap.Save(screenshotPath, Avalonia.Media.Imaging.PngBitmapEncoderOptions.Default);
         }
         catch (Exception ex)
         {
@@ -296,8 +289,8 @@ internal static class Program
 
 internal sealed class FakeTray : ITrayIconService
 {
-    public event Action? RightButtonDown;
-    public event Action? RightButtonUp;
+    public event Action? RightButtonDown { add { } remove { } }
+    public event Action? RightButtonUp { add { } remove { } }
     public bool Visible { get; set; } = true;
     public string ToolTipText { get; set; } = "ShareX";
     public void SetIcon(byte[] icon) { }

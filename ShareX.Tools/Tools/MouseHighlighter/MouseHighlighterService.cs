@@ -25,7 +25,6 @@
 
 using Avalonia.Controls;
 using Avalonia.Threading;
-using ShareX.HelpersLib;
 using System.Diagnostics;
 using DrawingPoint = System.Drawing.Point;
 

@@ -1362,21 +1362,6 @@ public partial class EditorSelectionController
         }
     }
 
-    private Cursor GetDefaultCanvasCursor()
-    {
-        if (_view.DataContext is not MainViewModel vm)
-        {
-            return SelectToolCursor;
-        }
-
-        return vm.ActiveTool switch
-        {
-            EditorTool.Select => SelectToolCursor,
-            EditorTool.Crop or EditorTool.CutOut => _view.GetCrosshairCursor(),
-            _ => _view.GetCrosshairCursor()
-        };
-    }
-
     public void PerformDelete()
     {
         if (_selectedShape != null)

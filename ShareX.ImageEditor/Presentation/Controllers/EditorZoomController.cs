@@ -27,7 +27,6 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Threading;
-using ShareX.ImageEditor.Core.Annotations;
 using ShareX.ImageEditor.Presentation.ViewModels;
 using ShareX.ImageEditor.Presentation.Views;
 
@@ -35,8 +34,6 @@ namespace ShareX.ImageEditor.Presentation.Controllers;
 
 public class EditorZoomController
 {
-    private static readonly Cursor ArrowCursor = new(StandardCursorType.Arrow);
-
     private readonly EditorView _view;
     private bool _isPointerZooming;
     private double _lastZoom = 1.0;
@@ -50,7 +47,6 @@ public class EditorZoomController
 
     private const double MinZoom = 0.25;
     private const double MaxZoom = 4.0;
-    private const double ZoomStep = 0.1;
 
     // Predefined zoom levels matching the dropdown
     private static readonly double[] ZoomLevels = { 0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0, 4.0 };
@@ -316,21 +312,6 @@ public class EditorZoomController
         {
             _view.RestoreEditorSurfaceCursorForActiveTool();
         }
-    }
-
-    private Cursor GetDefaultCanvasCursor()
-    {
-        if (_view.DataContext is not MainViewModel vm)
-        {
-            return ArrowCursor;
-        }
-
-        return vm.ActiveTool switch
-        {
-            EditorTool.Select => ArrowCursor,
-            EditorTool.Crop or EditorTool.CutOut => _view.GetCrosshairCursor(),
-            _ => _view.GetCrosshairCursor()
-        };
     }
 
     public void ResetScrollViewerOffset()

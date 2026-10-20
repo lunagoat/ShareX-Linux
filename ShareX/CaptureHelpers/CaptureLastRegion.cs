@@ -25,7 +25,6 @@
 
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using System.Threading.Tasks;
-using Bitmap = SkiaSharp.SKBitmap;
 
 namespace ShareX
 {

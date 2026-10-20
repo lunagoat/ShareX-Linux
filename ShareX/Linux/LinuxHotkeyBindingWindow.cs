@@ -5,7 +5,6 @@ using Avalonia.Layout;
 using ShareX.AvaloniaUI.Theming;
 using ShareX.HelpersLib;
 using System;
-using System.Linq;
 
 namespace ShareX;
 

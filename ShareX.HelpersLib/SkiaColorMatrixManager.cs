@@ -38,12 +38,6 @@ namespace ShareX.HelpersLib
         private const float gw = 0.715160f;
         private const float bw = 0.072169f;
 
-        /*
-        private const float rw = 0.3086f;
-        private const float gw = 0.6094f;
-        private const float bw = 0.0820f;
-        */
-
         public static SKBitmap Apply(this ImageColorMatrix matrix, SKBitmap bmp)
         {
             SKBitmap dest = bmp.CreateEmptyBitmap();

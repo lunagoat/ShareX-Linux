@@ -25,7 +25,6 @@
 
 using System.Drawing;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace ShareX.AvaloniaUI.Linux;
 

@@ -36,7 +36,6 @@ using ShareX.ImageEditor.Presentation.Rendering;
 using ShareX.ImageEditor.Presentation.ViewModels;
 using SkiaSharp;
 using System.ComponentModel;
-using System.Runtime.InteropServices;
 
 namespace ShareX.ImageEditor.Presentation.Views
 {

@@ -7,7 +7,6 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using ShareX;
 using ShareX.HelpersLib;
-using ShareX.HistoryLib;
 using ShareX.UploadersLib;
 using ShareX.UploadersLib.FileUploaders;
 using ShareX.UploadersLib.TextUploaders;

@@ -60,7 +60,6 @@ namespace ShareX.UploadersLib.FileUploaders
         private const string URLAPIBase = "https://api.dropboxapi.com";
         private const string URLAPI = URLAPIBase + "/" + APIVersion;
         private const string URLContent = "https://content.dropboxapi.com/" + APIVersion;
-        private const string URLNotify = "https://notify.dropboxapi.com/" + APIVersion;
 
         private const string URLOAuth2Authorize = URLWEB + "/oauth2/authorize";
         private const string URLOAuth2Token = URLAPIBase + "/oauth2/token";

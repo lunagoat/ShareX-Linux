@@ -1,5 +1,4 @@
 // ShareX - GPL-3.0-or-later. Xcursor theme images work on both Wayland and X11.
-using System;
 using System.Runtime.InteropServices;
 using ShareX.ImageEditor.Core.Annotations;
 using SkiaSharp;

@@ -47,8 +47,6 @@ namespace ShareX.UploadersLib
         private const string ParameterTokenSecret = "oauth_token_secret";
         private const string ParameterVerifier = "oauth_verifier";
         internal const string ParameterCallback = "oauth_callback";
-
-        private const string PlainTextSignatureType = "PLAINTEXT";
         private const string HMACSHA1SignatureType = "HMAC-SHA1";
         private const string RSASHA1SignatureType = "RSA-SHA1";
 

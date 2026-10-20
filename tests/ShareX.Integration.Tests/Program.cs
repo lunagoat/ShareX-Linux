@@ -8,7 +8,6 @@ using ShareX.AvaloniaUI.Integration;
 using ShareX.HelpersLib;
 using ShareX.HistoryLib;
 using ShareX.UploadersLib;
-using Newtonsoft.Json;
 
 internal static class Program
 {
@@ -93,8 +92,8 @@ internal static class Program
 
 internal sealed class TestTray : ITrayIconService
 {
-    public event Action? RightButtonDown;
-    public event Action? RightButtonUp;
+    public event Action? RightButtonDown { add { } remove { } }
+    public event Action? RightButtonUp { add { } remove { } }
     public bool Visible { get; set; }
     public string ToolTipText { get; set; } = "ShareX";
     public void SetIcon(byte[] icon) { }

@@ -910,11 +910,6 @@ namespace ShareX.ImageEditor.Presentation.Views
             }
         }
 
-        private static Color ApplyHighlightAlpha(Color baseColor)
-        {
-            return Color.FromArgb(0x55, baseColor.R, baseColor.G, baseColor.B);
-        }
-
         private TextBox? FindActiveTextEditor(Annotation annotation)
         {
             var overlay = this.FindControl<Canvas>("OverlayCanvas");
