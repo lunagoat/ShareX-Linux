@@ -1,0 +1,82 @@
+// ShareX - GPL v3 or later. Copyright (c) 2007-2026 ShareX Team.
+using System.Drawing;
+using System.Text.RegularExpressions;
+using ShareX.AvaloniaUI.Linux;
+using Tmds.DBus.Protocol;
+
+// Run ONLY under a private bus: dbus-run-session -- env SHAREX_TEST_PRIVATE_BUS=1 dotnet run --project ... -- --fake-kwin
+internal sealed class KWinDbusChecks : IPathMethodHandler
+{
+    public string Path => "/Scripting";
+    public bool HandlesChildPaths => true;
+    private string script;
+    private string file;
+    public int Loads, Runs, Unloads;
+    public bool Denied;
+    public List<string> Files = [];
+
+    public static async Task RunAsync(Action<bool, string> check)
+    {
+        if (Environment.GetEnvironmentVariable("SHAREX_TEST_PRIVATE_BUS") != "1")
+            throw new InvalidOperationException("Use dbus-run-session with SHAREX_TEST_PRIVATE_BUS=1; never register a fake KWin on the desktop bus.");
+        using DBusConnection service = new(DBusAddress.Session!);
+        await service.ConnectAsync();
+        await service.RequestNameAsync("org.kde.KWin");
+        KWinDbusChecks fake = new();
+        service.AddMethodHandler(fake);
+        Point? pointer = await KdeCapture.CursorPositionAsync();
+        check(pointer == new Point(3100, 400), "KWin private D-Bus fake: compositor cursor on right monitor, without XQueryPointer");
+        check(await KdeCapture.PlaceAsync("ShareX [unique]", new Rectangle(0, 0, 4480, 1440)),
+            "KWin private D-Bus fake: loadScript/run/callback/measure/unloadScript sequence");
+        check(fake.Loads == 3 && fake.Runs == 3 && fake.Unloads == 3 && fake.Files.All(f => !File.Exists(f)),
+            "KWin private D-Bus fake: scripts unloaded and private temporary files deleted");
+        fake.Denied = true;
+        check(await KdeCapture.CursorPositionAsync() == null, "KWin private D-Bus fake: permission denial does not fabricate a cursor");
+        check(!await KdeCapture.PlaceAsync("ShareX [unique]", new Rectangle(0, 0, 4480, 1440)),
+            "KWin private D-Bus fake: permission denial rejects overlay placement");
+    }
+
+    public ValueTask HandleMethodAsync(MethodContext context)
+    {
+        string member = context.Request.MemberAsString;
+        if (member == "loadScript")
+        {
+            var reader = context.Request.GetBodyReader();
+            file = reader.ReadString();
+            string name = reader.ReadString();
+            if (!name.StartsWith("sharex_capture_")) throw new Exception("Unexpected script name");
+            script = File.ReadAllText(file);
+            if ((File.GetUnixFileMode(file) & (UnixFileMode.GroupRead | UnixFileMode.OtherRead | UnixFileMode.GroupWrite | UnixFileMode.OtherWrite)) != 0)
+                throw new Exception("KWin script must be private to the user");
+            Files.Add(file);
+            Loads++;
+            using var reply = context.CreateReplyWriter("i");
+            reply.WriteInt32(Denied ? -1 : 7);
+            context.Reply(reply.CreateMessage());
+        }
+        else if (member == "run")
+        {
+            if (context.Request.PathAsString != "/Scripting/Script7") throw new Exception("Wrong script object path");
+            Runs++;
+            Match destination = Regex.Match(script, "callDBus\\(\"([^\"]+)\"");
+            if (!destination.Success) throw new Exception("Script does not callback on its own D-Bus connection");
+            using var call = context.Connection.GetMessageWriter();
+            call.WriteMethodCallHeader(destination: destination.Groups[1].Value, path: "/org/sharex/Capture",
+                @interface: "org.sharex.Capture", member: "Result", signature: "s");
+            call.WriteString(script.Contains("workspace.cursorPos") ? "{\"x\":3100,\"y\":400}" :
+                "{\"x\":0,\"y\":0,\"width\":4480,\"height\":1440}");
+            context.Connection.TrySendMessage(call.CreateMessage());
+            using var reply = context.CreateReplyWriter(null);
+            context.Reply(reply.CreateMessage());
+        }
+        else if (member == "unloadScript")
+        {
+            Unloads++;
+            using var reply = context.CreateReplyWriter("b");
+            reply.WriteBool(true);
+            context.Reply(reply.CreateMessage());
+        }
+        else context.ReplyUnknownMethodError();
+        return default;
+    }
+}

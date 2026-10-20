@@ -106,7 +106,7 @@ public static class LinuxScreenCapture
         return null;
     }
 
-    /// <summary>`kscreen-doctor -j` (KDE Plasma): outputs with a logical position, a physical mode size, a scale and a rotation.</summary>
+    /// <summary>`kscreen-doctor -j`: logical positions and transformed output sizes, with optional explicit logical sizes.</summary>
     public static LinuxCaptureMonitor[] ParseKScreenDoctor(string json)
     {
         using JsonDocument document = JsonDocument.Parse(json);
@@ -121,12 +121,21 @@ public static class LinuxScreenCapture
             double scale = output.TryGetProperty("scale", out var s) && s.ValueKind == JsonValueKind.Number ? s.GetDouble() : 1;
             if (!double.IsFinite(scale) || scale <= 0) scale = 1;
             int width = size.GetProperty("width").GetInt32(), height = size.GetProperty("height").GetInt32();
-            int rotation = output.TryGetProperty("rotation", out var r) && r.ValueKind == JsonValueKind.Number ? r.GetInt32() : 1;
-            if (rotation is 2 or 8) (width, height) = (height, width);
+            // KScreen Output::size is already transformed (including rotation). Do not rotate it twice.
+            int logicalWidth = (int)Math.Ceiling(width / scale), logicalHeight = (int)Math.Ceiling(height / scale);
+            if (output.TryGetProperty("explicitLogicalSize", out var logical) && logical.ValueKind == JsonValueKind.Object &&
+                logical.TryGetProperty("width", out var lw) && logical.TryGetProperty("height", out var lh) &&
+                lw.GetDouble() > 0 && lh.GetDouble() > 0)
+            {
+                logicalWidth = (int)Math.Ceiling(lw.GetDouble());
+                logicalHeight = (int)Math.Ceiling(lh.GetDouble());
+            }
+            if (logicalWidth <= 0 || logicalHeight <= 0) continue;
 
             monitors.Add(new LinuxCaptureMonitor(output.GetProperty("name").GetString()!,
-                new Rectangle(pos.GetProperty("x").GetInt32(), pos.GetProperty("y").GetInt32(), (int)Math.Round(width / scale), (int)Math.Round(height / scale)),
-                scale, output.TryGetProperty("primary", out var primary) && primary.ValueKind == JsonValueKind.True));
+                new Rectangle(pos.GetProperty("x").GetInt32(), pos.GetProperty("y").GetInt32(), logicalWidth, logicalHeight),
+                scale, (output.TryGetProperty("primary", out var primary) && primary.ValueKind == JsonValueKind.True) ||
+                    (output.TryGetProperty("priority", out var priority) && priority.GetInt32() == 1)));
         }
 
         return monitors.ToArray();
@@ -151,7 +160,7 @@ public static class LinuxScreenCapture
             }
             catch (Exception) { }
         }
-        else if (IsWayland && (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Contains("KDE", StringComparison.OrdinalIgnoreCase))
+        else if (IsWayland && KdeCapture.IsSession)
         {
             try
             {
@@ -188,13 +197,20 @@ public static class LinuxScreenCapture
     }
 
     /// <summary>
-    /// The monitor that has keyboard focus, where the compositor can say so (niri). The pointer position cannot be used there: X clients
-    /// (ShareX runs through xwayland-satellite) only see the pointer while it is over their own windows.
+    /// Uses compositor focus on niri or KWin's global pointer on KDE Wayland. XWayland pointer queries may be stale over native windows.
+    /// If KWin scripting is unavailable, capture the entire desktop rather than silently choosing the wrong monitor.
     /// </summary>
     public static bool TryGetFocusedMonitor(out Rectangle bounds)
     {
         bounds = Rectangle.Empty;
-        if (!IsWayland || !NiriIpc.IsAvailable) return false;
+        if (!IsWayland) return false;
+        if (KdeCapture.IsSession)
+        {
+            Point? cursor = KdeCapture.CursorPositionAsync().GetAwaiter().GetResult();
+            bounds = cursor is Point p ? GetMonitors().FirstOrDefault(m => m.Bounds.Contains(p))?.Bounds ?? DesktopBounds : DesktopBounds;
+            return true;
+        }
+        if (!NiriIpc.IsAvailable) return false;
 
         try
         {
@@ -219,6 +235,14 @@ public static class LinuxScreenCapture
             {
                 using JsonDocument doc = JsonDocument.Parse(LinuxCaptureProcess.Text("hyprctl", "cursorpos", "-j"));
                 return new Point((int)doc.RootElement.GetProperty("x").GetDouble(), (int)doc.RootElement.GetProperty("y").GetDouble());
+            }
+            if (IsWayland && KdeCapture.IsSession)
+            {
+                Point? cursor = KdeCapture.CursorPositionAsync().GetAwaiter().GetResult();
+                if (cursor != null) return cursor.Value;
+                // No global pointer API is available: use a safe toolbar anchor, never a stale XWayland pointer.
+                Rectangle primary = GetMonitors().FirstOrDefault(m => m.Primary)?.Bounds ?? DesktopBounds;
+                return new Point(primary.X + primary.Width / 2, primary.Y + primary.Height / 2);
             }
             return X11Capture.GetCursorPosition();
         }

@@ -128,7 +128,7 @@ public partial class RegionCaptureWindow : Window
         _request = request ?? throw new ArgumentNullException(nameof(request));
         _imageWidth = request.Screenshot.Width;
         _imageHeight = request.Screenshot.Height;
-        if (request.RegionCaptureOptions.ActiveMonitorMode)
+        if (request.RegionCaptureOptions.ActiveMonitorMode && !(OperatingSystem.IsLinux() && KdeCapture.IsSession))
         {
             Helpers.LockCursorToWindow(this);
         }
@@ -1699,8 +1699,9 @@ public partial class RegionCaptureWindow : Window
         }
 
         double scaling = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
-        Width = _request.ScreenBounds.Width / (OperatingSystem.IsLinux() ? 1 : scaling);
-        Height = _request.ScreenBounds.Height / (OperatingSystem.IsLinux() ? 1 : scaling);
+        bool logicalBounds = OperatingSystem.IsLinux() && LinuxScreenCapture.IsWayland;
+        Width = _request.ScreenBounds.Width / (logicalBounds ? 1 : scaling);
+        Height = _request.ScreenBounds.Height / (logicalBounds ? 1 : scaling);
     }
 
     private void UpdatePixelTransforms()

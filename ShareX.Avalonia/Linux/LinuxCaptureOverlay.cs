@@ -182,6 +182,13 @@ public static class LinuxCaptureOverlay
 
     public static async Task PlaceAsync(Window window, Rectangle bounds)
     {
+        if (KdeCapture.IsSession)
+        {
+            await Task.Delay(40);
+            if (!await KdeCapture.PlaceAsync(window.Title ?? "", bounds)) throw new CaptureOverlayPlacementException();
+            return;
+        }
+
         if (NiriIpc.IsAvailable)
         {
             await PlaceNiriAsync(window);
