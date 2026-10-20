@@ -47,7 +47,7 @@ internal static class NativeRegionCapture
     internal sealed class PrewarmedHelper : IDisposable
     {
         public string Directory = "";
-        public Process Child = null!;
+        public Process? Child;
         public (int Parent, string Birth) Identity;
         public Task Errors = Task.CompletedTask;
         public IReadOnlyList<OverlayOutput> Outputs = [];
@@ -56,9 +56,12 @@ internal static class NativeRegionCapture
         {
             if (Consumed) return;
             Consumed = true;
-            KillVerified(Child, Identity);
-            try { Child.WaitForExit(3000); } catch (Exception) { }
-            Child.Dispose();
+            if (Child != null) // null when the process could not be started
+            {
+                KillVerified(Child, Identity);
+                try { Child.WaitForExit(3000); } catch (Exception) { }
+                Child.Dispose();
+            }
             try { System.IO.Directory.Delete(Directory, true); } catch (Exception) { }
         }
     }
@@ -73,6 +76,7 @@ internal static class NativeRegionCapture
             string directory = OverlayPixels.CreateDirectory();
             helper = new PrewarmedHelper { Directory = directory };
             (helper.Child, helper.Identity, helper.Errors) = StartChild(directory, test);
+            if (helper.Child == null) throw new IOException("Helper failed to start.");
             var outputs = WaylandOverlay.GetOutputs();
             helper.Outputs = outputs;
             var (windows, pointer) = Discover(outputs);
@@ -160,7 +164,7 @@ internal static class NativeRegionCapture
                 using (OverlayPixels.Create(Path.Combine(directory, "tiles.ready"))) { }
                 prewarmed.Consumed = true;
                 Mark("helper told the screenshot is ready");
-                return await SuperviseChildAsync(prewarmed.Child, prewarmed.Identity, prewarmed.Errors, directory, null).ConfigureAwait(false);
+                return await SuperviseChildAsync(prewarmed.Child!, prewarmed.Identity, prewarmed.Errors, directory, null).ConfigureAwait(false);
             }
             var (windows, pointer) = Discover(outputs);
             Mark("windows and pointer discovered");

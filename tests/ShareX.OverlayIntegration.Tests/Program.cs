@@ -203,7 +203,7 @@ static async Task Nested()
         }
         {   // An aborted capture (screenshot failed) must not leave a prewarmed helper or its directory behind.
             var abandoned = NativeRegionCapture.Prewarm(request.RegionCaptureOptions, request.ImageEditorOptions, true) ?? throw new Exception("Prewarm unavailable.");
-            int pid = abandoned.Child.Id; string abandonedDirectory = abandoned.Directory;
+            int pid = abandoned.Child!.Id; string abandonedDirectory = abandoned.Directory;
             await Task.Delay(500);
             abandoned.Dispose();
             await Task.Delay(300);
