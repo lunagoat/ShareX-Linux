@@ -47,6 +47,11 @@ internal static class Program
     private static void Main(string[] args)
     {
         LinuxPaths.InitializeSandbox();
+        if (Array.IndexOf(args, "--overlay-helper") >= 0)
+        {
+            Environment.ExitCode = OverlayHelperServer.Run(args);
+            return;
+        }
         ApplicationDiagnostics.Initialize();
         _startTimer = Stopwatch.StartNew();
         ApplicationCommandLine.Initialize(args);

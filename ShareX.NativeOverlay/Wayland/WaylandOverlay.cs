@@ -3,6 +3,13 @@ namespace ShareX.NativeOverlay.Wayland;
 
 public static class WaylandOverlay
 {
+    /// <summary>Read compositor geometry without creating or mapping any surfaces.</summary>
+    public static IReadOnlyList<OverlayOutput> GetOutputs()
+    {
+        using var probe = new WaylandOverlaySession(true);
+        return probe.Outputs.ToArray();
+    }
+
     public static void Register()
     {
         OverlaySessionFactory.IsSupported = () =>

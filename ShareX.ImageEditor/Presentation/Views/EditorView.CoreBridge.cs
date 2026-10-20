@@ -190,11 +190,13 @@ namespace ShareX.ImageEditor.Presentation.Views
             }
         }
 
-        /// <summary>
-        /// Renders an image-pixel rectangle from the shared workspace. Hosts such as region
-        /// capture can avoid allocating a second full-size virtual-desktop bitmap.
-        /// </summary>
-        public SkiaSharp.SKBitmap? GetSnapshot(Rect sourceRectangle)
+        /// <summary>Replace the frozen background while retaining the annotation document. Takes ownership.</summary>
+        public void SetWorkspaceBackground(SkiaSharp.SKBitmap image) => _editorCore.UpdateSourceImage(image);
+
+        public System.Collections.Generic.IReadOnlyList<Annotation> WorkspaceAnnotations => _editorCore.Annotations;
+
+        /// <summary>Render a rectangle from the workspace at an explicit export density.</summary>
+        public SkiaSharp.SKBitmap? GetSnapshot(Rect sourceRectangle, double renderScale = 1)
         {
             if (_workspaceDisposed) return null;
             SkiaSharp.SKBitmap? sourceImage = _editorCore.SourceImage;
@@ -222,7 +224,7 @@ namespace ShareX.ImageEditor.Presentation.Views
                 return null;
             }
 
-            if (_editorCore.Annotations.Count == 0)
+            if (_editorCore.Annotations.Count == 0 && renderScale == 1)
             {
                 SkiaSharp.SKBitmap output = new(new SkiaSharp.SKImageInfo(
                     width,
@@ -256,8 +258,8 @@ namespace ShareX.ImageEditor.Presentation.Views
                 previewFrame.Arrange(new Rect(0, 0, sourceImage.Width, sourceImage.Height));
 
                 using RenderTargetBitmap renderTarget = new(
-                    new PixelSize(width, height),
-                    new Vector(96, 96));
+                    new PixelSize((int)Math.Ceiling(width * renderScale), (int)Math.Ceiling(height * renderScale)),
+                    new Vector(96 * renderScale, 96 * renderScale));
                 VisualBrush brush = new(previewFrame)
                 {
                     SourceRect = new RelativeRect(new Rect(left, top, width, height), RelativeUnit.Absolute),

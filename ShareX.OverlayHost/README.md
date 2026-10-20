@@ -80,3 +80,10 @@ Headless checks: `tests/ShareX.OverlayHost.Tests/run.sh` (fake sessions/clock, n
 The separate `tests/ShareX.OverlayHost.Smoke` executable uses synthetic screenshots and
 refuses to open a session unless WAYLAND_DISPLAY starts with sx-. Do not run it against
 a real display; no compositor smoke execution is included in the headless suite.
+
+Application integration now lives in `ShareX/NativeOverlay`. The default `Prepare`
+extension method runs on the controller owner thread before scene publication;
+`AnnotationMode` lets toolbar-selected tools receive editor keys. The concrete
+`AnnotationOverlayExtension` retains the editor document and publishes only changed
+bitmap bands. Application export uses the full document through `RenderResult`,
+rather than limiting it to the primitive `OverlayShape` metadata seam.

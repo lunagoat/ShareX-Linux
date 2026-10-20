@@ -74,3 +74,9 @@ add `--bench output.json` for timings, or `--memory Dual` / `--memory Triple` fo
 an isolated retained-scene memory reading. Run
 `tests/ShareX.OverlayBench/run.sh --native-parity` for direct bitmap comparisons
 with the existing Avalonia region control, without constructing a window.
+
+A retained desktop-sized annotation layer can supply `OverlayBitmap.DirtyRegions`
+(global logical coordinates). When bitmap identity and bounds are unchanged, a new
+revision damages only those regions. Clearing pixels must include the cleared area.
+Replacing/moving the bitmap still damages both complete bounds. Omitting the list
+retains the original conservative behavior.

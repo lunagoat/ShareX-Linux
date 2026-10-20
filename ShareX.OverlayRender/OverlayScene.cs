@@ -42,7 +42,7 @@ public sealed record OverlayShape(OverlayShapeKind Kind, LogicalRect Bounds, SKC
 /// Caller-owned immutable premultiplied BGRA bitmap, composited last (e.g. toolbar).
 /// Increment Revision after changing its pixels; retain the old bitmap until Update returns.
 /// </summary>
-public sealed record OverlayBitmap(SKBitmap Bitmap, LogicalRect Bounds, long Revision = 0);
+public sealed record OverlayBitmap(SKBitmap Bitmap, LogicalRect Bounds, long Revision = 0, IReadOnlyList<LogicalRect>? DirtyRegions = null);
 
 public sealed record OverlayScene
 {

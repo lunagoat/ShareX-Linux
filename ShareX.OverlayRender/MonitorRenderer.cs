@@ -168,8 +168,16 @@ public sealed class MonitorRenderer : IDisposable
         }
         if (old.ExternalOverlay != next.ExternalOverlay)
         {
-            if (old.ExternalOverlay is { } x) d.Add(Round(Map(x.Bounds), 1));
-            if (next.ExternalOverlay is { } y) d.Add(Round(Map(y.Bounds), 1));
+            if (old.ExternalOverlay is { } previous && next.ExternalOverlay is { DirtyRegions: { } regions } current &&
+                ReferenceEquals(previous.Bitmap, current.Bitmap) && previous.Bounds == current.Bounds)
+            {
+                foreach (var region in regions) d.Add(Round(Map(region), 1));
+            }
+            else
+            {
+                if (old.ExternalOverlay is { } x) d.Add(Round(Map(x.Bounds), 1));
+                if (next.ExternalOverlay is { } y) d.Add(Round(Map(y.Bounds), 1));
+            }
         }
     }
 

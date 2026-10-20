@@ -56,6 +56,7 @@ public sealed class OverlayController
 
     public void Publish(Action<OverlayOutput, OverlayScene> callback)
     {
+        extension.Prepare(Selection, Pointer);
         var scene = Scene;
         foreach (var output in outputs) callback(output, scene);
         Dirty = false;
@@ -175,7 +176,7 @@ public sealed class OverlayController
         if (clock.Now - opened < options.InputDelay) return;
         if (k.EvdevCode == 15 && k.Pressed && k.Modifiers == OverlayModifiers.None) { annotationMode = false; extension.SetAnnotationMode(false); return; }
         if (k.Pressed && k.EvdevCode is 28 or 96 && Valid) { Complete(Selection, selected); return; }
-        if (annotationMode) { extension.OnKey(k); return; }
+        if (annotationMode || extension.AnnotationMode) { extension.OnKey(k); return; }
         if (k.EvdevCode is 29 or 97 && !k.Pressed) movingCreation = wasControl = false;
         if (k.EvdevCode is 42 or 54 && interaction == Interaction.Creating) { Move(k.Pressed ? k.Modifiers | OverlayModifiers.Shift : k.Modifiers & ~OverlayModifiers.Shift); return; }
         if (!k.Pressed) return;

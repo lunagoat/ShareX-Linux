@@ -125,3 +125,86 @@ application warnings). The smoke executable's refusal path was checked with both
 unset display and a non-sx socket, returning 9 before opening a session. No real or
 nested display connection/window was attempted. Git checkpointing failed because
 `.git/index.lock` cannot be created on the read-only Git directory; changes are uncommitted.
+
+## Step 4c: application wiring (2026-10-20)
+
+Implemented, with compositor validation blocked in the execution environment:
+
+- `CaptureRegion` (CLI RectangleRegion and the region hotkey's shared capture path)
+  selects the native helper on layer-shell Wayland. `SHAREX_OVERLAY=window` forces
+  the existing window path; `native` selects native when supported and retains
+  fallback when unavailable. `--doctor` reports the selected backend and reason.
+- `sharex --overlay-helper <private-runtime-directory>` branches before desktop
+  Avalonia initialization and single-instance forwarding. One helper owns the
+  native session, monitor renderers, controller and headless annotation layer.
+  The controller and annotation UI share one thread; native dispatch handles Esc
+  independently. Toolbar, popup capture, annotation input and editor keys flow
+  through `AnnotationOverlayExtension`. Committed documents use the existing
+  editor's annotation visuals for export, including tools beyond OverlayShape.
+- The main process captures the frozen desktop through existing screenshot code,
+  probes output geometry without mapping surfaces, and splits the screenshot into
+  `ceil(logical * scale)` BGRA tiles. Compositor geometry is already rotated;
+  negative origins and per-output scales are applied once. Private runtime files
+  carry a small validated header and raw BGRA pixels (no PNG encode/decode in IPC).
+  Files are created atomically with mode 0600 in a random mode-0700 directory and
+  removed after the child exits. The original screenshot remains alive for fallback.
+- The parent supervises the exact Process.Start child, verifying its kernel start ticks and
+  `/proc/<pid>/stat` parent PID before killing it. Startup deadline: 20 seconds;
+  heartbeat deadline after readiness: 3 seconds; unconditional hard deadline:
+  120 seconds. Heartbeats certify progress on the render/UI thread. Failure,
+  crash, timeout or output-layout change logs a reason and invokes the existing
+  window overlay. Esc cancellation does not invoke fallback. Process exit closes
+  the Wayland connection and releases its surfaces even after SIGKILL.
+- Export stitches frozen tiles at the highest intersecting output density (the
+  existing screenshot policy), flattens through `AnnotationLayerHost.RenderResult`,
+  and returns `AvaloniaRegionCaptureResult` to the unchanged after-capture flow.
+  Export now preserves the annotation document: LoadWorkspaceImage cleared it.
+  Original background pixels are copied separately from the annotation visual
+  layer so high-density pixels are not downsampled during flattening.
+- Retained external bitmap revisions can carry sparse global logical damage bands;
+  the renderer restores and composites just those bands. Replacement or movement
+  still damages complete old/new bounds.
+
+Reproduce headless integration and fault supervision:
+
+```bash
+tests/ShareX.OverlayIntegration.Tests/run.sh --headless
+tests/ShareX.OverlayHost.Tests/run.sh
+tests/ShareX.OverlayRender.Tests/run.sh
+```
+
+Native integration runner: `tests/ShareX.OverlayIntegration.Tests/run.sh` with an
+existing **private** `XDG_RUNTIME_DIR`, `SX_SANDBOX`, and `WAYLAND_DISPLAY=sx-...`.
+It expects two 1600x900 outputs at scale 1 and virtual pointer/keyboard protocols
+(`xkbcli` builds the injection keymap). It drags a selection, clicks the actual
+rectangle button, draws, confirms and checks crop dimensions/annotation/background
+pixels; checks Esc with both normal and deliberately stalled rendering; then
+checks the parent heartbeat kill/fallback boundary. The script, C# native test,
+input-injection constructor and helper test entry all refuse non-sx displays.
+The runner removes compositor IPC environment variables to prevent an inherited
+Hyprland/niri/sway identifier from addressing the real session.
+
+Environment limitation: both KWin virtual-backend attempts crashed at startup
+(`RenderDevice::eglShareContext`, confirmed in a local GDB backtrace); Hyprland
+with socket handover and a private runtime directory failed `CBackend::create`.
+No `/dev/dri` device is available in this execution environment. No real display
+connection was attempted. Therefore native compositor E2E, native Esc during the
+injected stall, event-to-present latency, startup-to-visible latency and actual
+multi-output presentation remain **unverified**. Headless checks cover real
+annotation UI/controller/export, mixed scale/negative/portrait geometry, popup
+composition, sparse damage, and real child-process failure/timeout/fallback.
+
+Git checkpointing is unavailable: `.git/index.lock` creation fails with read-only
+filesystem. Changes remain uncommitted. This is not completion of the compositor
+parity checklist or authorization for a real-desktop test.
+
+Final validation for this wiring: Release whole-solution build passed (0 errors;
+existing compiler/platform warnings plus Unix-only IPC analyzer warnings). Renderer
+correctness suite, 119 host checks, and 27 headless integration/fault checks passed.
+The latter cover actual toolbar selection, drawing, Undo/Redo, popup composition and
+hit-testing, annotation flattening at 1x/1.25x, native-density source preservation,
+fractional/portrait tile splitting, real child heartbeat/crash/hard-timeout fallback,
+and 0600 transport permissions. Script/C# helper refusal on `wayland-1` was verified
+before any display initialization; path-shaped sx- names are also rejected.
+`--doctor` reports one consistent backend choice for both forced-window and missing
+layer-shell cases. Native-compositor timing remains unavailable for the reasons above.

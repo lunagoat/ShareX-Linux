@@ -57,6 +57,7 @@ namespace ShareX
                 taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode,
                 System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.KdeCapture.IsSession,
                 System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NiriIpc.IsAvailable);
+            if (NativeRegionCapture.Choose(out _)) activeMonitorMode = false;
             Rectangle screenBounds = activeMonitorMode
                 ? CaptureHelpers.GetActiveScreenBounds()
                 : CaptureHelpers.GetScreenBounds();
@@ -95,7 +96,7 @@ namespace ShareX
                 CursorPosition = cursorPosition
             };
 
-            AvaloniaRegionCaptureResult result = await RegionCaptureIntegration.CaptureAsync(request);
+            AvaloniaRegionCaptureResult result = await NativeRegionCapture.CaptureAsync(request);
             if (result == null)
             {
                 return null;

@@ -434,7 +434,7 @@ public static class DoctorDisplays
 
         // 5. Region selection, tools
         string placement = DetectWindowPlacementPath();
-        lines.Add($"region selection: ShareX overlay (placement: {placement})");
+        lines.Add($"window overlay placement: {placement}");
         if (KdeCapture.IsSession)
         {
             lines.AddRange(QueryKdeGeometry());

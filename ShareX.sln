@@ -67,7 +67,10 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayHost.Tests", "tests\ShareX.OverlayHost.Tests\ShareX.OverlayHost.Tests.csproj", "{702A484E-5306-4FFF-9D2F-DDA2F1535452}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayHost.Smoke", "tests\ShareX.OverlayHost.Smoke\ShareX.OverlayHost.Smoke.csproj", "{CA26E661-E8DF-4F86-A238-ADC1FF861A89}"
+EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayAvaloniaLayer", "ShareX.OverlayAvaloniaLayer\ShareX.OverlayAvaloniaLayer.csproj", "{82DEFF1D-1C3E-410E-816F-78097A03C9FC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayIntegration.Tests", "tests\ShareX.OverlayIntegration.Tests\ShareX.OverlayIntegration.Tests.csproj", "{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1129,6 +1132,46 @@ Global
 		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|Any CPU.Build.0 = Debug|Any CPU
 		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x86.ActiveCfg = Debug|Any CPU
 		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x86.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|x64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Debug|x86.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|ARM64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|ARM64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|x64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|x64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|Any CPU.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|x86.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStore|x86.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|ARM64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|ARM64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|x64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|x64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|Any CPU.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|x86.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.MicrosoftStoreDebug|x86.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|ARM64.Build.0 = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|x64.ActiveCfg = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|x64.Build.0 = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|x86.ActiveCfg = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Release|x86.Build.0 = Release|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|ARM64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|ARM64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|x64.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|x64.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|Any CPU.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|Any CPU.Build.0 = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|x86.ActiveCfg = Debug|Any CPU
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6}.Steam|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -1142,6 +1185,7 @@ Global
 		{7C3ED6DE-1A35-46EC-BA2E-9125E082FBAA} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{702A484E-5306-4FFF-9D2F-DDA2F1535452} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 		{CA26E661-E8DF-4F86-A238-ADC1FF861A89} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
+		{CEB3B7FD-ECFB-4DB5-A72A-5657A9B6FDB6} = {0AB3BF05-4346-4AA6-1389-037BE0695223}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {DEACF1C2-28EE-44DF-B55E-2234F6137272}

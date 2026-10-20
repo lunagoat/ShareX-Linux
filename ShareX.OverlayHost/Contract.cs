@@ -37,6 +37,8 @@ public interface IWindowRectProvider
 /// Extension implementations own tool editing, undo/delete, toolbar state and annotation composition.</summary>
 public interface IOverlayExtension
 {
+    bool AnnotationMode => false;
+    void Prepare(LogicalRect selection, LogicalPoint pointer) { }
     bool HandlesPointer(LogicalPoint point);
     void OnPointer(OverlayEvent input);
     void OnKey(KeyEvent input);

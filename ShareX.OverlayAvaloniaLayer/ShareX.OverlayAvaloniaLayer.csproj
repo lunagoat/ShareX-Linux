@@ -11,6 +11,7 @@
     <PackageReference Include="Avalonia.Skia" />
     <ProjectReference Include="../ShareX.ImageEditor/ShareX.ImageEditor.csproj" />
     <ProjectReference Include="../ShareX.ScreenCaptureLib/ShareX.ScreenCaptureLib.csproj" />
+    <ProjectReference Include="../ShareX.OverlayHost/ShareX.OverlayHost.csproj" />
     <ProjectReference Include="../ShareX.OverlayRender/ShareX.OverlayRender.csproj" />
   </ItemGroup>
 </Project>

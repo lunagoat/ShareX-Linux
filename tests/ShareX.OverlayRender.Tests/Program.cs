@@ -214,6 +214,23 @@ internal static class Program
         external.Erase(SKColors.Blue);
         MonitorDamage revision = r.Update(toolbarScene with { ExternalOverlay = toolbarScene.ExternalOverlay! with { Revision = 1 } });
         Check(revision.Bounds.Width <= 10 && r.Framebuffer.GetPixel(12, 12) == SKColors.Blue, "bitmap revision updates locally");
+        // A full-desktop retained annotation layer must damage only its changed bands.
+        using var large = new SKBitmap(240, 180, SKColorType.Bgra8888, SKAlphaType.Premul);
+        large.Erase(SKColors.Transparent);
+        var layer = new OverlayScene { Options = Bare, ExternalOverlay = new(large, new(0, 0, 240, 180)) };
+        r.Update(layer);
+        large.SetPixel(30, 40, SKColors.Red); large.NotifyPixelsChanged();
+        var changed = layer with { ExternalOverlay = layer.ExternalOverlay! with { Revision = 1, DirtyRegions = new[] { new LogicalRect(30, 40, 1, 1) } } };
+        MonitorDamage sparse = r.Update(changed);
+        Check(sparse.Bounds.Width <= 3 && sparse.Bounds.Height <= 3 && r.Framebuffer.GetPixel(30, 40) == SKColors.Red, "retained desktop layer sparse damage");
+        using (var fresh = new MonitorRenderer("fresh", new(0,0,240,180), 1, shot))
+        {
+            fresh.Update(changed);
+            Check(fresh.Framebuffer.Pixels.SequenceEqual(r.Framebuffer.Pixels), "sparse layer equals full redraw");
+        }
+        large.SetPixel(30, 40, SKColors.Transparent); large.NotifyPixelsChanged();
+        r.Update(changed with { ExternalOverlay = changed.ExternalOverlay! with { Revision = 2 } });
+        Check(r.Framebuffer.GetPixel(30,40) != SKColors.Red, "cleared annotation damage restores background");
         r.Update(new OverlayScene { Options = Bare });
         Check(r.Framebuffer.GetPixel(120, 90).Red is >= 203 and <= 205, "hover removal restores dim cache");
     }

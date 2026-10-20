@@ -12,6 +12,8 @@ using Avalonia.Controls;
 using Avalonia.Headless;
 using Avalonia.Input;
 using Avalonia.Layout;
+using Avalonia.LogicalTree;
+using Avalonia.Controls.Primitives;
 using Avalonia.Media;
 using Avalonia.Styling;
 using Avalonia.Threading;
@@ -373,6 +375,10 @@ public sealed class AnnotationLayerHost : IDisposable
         if (toolbarRect.Contains(point)) return true;
 
         if (_viewModel?.IsModalOpen == true) return true;
+        if (_window.GetVisualDescendants().OfType<Button>().Any(b => b.Flyout?.IsOpen == true)) return true;
+        if (_window.GetVisualDescendants().OfType<Control>().Any(c => c.ContextMenu?.IsOpen == true)) return true;
+        foreach (var popup in _window.GetLogicalDescendants().OfType<global::Avalonia.Controls.Primitives.Popup>())
+            if (popup.IsOpen) return true;
 
         return false;
     }
@@ -569,33 +575,34 @@ public sealed class AnnotationLayerHost : IDisposable
         return (regions, default, 0);
     }
 
-    public SKBitmap? RenderResult(SKBitmap screenshot, Rect selection)
+    /// <summary>Flatten the editor document over the original frozen pixels. Selection is local
+    /// logical space; screenshot pixels and export density are explicit. Chrome is excluded.</summary>
+    public SKBitmap? RenderResult(SKBitmap screenshot, Rect selection, double scale = 1)
     {
         ArgumentNullException.ThrowIfNull(screenshot);
-
-        var canvasControl = _editorWorkspace.FindControl<SKCanvasControl>("CanvasControl");
-        bool wasVisible = canvasControl?.IsVisible ?? false;
+        int left = (int)Math.Floor(selection.X * scale), top = (int)Math.Floor(selection.Y * scale);
+        int right = (int)Math.Ceiling(selection.Right * scale), bottom = (int)Math.Ceiling(selection.Bottom * scale);
+        var output = new SKBitmap(right - left, bottom - top, SKColorType.Bgra8888, SKAlphaType.Premul);
         try
         {
-            if (canvasControl != null)
+            using var canvas = new SKCanvas(output);
+            canvas.Clear(SKColors.Transparent);
+            canvas.DrawBitmap(screenshot, -left, -top);
+            if (HasAnnotations)
             {
-                var canvasField = typeof(EditorView).GetField("_canvasControl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                canvasField?.SetValue(_editorWorkspace, canvasControl);
-                canvasControl.IsVisible = true;
+                // The canvas remains hidden: GetSnapshot renders the annotation visual tree only.
+                // Updating the source preserves the document and supplies effect tools with frozen pixels.
+                var logical = new SKBitmap((int)_desktopBounds.Width, (int)_desktopBounds.Height, SKColorType.Bgra8888, SKAlphaType.Premul);
+                using (var background = new SKCanvas(logical))
+                    background.DrawBitmap(screenshot, new SKRect(0, 0, logical.Width, logical.Height));
+                _editorWorkspace.SetWorkspaceBackground(logical);
+                using var annotations = _editorWorkspace.GetSnapshot(selection, scale);
+                if (annotations == null) { output.Dispose(); return null; }
+                canvas.DrawBitmap(annotations, new SKRect(0, 0, output.Width, output.Height));
             }
-
-            _editorWorkspace.LoadWorkspaceImage(screenshot);
-            return _editorWorkspace.GetSnapshot(selection);
+            return output;
         }
-        finally
-        {
-            if (canvasControl != null)
-            {
-                var canvasField = typeof(EditorView).GetField("_canvasControl", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
-                canvasField?.SetValue(_editorWorkspace, null);
-                canvasControl.IsVisible = wasVisible;
-            }
-        }
+        catch { output.Dispose(); throw; }
     }
 
     private static void Tick()

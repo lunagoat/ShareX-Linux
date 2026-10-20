@@ -10,6 +10,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="ShareX.Integration.Tests" />
+    <InternalsVisibleTo Include="ShareX.OverlayIntegration.Tests" />
     <InternalsVisibleTo Include="ShareX.Startup.Tests" />
   </ItemGroup>
   <ItemGroup>
@@ -33,6 +34,7 @@
     </Compile>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="../ShareX.OverlayAvaloniaLayer/ShareX.OverlayAvaloniaLayer.csproj" />
     <ProjectReference Include="..\ShareX.Avalonia\ShareX.Avalonia.csproj" />
     <ProjectReference Include="..\ShareX.Tools\ShareX.Tools.csproj" />
     <ProjectReference Include="..\ShareX.HistoryLib\ShareX.HistoryLib.csproj" />

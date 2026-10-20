@@ -79,8 +79,9 @@ internal static class Doctor
         }
 
         Section("Region selection");
-        Info($"region selection: ShareX overlay (placement: {DoctorDisplays.DetectWindowPlacementPath()})");
-        if (ShareX.AvaloniaUI.Linux.KdeCapture.IsSession)
+        bool nativeOverlay = NativeRegionCapture.Choose(out string overlayReason);
+        Info(nativeOverlay ? "region selection: native layer-shell overlay" : "region selection: window overlay (" + overlayReason + ")");
+        if (!nativeOverlay && ShareX.AvaloniaUI.Linux.KdeCapture.IsSession)
         {
             Info("KDE: region capture uses the entire desktop regardless of ActiveMonitorMode; overlay placement is checked through KWin scripting.");
         }
