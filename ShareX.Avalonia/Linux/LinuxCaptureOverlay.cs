@@ -33,6 +33,7 @@ namespace ShareX.AvaloniaUI.Linux;
 /// <summary>Positions only our own transient capture window, without persistent compositor rules.</summary>
 public static class LinuxCaptureOverlay
 {
+    public static Action<string>? Diagnostic { get; set; }
     /// <summary>
     /// niri keeps every window inside its scrolling layout on one monitor, so the overlay cannot be positioned: ask niri to make it fullscreen
     /// on the focused output, where it covers the bar and lines up pixel for pixel with the frozen screenshot of that output.
@@ -180,12 +181,23 @@ public static class LinuxCaptureOverlay
         }
     }
 
+    public static async Task<bool> PlaceKdeOverlayAsync(string title, Rectangle bounds, Func<string, Rectangle, Task<bool>>? kdePlacer = null)
+    {
+        await Task.Delay(40);
+        kdePlacer ??= (t, b) => KdeCapture.PlaceAsync(t, b);
+        if (!await kdePlacer(title, bounds))
+        {
+            DebugHelper.WriteLine("KWin overlay placement could not be verified; continuing with plain overlay.");
+            return false;
+        }
+        return true;
+    }
+
     public static async Task PlaceAsync(Window window, Rectangle bounds)
     {
         if (KdeCapture.IsSession)
         {
-            await Task.Delay(40);
-            if (!await KdeCapture.PlaceAsync(window.Title ?? "", bounds)) throw new CaptureOverlayPlacementException();
+            await PlaceKdeOverlayAsync(window.Title ?? "", bounds);
             return;
         }
 
@@ -242,6 +254,21 @@ public static class LinuxCaptureOverlay
                 return;
             }
             await Task.Delay(30);
+        }
+    }
+}
+
+internal static class DebugHelper
+{
+    public static void WriteLine(string message)
+    {
+        if (LinuxCaptureOverlay.Diagnostic != null)
+        {
+            LinuxCaptureOverlay.Diagnostic(message);
+        }
+        else
+        {
+            System.Diagnostics.Debug.WriteLine(message);
         }
     }
 }

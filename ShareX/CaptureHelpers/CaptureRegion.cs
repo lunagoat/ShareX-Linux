@@ -48,44 +48,10 @@ namespace ShareX
             return await ExecuteRegionCaptureAvaloniaAsync(taskSettings);
         }
 
-        /// <summary>Region selection by the compositor's own overlay (slurp), for desktops where a window cannot be placed over every monitor.</summary>
-        private static async Task<TaskMetadata> ExecuteNativeSelectorCaptureAsync(Screenshot screenshot)
-        {
-            Rectangle? region = await Task.Run(() =>
-            {
-                IEnumerable<Rectangle> windows;
-                try
-                {
-                    windows = ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows().Select(w => w.Rectangle).ToArray();
-                }
-                catch (Exception)
-                {
-                    windows = [];
-                }
-
-                return ShareX.AvaloniaUI.Linux.NativeRegionSelector.Select(windows);
-            });
-
-            if (region == null)
-            {
-                return null;
-            }
-
-            // Give the compositor a moment to take slurp's overlay off the screen before capturing.
-            await Task.Delay(150);
-            SKBitmap image = await Task.Run(() => screenshot.CaptureRectangle(region.Value));
-            return image == null || image.Handle == IntPtr.Zero ? null : new TaskMetadata(image);
-        }
-
         protected async Task<TaskMetadata> ExecuteRegionCaptureAvaloniaAsync(TaskSettings taskSettings)
         {
             Screenshot screenshot = TaskHelpers.GetScreenshot(taskSettings);
             screenshot.CaptureCursor = System.OperatingSystem.IsLinux() && taskSettings.CaptureSettings.ShowCursor;
-
-            if (System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NativeRegionSelector.ShouldUse)
-            {
-                return await ExecuteNativeSelectorCaptureAsync(screenshot);
-            }
 
             bool activeMonitorMode = ShareX.AvaloniaUI.Linux.KdeCapture.UseActiveMonitor(
                 taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode,
@@ -129,16 +95,7 @@ namespace ShareX
                 CursorPosition = cursorPosition
             };
 
-            AvaloniaRegionCaptureResult result;
-            try
-            {
-                result = await RegionCaptureIntegration.CaptureAsync(request);
-            }
-            catch (ShareX.AvaloniaUI.Linux.CaptureOverlayPlacementException) when
-                (ShareX.AvaloniaUI.Linux.LinuxScreenCapture.IsWayland && ShareX.AvaloniaUI.Linux.NativeRegionSelector.IsInstalled)
-            {
-                return await ExecuteNativeSelectorCaptureAsync(screenshot);
-            }
+            AvaloniaRegionCaptureResult result = await RegionCaptureIntegration.CaptureAsync(request);
             if (result == null)
             {
                 return null;

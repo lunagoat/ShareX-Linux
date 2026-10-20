@@ -100,9 +100,8 @@ internal static class KdeChecks
             Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", "KDE");
             Environment.SetEnvironmentVariable("XDG_SESSION_TYPE", "wayland");
             Environment.SetEnvironmentVariable("WAYLAND_DISPLAY", "fixture-only");
-            check(DoctorDisplays.DetectWindowPlacementPath().StartsWith("KWin scripting") &&
-                DoctorDisplays.DescribeKdeCapturePath().Contains("ShareX overlay"),
-                "KDE doctor: missing slurp reports overlay and KWin placement instead of none");
+            check(DoctorDisplays.DetectWindowPlacementPath() == "kde-kwin",
+                "KDE doctor: reports kde-kwin placement");
             check(DoctorDisplays.FormatKdeGeometry("{}")[0].Contains("unavailable"), "KDE doctor: malformed geometry fails soft");
             var monitors = LinuxScreenCapture.GetMonitors();
             check(monitors.Length == 2 && monitors[1].Bounds == new Rectangle(1920, 0, 2560, 1440) &&

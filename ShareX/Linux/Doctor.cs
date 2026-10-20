@@ -79,21 +79,20 @@ internal static class Doctor
         }
 
         Section("Region selection");
-        Info(ShareX.AvaloniaUI.Linux.NativeRegionSelector.Decision.Reason);
+        Info($"region selection: ShareX overlay (placement: {DoctorDisplays.DetectWindowPlacementPath()})");
         if (ShareX.AvaloniaUI.Linux.KdeCapture.IsSession)
         {
-            Info(DoctorDisplays.DescribeKdeCapturePath());
-            Info("KDE: region capture uses the entire desktop regardless of ActiveMonitorMode; overlay placement is checked through KWin scripting. slurp selects the live desktop without annotations.");
+            Info("KDE: region capture uses the entire desktop regardless of ActiveMonitorMode; overlay placement is checked through KWin scripting.");
         }
 
         bool wlroots = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"));
         if (wlroots)
         {
-            foreach (string tool in new[] { "grim", "slurp", "wl-copy" })
+            foreach (string tool in new[] { "grim", "wl-copy" })
             {
                 if (Run("sh", "-c", "command -v " + tool)?.Trim().Length > 0) Ok(tool + " is installed");
-                else Problem(tool + " is not installed", tool == "wl-copy" ? "install wl-clipboard" : "install " + tool + " with your package manager (needed for screenshots / region selection on this desktop)");
+                else Problem(tool + " is not installed", tool == "wl-copy" ? "install wl-clipboard" : "install " + tool + " with your package manager (needed for screenshots / clipboard copying on this desktop)");
             }
         }
 

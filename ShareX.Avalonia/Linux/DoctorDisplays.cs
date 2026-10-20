@@ -132,26 +132,14 @@ public static class DoctorDisplays
         return $"{sessionStr}  ({appMode})";
     }
 
-    public static string DetectRegionSelector(out string reason)
-    {
-        bool useSlurp = NativeRegionSelector.ShouldUse;
-        string choice = useSlurp ? "slurp" : "overlay";
-        reason = NativeRegionSelector.Decision.Reason;
-        return choice;
-    }
-
     public static string DetectWindowPlacementPath()
     {
-        if (KdeCapture.IsSession) return "KWin scripting: borderless, keepAbove + raise over panels, full-desktop frame AND client geometry verified";
+        if (KdeCapture.IsSession) return "kde-kwin";
         if (NiriIpc.IsAvailable) return "niri";
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return "sway";
         if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return "hyprland";
         return "none";
     }
-
-    public static string DescribeKdeCapturePath() => NativeRegionSelector.Decision.UseSlurp
-        ? "KDE selector/placement: slurp (live layer-shell selector; no ShareX overlay window or KWin placement)"
-        : "KDE selector/placement: ShareX overlay via " + DetectWindowPlacementPath();
 
     public static List<string> FormatKdeGeometry(string? json)
     {
@@ -188,7 +176,7 @@ public static class DoctorDisplays
 
     public static string CheckInstalledTools()
     {
-        var tools = new[] { "grim", "slurp", "kscreen-doctor", "xrandr" };
+        var tools = new[] { "grim", "kscreen-doctor", "xrandr" };
         return string.Join(", ", tools.Select(t => $"{t} ({(FindExecutable(t) != null ? "installed" : "not installed")})"));
     }
 
@@ -444,15 +432,11 @@ public static class DoctorDisplays
             }
         }
 
-        // 5. Region selector, overlay placement, tools
-        string regChoice = DetectRegionSelector(out string reason);
-        lines.Add($"region selector: {regChoice} ({reason})");
-
+        // 5. Region selection, tools
         string placement = DetectWindowPlacementPath();
-        lines.Add($"overlay window placement: {placement}");
+        lines.Add($"region selection: ShareX overlay (placement: {placement})");
         if (KdeCapture.IsSession)
         {
-            lines.Add(DescribeKdeCapturePath());
             lines.AddRange(QueryKdeGeometry());
         }
 

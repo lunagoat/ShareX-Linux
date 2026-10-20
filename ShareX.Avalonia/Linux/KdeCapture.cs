@@ -9,7 +9,7 @@ namespace ShareX.AvaloniaUI.Linux;
 public static class KdeCapture
 {
     public static bool IsSession => Detect(Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"),
-        Environment.GetEnvironmentVariable("KDE_FULL_SESSION"), NativeRegionSelector.FindExecutable("kscreen-doctor") != null,
+        Environment.GetEnvironmentVariable("KDE_FULL_SESSION"), LinuxCaptureProcess.FindExecutable("kscreen-doctor") != null,
         NiriIpc.IsAvailable || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")) ||
         !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")));
 
@@ -158,9 +158,4 @@ public static class KdeCapture
             return default;
         }
     }
-}
-
-public sealed class CaptureOverlayPlacementException : InvalidOperationException
-{
-    public CaptureOverlayPlacementException() : base("KWin could not place the region overlay across the desktop. Install slurp on Plasma 6 Wayland and use SHAREX_REGION_SELECTOR=slurp, or check KWin scripting permissions.") { }
 }

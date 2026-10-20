@@ -16,19 +16,11 @@ internal static class KdePlacementChecks
             "KDE regression: region captures every output even when ActiveMonitorMode was saved as true");
         check(KdeCapture.UseActiveMonitor(false, false, true) && KdeCapture.UseActiveMonitor(true, false, false),
             "other compositors retain active-monitor behavior");
-        var native = NativeRegionSelector.Decide(true, true, true, null, false);
-        check(native.UseSlurp && native.Reason.Contains("KDE"), "KDE Wayland: default slurp and doctor explanation agree");
-        check(!NativeRegionSelector.Decide(true, true, true, "overlay", false).UseSlurp, "KDE Wayland: explicit overlay uses verified placement");
-        check(!NativeRegionSelector.Decide(true, true, false, null, false).UseSlurp &&
-            NativeRegionSelector.Decide(true, true, false, null, false).Reason.Contains("missing"), "KDE Wayland: missing slurp explains required placement check");
-        check(!NativeRegionSelector.Decide(false, true, true, null, false).UseSlurp, "KDE X11: use full-desktop overlay");
-        check(NativeRegionSelector.Decide(true, false, true, "slurp", false).UseSlurp &&
-            NativeRegionSelector.Decide(true, false, true, null, true).UseSlurp &&
-            !NativeRegionSelector.Decide(true, false, true, null, false).UseSlurp, "slurp overrides and niri default retained");
-
         Rectangle desktop = new(-1920, -120, 4480, 1560);
-        string expected = State(desktop);
         string title = "ShareX capture \"test\" [unique]";
+        check(!await LinuxCaptureOverlay.PlaceKdeOverlayAsync(title, desktop, (t, b) => Task.FromResult(false)),
+            "KDE placement failure: continues with plain overlay instead of throwing");
+        string expected = State(desktop);
         List<string> calls = [];
         bool placed = await KdeCapture.PlaceAsync(title, desktop, script =>
         {

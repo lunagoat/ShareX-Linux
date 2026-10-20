@@ -30,6 +30,14 @@ namespace ShareX.HelpersLib
 {
     public static class DebugHelper
     {
+        static DebugHelper()
+        {
+            if (OperatingSystem.IsLinux())
+            {
+                ShareX.AvaloniaUI.Linux.LinuxCaptureOverlay.Diagnostic = msg => WriteLine(msg);
+            }
+        }
+
         public static Logger Logger { get; private set; }
 
         public static void Init(string logFilePath)

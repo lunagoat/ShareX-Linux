@@ -86,4 +86,8 @@ public static class LinuxCaptureProcess
 
     public static string? TryText(string executable, params string[] arguments) =>
         TryText(executable, TimeSpan.FromSeconds(3), arguments);
+
+    public static string? FindExecutable(string name) =>
+        (Environment.GetEnvironmentVariable("PATH") ?? "").Split(':', StringSplitOptions.RemoveEmptyEntries)
+            .Select(dir => Path.Combine(dir, name)).FirstOrDefault(File.Exists);
 }
