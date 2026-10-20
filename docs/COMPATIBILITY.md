@@ -12,7 +12,7 @@ unit tests, but nobody has run it on the real desktop yet. **Hyprland is tested 
 | Screenshot | `grim` | `grim` | `grim` | desktop portal | desktop portal | built-in (X11) |
 | Monitor layout / scale | `hyprctl` | `swaymsg` | `niri msg` | `kscreen-doctor` | XWayland (RandR) | RandR |
 | Window capture (window list) | `hyprctl` | `swaymsg` | `niri msg` (floating windows only) | — (XWayland windows only) | — (XWayland windows only) | EWMH |
-| Region selection | ShareX overlay (annotations, magnifier) | ShareX overlay, placed via `swaymsg` (tested nested) | ShareX overlay, fullscreen on the focused monitor via `niri msg` (tested nested) | ShareX overlay (unverified) | ShareX overlay (unverified) | ShareX overlay |
+| Region selection | ShareX overlay (annotations, magnifier) | ShareX overlay, placed via `swaymsg` (tested nested) | ShareX overlay, fullscreen on the focused monitor via `niri msg` (tested nested) | `slurp` when installed; otherwise verified-placement overlay (hardware untested) | ShareX overlay (unverified) | ShareX overlay |
 | Fullscreen / monitor capture | yes | yes | yes | yes | yes | yes |
 | Hotkeys | portal binds **or** `sharex --install-binds` | `sharex --install-binds` | `sharex --print-binds niri` (add to `config.kdl`) | portal: shortcuts show up in System Settings | `sharex --print-binds gnome \| sh`, or the portal on GNOME 48+ | built-in key grabs |
 | Screen recording | `grim` frames / `gpu-screen-recorder` | same | portal via `gpu-screen-recorder` | portal via `gpu-screen-recorder` | portal via `gpu-screen-recorder` | ffmpeg `x11grab` |
@@ -26,7 +26,8 @@ unit tests, but nobody has run it on the real desktop yet. **Hyprland is tested 
 * **niri:** install **xwayland-satellite**. niri 25.08+ starts it automatically; on older versions add `spawn-at-startup "xwayland-satellite"`.
   Without it ShareX prints a clear message and exits instead of crashing. Key binds go in the `binds { }` block of `~/.config/niri/config.kdl`.
 * **KDE Plasma:** Spectacle owns `Print`; assign other keys or free it in *System Settings → Shortcuts*. Install `xdg-desktop-portal-kde`.
-  Screen capture goes through the portal, so Plasma asks for permission the first time.
+  Screen capture goes through the portal, so Plasma asks for permission the first time. On **Plasma 6 Wayland**, install `slurp` for
+  region selection across all monitors through KWin's layer-shell support; `grim` is not required (screenshots still use the portal).
 * **GNOME:** the tray icon needs the *AppIndicator and KStatusNotifierItem* extension. Screen capture goes through the portal (permission prompt first time).
   Recording asks which screen to share each time (the portal's picker).
 * **X11 sessions:** nothing special; `xclip`/`xdotool` help.
@@ -50,6 +51,35 @@ told where to put them. Hyprland, sway and niri are all handled through their IP
 
 Window capture on niri only knows floating windows' positions (niri does not report where tiled windows are).
 The recording-region window and scrolling capture are not adapted to niri and sway yet.
+
+## KDE multi-monitor region capture
+
+KDE region capture always uses the **whole desktop**, including when an older task has `ActiveMonitorMode` enabled. An overlay freezes
+that whole rectangle once, so each monitor's image stays at its desktop position. KDE Wayland uses `slurp` by default when installed:
+spanning an Avalonia XWayland window on KWin has not been verified on hardware. Slurp selects on the live desktop, supports selections
+across outputs, and retains ShareX's after-capture tasks; it has no frozen preview, magnifier or annotation toolbar.
+
+With `SHAREX_REGION_SELECTOR=overlay`, or without slurp, ShareX loads a temporary KWin script over D-Bus to move/resize its uniquely titled
+capture window to the logical desktop rectangle and keep it above other windows. It checks the geometry after KWin processes the configure,
+retrying if needed. A persistent single-monitor or misplaced window is rejected and closed: on Wayland it falls back to slurp if installed;
+otherwise capture reports an installation / KWin scripting hint. KDE X11 also uses this whole-desktop placement check. The script is unloaded
+and its private temporary file removed after each request. KWin scripting must be permitted for this overlay path.
+
+KDE Wayland global pointer queries use `workspace.cursorPos` through the same temporary scripting mechanism, never `XQueryPointer`.
+If unavailable, active-monitor screenshot requests use the full desktop, and overlay toolbar initialization uses the primary monitor's centre
+as an anchor. X11 sessions continue using their real X11 pointer. `sharex --doctor` prints the selected region selector and its reason; it does
+not open a test overlay or certify that KWin will allow placement.
+
+**Verified without a desktop:** `tests/ShareX.Compositor.Tests` covers kscreen-doctor JSON for two unequal outputs, fractional scale, primary
+on the right, negative origins, transformed rotation and explicit logical sizes. Fake portal rasters test monitor crops and selections crossing
+monitor boundaries at 1x/2x. Placement fakes reproduce a window on the right output while the frozen rectangle starts on the left, and verify
+retries, rejection of single-monitor geometry, escaped window titles, and scripting denial. A private D-Bus fake tests script loading, running,
+callbacks, cursor queries, unloading and file cleanup. No GUI or live compositor is used.
+
+**Still needs a real KDE user:** KWin spanning and stacking above panels on X11/XWayland, slurp on the user's Plasma version, and portal PNG
+layout on mixed-DPI / fractional-scale hardware. The crop tests assume a portal PNG is a uniformly scaled raster of the logical desktop;
+the portal provides no per-output geometry metadata. Fixtures establish the coordinate calculations under that assumption, not KDE's actual
+PNG composition. The original report is consistent with a stale XWayland cursor plus missing placement, but that causal chain is inferred.
 
 ## Known limits
 

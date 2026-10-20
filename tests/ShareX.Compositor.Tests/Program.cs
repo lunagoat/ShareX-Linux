@@ -47,14 +47,14 @@ Check(NiriIpc.Parse("[]", "[]", "{}").Length == 0, "niri: empty desktop");
 const string kscreen = """
 { "outputs": [
   { "id": 1, "name": "DP-3", "enabled": true, "connected": true, "primary": true, "pos": { "x": 0, "y": 0 }, "size": { "width": 3840, "height": 2160 }, "scale": 1.5, "rotation": 1 },
-  { "id": 2, "name": "HDMI-A-1", "enabled": true, "connected": true, "primary": false, "pos": { "x": 2560, "y": 0 }, "size": { "width": 1080, "height": 1920 }, "scale": 1.0, "rotation": 2 },
+  { "id": 2, "name": "HDMI-A-1", "enabled": true, "connected": true, "primary": false, "pos": { "x": 2560, "y": 0 }, "size": { "width": 1920, "height": 1080 }, "scale": 1.0, "rotation": 2 },
   { "id": 3, "name": "DP-1", "enabled": false, "connected": true, "primary": false, "pos": { "x": 0, "y": 0 }, "size": { "width": 1920, "height": 1080 }, "scale": 1.0, "rotation": 1 } ],
   "screen": {} }
 """;
 var kde = LinuxScreenCapture.ParseKScreenDoctor(kscreen);
 Check(kde.Length == 2, "kde: disabled output ignored");
 Check(kde[0].Bounds == new System.Drawing.Rectangle(0, 0, 2560, 1440) && kde[0].Primary, "kde: physical size divided by the scale");
-Check(kde[1].Bounds == new System.Drawing.Rectangle(2560, 0, 1920, 1080), "kde: rotated output swaps width and height");
+Check(kde[1].Bounds == new System.Drawing.Rectangle(2560, 0, 1920, 1080), "kde: transformed output size is not rotated twice");
 
 // ---- layer-shell bars (hyprctl layers -j)
 const string layers = """
@@ -146,6 +146,9 @@ Monitors: 2
 var xMismatched = DoctorDisplays.ParseXRandRListMonitors(xrandrMismatched);
 var verdictsMismatch = DoctorDisplays.EvaluateVerdicts(kdeMonitors, xMismatched, null, null);
 Check(verdictsMismatch.Any(v => v.Contains("layout mismatch")), "verdicts: flags monitor layout mismatch between XWayland and compositor");
+KdeChecks.Run(Check);
+await KdePlacementChecks.RunAsync(Check);
+if (args.Contains("--fake-kwin")) await KWinDbusChecks.RunAsync(Check);
 
 Console.WriteLine($"RESULT: {failures} failures");
 return failures == 0 ? 0 : 1;

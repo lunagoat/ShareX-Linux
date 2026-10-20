@@ -87,15 +87,15 @@ namespace ShareX
                 return await ExecuteNativeSelectorCaptureAsync(screenshot);
             }
 
-            bool activeMonitorMode = taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode ||
-                (System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NiriIpc.IsAvailable); // a niri window cannot span monitors
+            bool activeMonitorMode = ShareX.AvaloniaUI.Linux.KdeCapture.UseActiveMonitor(
+                taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode,
+                System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.KdeCapture.IsSession,
+                System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NiriIpc.IsAvailable);
             Rectangle screenBounds = activeMonitorMode
                 ? CaptureHelpers.GetActiveScreenBounds()
                 : CaptureHelpers.GetScreenBounds();
 
-            SKBitmap frozenScreenshot = activeMonitorMode
-                ? screenshot.CaptureActiveMonitor()
-                : screenshot.CaptureFullscreen();
+            SKBitmap frozenScreenshot = screenshot.CaptureRectangle(screenBounds);
 
             if (frozenScreenshot == null || frozenScreenshot.Handle == IntPtr.Zero)
             {
@@ -129,7 +129,16 @@ namespace ShareX
                 CursorPosition = cursorPosition
             };
 
-            AvaloniaRegionCaptureResult result = await RegionCaptureIntegration.CaptureAsync(request);
+            AvaloniaRegionCaptureResult result;
+            try
+            {
+                result = await RegionCaptureIntegration.CaptureAsync(request);
+            }
+            catch (ShareX.AvaloniaUI.Linux.CaptureOverlayPlacementException) when
+                (ShareX.AvaloniaUI.Linux.LinuxScreenCapture.IsWayland && ShareX.AvaloniaUI.Linux.NativeRegionSelector.IsInstalled)
+            {
+                return await ExecuteNativeSelectorCaptureAsync(screenshot);
+            }
             if (result == null)
             {
                 return null;
