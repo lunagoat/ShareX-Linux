@@ -53,7 +53,7 @@ static Button RectangleButton(AnnotationLayerHost layer) => layer.Window.GetVisu
     .First(b => b.IsVisible && b.DataContext is ToolbarCustomizationItemViewModel { Tool: EditorTool.Rectangle } && b.Tag != null);
 static void AssertImage(SKBitmap image, int width, int height)
 {
-    Check(image.Width == width && image.Height == height, "crop has exact pixel dimensions");
+    Check(image.Width == width && image.Height == height, $"crop has exact pixel dimensions (expected {width}x{height}, got {image.Width}x{image.Height})");
     int red = 0, sentinel = 0, background = 0;
     foreach (var p in image.Pixels)
     {
@@ -180,13 +180,13 @@ static async Task Nested()
         while (!File.Exists(toolbar) && deadline.Elapsed < TimeSpan.FromSeconds(15)) await Task.Delay(50);
         Check(File.Exists(toolbar), "helper mapped native scene and actual toolbar");
         await Task.Delay(700);
-        await Drag(200, 200, 800, 500);
+        await Drag(100, 120, 500, 370); // must fit the smallest logical output (445 px tall at 1.6x)
         int[] point = Newtonsoft.Json.JsonConvert.DeserializeObject<int[]>(File.ReadAllText(toolbar))!;
         await Drag(point[0], point[1], point[0], point[1]);
-        await Drag(260, 260, 700, 430);
+        await Drag(140, 160, 450, 330);
         injection.Key(28, true); injection.Key(28, false);
         var result = await capture ?? throw new Exception("Capture cancelled.");
-        using (result.Image) AssertImage(result.Image, (int)Math.Ceiling(600 * outputs[0].Scale), (int)Math.Ceiling(300 * outputs[0].Scale));
+        using (result.Image) AssertImage(result.Image, (int)Math.Ceiling(400 * outputs[0].Scale), (int)Math.Ceiling(250 * outputs[0].Scale));
         Check(result.ImageModified, "annotation metadata returned to after-capture flow");
         foreach (string mode in new[] { "toolbar", "stall" })
         {
