@@ -86,5 +86,13 @@ const string swayWorkspaces = """
 Check(LayerShellInsets.ParseSwayTopInset(swayWorkspaces, new System.Drawing.Rectangle(0, 0, 2560, 1440)) == 60, "sway: top bars = workspace top minus output top");
 Check(LayerShellInsets.ParseSwayTopInset(swayWorkspaces, new System.Drawing.Rectangle(2560, 0, 1920, 1080)) == 0, "sway: an output without bars has no inset");
 
+// ---- niri focused output from the workspace list (three outputs, the right one focused)
+const string niriWs = """
+[ {"id":1,"idx":1,"output":"DVI-D-1","is_focused":false,"is_active":true}, {"id":2,"idx":2,"output":"DP-1","is_focused":false,"is_active":true},
+  {"id":6,"idx":1,"output":"HDMI-A-1","is_focused":true,"is_active":true}, {"id":7,"idx":2,"output":"HDMI-A-1","is_focused":false,"is_active":false} ]
+""";
+Check(LinuxScreenCapture.ParseNiriFocusedOutput(niriWs) == "HDMI-A-1", "niri: focused output comes from the focused workspace");
+Check(LinuxScreenCapture.ParseNiriFocusedOutput("[]") == null, "niri: no workspaces, no focused output");
+
 Console.WriteLine($"RESULT: {failures} failures");
 return failures == 0 ? 0 : 1;

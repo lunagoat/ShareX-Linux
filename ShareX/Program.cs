@@ -121,7 +121,10 @@ internal static class Program
             return;
         }
 
+        string discovered = CompositorEnvironment.Ensure();
+
         DebugHelper.WriteLine("ShareX starting.");
+        if (discovered != null) DebugHelper.WriteLine("Compositor not in the environment; using the running one: " + discovered);
         DebugHelper.WriteLine("Version: " + ApplicationInfo.VersionText);
         DebugHelper.WriteLine("Build: " + ApplicationInfo.Build);
         DebugHelper.WriteLine("Command line: " + Environment.CommandLine);

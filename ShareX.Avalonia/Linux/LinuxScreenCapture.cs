@@ -93,6 +93,19 @@ public static class LinuxScreenCapture
         return monitors.ToArray();
     }
 
+    /// <summary>`niri msg --json workspaces`: the focused workspace names the focused output.</summary>
+    public static string? ParseNiriFocusedOutput(string workspacesJson)
+    {
+        using JsonDocument document = JsonDocument.Parse(workspacesJson);
+        foreach (JsonElement ws in document.RootElement.EnumerateArray())
+        {
+            if (ws.TryGetProperty("is_focused", out var focused) && focused.ValueKind == JsonValueKind.True && ws.TryGetProperty("output", out var output) && output.ValueKind == JsonValueKind.String)
+                return output.GetString();
+        }
+
+        return null;
+    }
+
     /// <summary>`kscreen-doctor -j` (KDE Plasma): outputs with a logical position, a physical mode size, a scale and a rotation.</summary>
     public static LinuxCaptureMonitor[] ParseKScreenDoctor(string json)
     {
@@ -126,8 +139,13 @@ public static class LinuxScreenCapture
             try
             {
                 string focused = null;
-                try { using JsonDocument f = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "focused-output")); focused = f.RootElement.GetProperty("name").GetString(); }
+                try { focused = ParseNiriFocusedOutput(LinuxCaptureProcess.Text("niri", "msg", "--json", "workspaces")); }
                 catch (Exception) { }
+                if (focused == null)
+                {
+                    try { using JsonDocument f = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "focused-output")); focused = f.RootElement.GetProperty("name").GetString(); }
+                    catch (Exception) { }
+                }
                 LinuxCaptureMonitor[] monitors = ParseNiriOutputs(LinuxCaptureProcess.Text("niri", "msg", "--json", "outputs"), focused);
                 if (monitors.Length > 0) return monitors;
             }

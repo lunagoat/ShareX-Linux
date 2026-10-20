@@ -51,6 +51,7 @@ internal static class Doctor
         string versionFile = Path.Combine(AppContext.BaseDirectory, "version");
         Console.WriteLine("ShareX doctor - release " + (File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "(development build)"));
 
+        string discoveredCompositor = CompositorEnvironment.Ensure();
         string desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "?";
         Section("Session");
         Info($"desktop={desktop}  session={Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") ?? "?"}  WAYLAND_DISPLAY={Environment.GetEnvironmentVariable("WAYLAND_DISPLAY") ?? "-"}  DISPLAY={Environment.GetEnvironmentVariable("DISPLAY") ?? "-"}");
@@ -90,6 +91,36 @@ internal static class Doctor
         int running = Process.GetProcessesByName("ShareX").Count(x => x.Id != Environment.ProcessId);
         if (running > 0) Ok("ShareX is running (" + running + " process" + (running > 1 ? "es" : "") + ")");
         else Info("ShareX is not running; a key bind will start it (that takes a second or two).");
+
+        // The running ShareX decides what to do from ITS environment, which can differ from this terminal's (autostart, systemd, launchers).
+        foreach (Process other in Process.GetProcessesByName("ShareX").Where(x => x.Id != Environment.ProcessId))
+        {
+            try
+            {
+                Dictionary<string, string> env = File.ReadAllText($"/proc/{other.Id}/environ").Split('\0', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(x => x.Split('=', 2)).Where(x => x.Length == 2).GroupBy(x => x[0]).ToDictionary(x => x.Key, x => x.First()[1]);
+                foreach (string key in new[] { "WAYLAND_DISPLAY", "XDG_RUNTIME_DIR", "DBUS_SESSION_BUS_ADDRESS", "NIRI_SOCKET", "SWAYSOCK", "HYPRLAND_INSTANCE_SIGNATURE", "DISPLAY", "XDG_CURRENT_DESKTOP" })
+                {
+                    string mine = Environment.GetEnvironmentVariable(key);
+                    if (string.IsNullOrEmpty(mine)) continue;
+
+                    // ShareX finds the compositor sockets and the X server itself when they are missing, so those are only worth a note.
+                    bool selfHealing = key is "NIRI_SOCKET" or "SWAYSOCK" or "HYPRLAND_INSTANCE_SIGNATURE" or "DISPLAY" or "XDG_CURRENT_DESKTOP";
+                    if (!env.ContainsKey(key))
+                    {
+                        if (selfHealing) Info($"the running ShareX (pid {other.Id}) was started without {key}; it looks the compositor up itself");
+                        else Problem($"the running ShareX (pid {other.Id}) was started without {key}, so it cannot work properly",
+                            "restart it from your session: sharex -ExitShareX, then use the key again (or start it with your compositor's spawn-at-startup)");
+                    }
+                    else if (env[key] != mine && key is "WAYLAND_DISPLAY" or "NIRI_SOCKET" or "SWAYSOCK")
+                    {
+                        Problem($"the running ShareX has a different {key} ({env[key]}) than this terminal ({mine})", "restart ShareX from your current session");
+                    }
+                }
+            }
+            catch (Exception) { /* not readable */ }
+        }
+        if (discoveredCompositor != null) Info("this terminal had no compositor variable; ShareX falls back to: " + discoveredCompositor);
 
         List<HotkeySettings> hotkeys = [];
         Section("Hotkeys configured in ShareX");
