@@ -125,25 +125,37 @@ CREATE TABLE IF NOT EXISTS History (
             {
                 using (SqliteTransaction transaction = connection.BeginTransaction())
                 {
-                    foreach (HistoryItem item in historyItems)
+                    using (SqliteCommand cmd = connection.CreateCommand())
                     {
-                        using (SqliteCommand cmd = connection.CreateCommand())
-                        {
-                            cmd.CommandText = @"
+                        cmd.CommandText = @"
     INSERT INTO History
     (FileName, FilePath, DateTime, Type, Host, URL, ThumbnailURL, DeletionURL, ShortenedURL, Tags)
     VALUES (@FileName, @FilePath, @DateTime, @Type, @Host, @URL, @ThumbnailURL, @DeletionURL, @ShortenedURL, @Tags);
     SELECT last_insert_rowid();";
-                            cmd.Parameters.AddWithValue("@FileName", item.FileName ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@FilePath", item.FilePath ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@DateTime", item.DateTime.ToString("o") ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Type", item.Type ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Host", item.Host ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@URL", item.URL ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ThumbnailURL", item.ThumbnailURL ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@DeletionURL", item.DeletionURL ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@ShortenedURL", item.ShortenedURL ?? (object)DBNull.Value);
-                            cmd.Parameters.AddWithValue("@Tags", item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value);
+                        cmd.Parameters.Add("@FileName", SqliteType.Text);
+                        cmd.Parameters.Add("@FilePath", SqliteType.Text);
+                        cmd.Parameters.Add("@DateTime", SqliteType.Text);
+                        cmd.Parameters.Add("@Type", SqliteType.Text);
+                        cmd.Parameters.Add("@Host", SqliteType.Text);
+                        cmd.Parameters.Add("@URL", SqliteType.Text);
+                        cmd.Parameters.Add("@ThumbnailURL", SqliteType.Text);
+                        cmd.Parameters.Add("@DeletionURL", SqliteType.Text);
+                        cmd.Parameters.Add("@ShortenedURL", SqliteType.Text);
+                        cmd.Parameters.Add("@Tags", SqliteType.Text);
+
+                        // Reuse the prepared statement and parameters for the whole batch.
+                        foreach (HistoryItem item in historyItems)
+                        {
+                            cmd.Parameters["@FileName"].Value = item.FileName ?? (object)DBNull.Value;
+                            cmd.Parameters["@FilePath"].Value = item.FilePath ?? (object)DBNull.Value;
+                            cmd.Parameters["@DateTime"].Value = item.DateTime.ToString("o");
+                            cmd.Parameters["@Type"].Value = item.Type ?? (object)DBNull.Value;
+                            cmd.Parameters["@Host"].Value = item.Host ?? (object)DBNull.Value;
+                            cmd.Parameters["@URL"].Value = item.URL ?? (object)DBNull.Value;
+                            cmd.Parameters["@ThumbnailURL"].Value = item.ThumbnailURL ?? (object)DBNull.Value;
+                            cmd.Parameters["@DeletionURL"].Value = item.DeletionURL ?? (object)DBNull.Value;
+                            cmd.Parameters["@ShortenedURL"].Value = item.ShortenedURL ?? (object)DBNull.Value;
+                            cmd.Parameters["@Tags"].Value = item.Tags != null ? JsonConvert.SerializeObject(item.Tags) : (object)DBNull.Value;
                             item.Id = (long)cmd.ExecuteScalar();
                         }
                     }
