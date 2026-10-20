@@ -1,6 +1,6 @@
 # Native overlay: plan (DRAFT, edit me)
 
-Status: approved by the user (Option B, benchmark first). Nothing built yet. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
+Status: approved by the user (Option B, benchmark first). Step 1 completed 2026-10-20: [headless CPU benchmark results](native-overlay-bench.md). No native overlay host built. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
 
 ## Goal
 
