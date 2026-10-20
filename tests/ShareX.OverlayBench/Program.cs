@@ -68,6 +68,7 @@ internal static class Program
             .UseSkia().WithInterFont().SetupWithoutStarting();
         SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
         if (args.Contains("--native-parity")) return NativeSceneParity.Run();
+        if (args.Contains("--layer")) return LayerBench.Run(args);
         var results = new List<Result>();
         foreach (Layout layout in Layouts)
         foreach (string mode in new[] { "A", "B" })
