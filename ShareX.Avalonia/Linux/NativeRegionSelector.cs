@@ -6,11 +6,9 @@ using System.Globalization;
 namespace ShareX.AvaloniaUI.Linux;
 
 /// <summary>
-/// Region selection with <c>slurp</c>, a layer-shell overlay drawn by the compositor itself.
-/// ShareX's own overlay is an ordinary window spanning the whole desktop, which only works where the window can be placed at an
-/// exact position and size across all monitors (Hyprland). Tiling compositors such as niri and sway cannot do that: they put the window
-/// in their layout (niri scrolls every other window out of view), so those use this instead.
-/// Override with SHAREX_REGION_SELECTOR=overlay|slurp.
+/// Optional region selection with <c>slurp</c>, a layer-shell overlay drawn by the compositor itself, selected with
+/// SHAREX_REGION_SELECTOR=slurp. ShareX's own overlay (annotation tools, magnifier) is the default everywhere; this is the alternative
+/// for setups where that overlay misbehaves, and it can select across monitors on niri.
 /// </summary>
 public static class NativeRegionSelector
 {
@@ -21,7 +19,8 @@ public static class NativeRegionSelector
             if (!OperatingSystem.IsLinux() || !LinuxScreenCapture.IsWayland) return false;
             string choice = Environment.GetEnvironmentVariable("SHAREX_REGION_SELECTOR")?.Trim().ToLowerInvariant() ?? "";
             if (choice == "overlay") return false;
-            if (choice != "slurp" && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK"))) return false;
+            // niri and sway: the overlay is placed through the compositor's IPC (see LinuxCaptureOverlay), so slurp is only used when asked for.
+            if (choice != "slurp") return false;
             return FindExecutable("slurp") != null;
         }
     }

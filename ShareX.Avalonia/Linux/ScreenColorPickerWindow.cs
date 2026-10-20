@@ -86,7 +86,8 @@ public partial class ScreenColorPickerWindow : Window
     public Task<ScreenColorPickerResult?> PickAsync(Window? owner = null)
     {
         // Freeze before showing any picker pixels, so neither the preview nor dimming contaminate samples.
-        _screenBounds = LinuxScreenCapture.DesktopBounds;
+        // niri windows cannot span monitors: pick on the focused one.
+        _screenBounds = LinuxScreenCapture.TryGetFocusedMonitor(out DrawingRectangle focusedMonitor) ? focusedMonitor : LinuxScreenCapture.DesktopBounds;
         _screenshot = LinuxScreenCapture.Capture(_screenBounds);
         using SKData data = _screenshot.Encode(SKEncodedImageFormat.Png, 100);
         using MemoryStream stream = new(data.ToArray());

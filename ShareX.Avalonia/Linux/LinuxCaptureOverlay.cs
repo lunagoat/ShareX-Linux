@@ -33,8 +33,146 @@ namespace ShareX.AvaloniaUI.Linux;
 /// <summary>Positions only our own transient capture window, without persistent compositor rules.</summary>
 public static class LinuxCaptureOverlay
 {
+    /// <summary>
+    /// niri keeps every window inside its scrolling layout on one monitor, so the overlay cannot be positioned: ask niri to make it fullscreen
+    /// on the focused output, where it covers the bar and lines up pixel for pixel with the frozen screenshot of that output.
+    /// </summary>
+    private static async Task PlaceNiriAsync(Window window)
+    {
+        string title = window.Title ?? "";
+        for (int attempt = 0; attempt < 30 && window.IsVisible; attempt++)
+        {
+            long? id = await Task.Run(() =>
+            {
+                try
+                {
+                    using JsonDocument windows = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "windows"));
+                    foreach (JsonElement w in windows.RootElement.EnumerateArray())
+                    {
+                        if (w.TryGetProperty("title", out var t) && t.GetString() == title) return (long?)w.GetProperty("id").GetInt64();
+                    }
+                }
+                catch (Exception) { }
+                return null;
+            });
+
+            if (id != null)
+            {
+                await Task.Run(() => LinuxCaptureProcess.Run("niri", "msg", "action", "fullscreen-window", "--id", id.Value.ToString()));
+                await Task.Delay(200); // let the compositor resize the surface before the overlay measures itself
+                return;
+            }
+
+            await Task.Delay(40);
+        }
+    }
+
+    private static long? FindSwayContainer(string title)
+    {
+        try
+        {
+            using JsonDocument tree = JsonDocument.Parse(LinuxCaptureProcess.Text("swaymsg", "-t", "get_tree", "-r"));
+            long? found = null;
+            void Visit(JsonElement node)
+            {
+                if (found != null) return;
+                if (node.TryGetProperty("name", out var name) && name.ValueKind == JsonValueKind.String && name.GetString() == title && node.TryGetProperty("pid", out _))
+                {
+                    found = node.GetProperty("id").GetInt64();
+                    return;
+                }
+                foreach (string child in new[] { "nodes", "floating_nodes" })
+                    if (node.TryGetProperty(child, out var children)) foreach (JsonElement item in children.EnumerateArray()) Visit(item);
+            }
+            Visit(tree.RootElement);
+            return found;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// sway floats a window with a fixed size by itself but centres it on one output; a floating window may span outputs, so place it
+    /// at the exact desktop rectangle, then measure and correct it like the Hyprland path does.
+    /// </summary>
+    private static async Task PlaceSwayAsync(Window window, Rectangle bounds)
+    {
+        string title = window.Title ?? "";
+        for (int attempt = 0; attempt < 30 && window.IsVisible; attempt++)
+        {
+            long? id = await Task.Run(() => FindSwayContainer(title));
+            if (id == null)
+            {
+                await Task.Delay(40);
+                continue;
+            }
+
+            int width = bounds.Width, height = bounds.Height, x = bounds.X, y = bounds.Y;
+            for (int correction = 0; correction < 4 && window.IsVisible; correction++)
+            {
+                await Task.Run(() =>
+                {
+                    try
+                    {
+                        LinuxCaptureProcess.Run("swaymsg", $"[con_id={id}] floating enable, border none, resize set width {width} px height {height} px, move absolute position {x} px {y} px");
+                    }
+                    catch (Exception) { }
+                });
+                await Task.Delay(150);
+
+                Rectangle? actual = await Task.Run(() =>
+                {
+                    try
+                    {
+                        using JsonDocument tree = JsonDocument.Parse(LinuxCaptureProcess.Text("swaymsg", "-t", "get_tree", "-r"));
+                        Rectangle? rect = null;
+                        void Visit(JsonElement node)
+                        {
+                            if (rect != null) return;
+                            if (node.TryGetProperty("id", out var nid) && nid.GetInt64() == id)
+                            {
+                                var r = node.GetProperty("rect");
+                                rect = new Rectangle(r.GetProperty("x").GetInt32(), r.GetProperty("y").GetInt32(), r.GetProperty("width").GetInt32(), r.GetProperty("height").GetInt32());
+                                return;
+                            }
+                            foreach (string child in new[] { "nodes", "floating_nodes" })
+                                if (node.TryGetProperty(child, out var children)) foreach (JsonElement item in children.EnumerateArray()) Visit(item);
+                        }
+                        Visit(tree.RootElement);
+                        return rect;
+                    }
+                    catch (Exception) { return null; }
+                });
+
+                if (actual == null || actual.Value.Width <= 0 || actual.Value.Height <= 0) break;
+                if (actual.Value.Location == bounds.Location && Math.Abs(actual.Value.Width - bounds.Width) <= 1 && Math.Abs(actual.Value.Height - bounds.Height) <= 1) break;
+
+                width = (int)Math.Round((double)width * bounds.Width / actual.Value.Width);
+                height = (int)Math.Round((double)height * bounds.Height / actual.Value.Height);
+                x += bounds.X - actual.Value.X;
+                y += bounds.Y - actual.Value.Y;
+            }
+
+            return;
+        }
+    }
+
     public static async Task PlaceAsync(Window window, Rectangle bounds)
     {
+        if (NiriIpc.IsAvailable)
+        {
+            await PlaceNiriAsync(window);
+            return;
+        }
+
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
+        {
+            await PlaceSwayAsync(window, bounds);
+            return;
+        }
+
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return;
         await Task.Delay(40); // Opened precedes IsVisible becoming true on Avalonia X11.
         string title = window.Title ?? "";

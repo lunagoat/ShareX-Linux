@@ -18,8 +18,9 @@ public static class NiriIpc
     }
 
     /// <summary>
-    /// niri reports each window's position inside its workspace view, so the desktop rectangle is the output's logical origin plus that
-    /// offset. Windows that are not in view (inactive workspace, scrolled off) have no position and are returned as not visible.
+    /// niri only reports a window's position (inside its workspace view) for floating windows; for tiled windows
+    /// <c>tile_pos_in_workspace_view</c> is null, so their rectangle is unknown. The desktop rectangle is the output's logical origin plus
+    /// that position; windows without a position are returned as not visible with an empty rectangle.
     /// </summary>
     public static NiriWindow[] Parse(string windowsJson, string workspacesJson, string outputsJson)
     {

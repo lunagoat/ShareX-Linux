@@ -87,7 +87,8 @@ namespace ShareX
                 return await ExecuteNativeSelectorCaptureAsync(screenshot);
             }
 
-            bool activeMonitorMode = taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode;
+            bool activeMonitorMode = taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode ||
+                (System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NiriIpc.IsAvailable); // a niri window cannot span monitors
             Rectangle screenBounds = activeMonitorMode
                 ? CaptureHelpers.GetActiveScreenBounds()
                 : CaptureHelpers.GetScreenBounds();

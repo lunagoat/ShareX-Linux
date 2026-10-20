@@ -67,5 +67,24 @@ Check(LayerShellInsets.ParseHyprlandTopInset(layers, new System.Drawing.Rectangl
 Check(LayerShellInsets.ParseHyprlandTopInset(layers, new System.Drawing.Rectangle(2560, 0, 2560, 1440)) == 0, "bars: a bottom bar does not move the toolbar");
 Check(LayerShellInsets.ParseHyprlandTopInset("{}", new System.Drawing.Rectangle(0, 0, 100, 100)) == 0, "bars: nothing reported");
 
+// ---- niri layers (no geometry available)
+const string niriLayers = """
+[ {"namespace":"waybar","output":"DP-3","layer":"Top","keyboard_interactivity":"None"},
+  {"namespace":"swaync-notification-window","output":"DP-2","layer":"Overlay","keyboard_interactivity":"None"},
+  {"namespace":"awww-daemon","output":"DP-2","layer":"Background","keyboard_interactivity":"None"} ]
+""";
+Check(LayerShellInsets.ParseNiriHasTopBar(niriLayers, "DP-3"), "niri layers: waybar on the top layer is a bar");
+Check(!LayerShellInsets.ParseNiriHasTopBar(niriLayers, "DP-2"), "niri layers: a notification daemon and the wallpaper are not bars");
+Check(!LayerShellInsets.ParseNiriHasTopBar("[]", "DP-1"), "niri layers: nothing on the layers");
+
+// ---- sway: the visible workspace excludes bars and nags
+const string swayWorkspaces = """
+[ { "name": "1", "visible": true, "focused": true, "output": "DP-1", "rect": { "x": 0, "y": 60, "width": 2560, "height": 1380 } },
+  { "name": "2", "visible": false, "focused": false, "output": "DP-1", "rect": { "x": 0, "y": 0, "width": 2560, "height": 1440 } },
+  { "name": "3", "visible": true, "focused": false, "output": "DP-2", "rect": { "x": 2560, "y": 0, "width": 1920, "height": 1080 } } ]
+""";
+Check(LayerShellInsets.ParseSwayTopInset(swayWorkspaces, new System.Drawing.Rectangle(0, 0, 2560, 1440)) == 60, "sway: top bars = workspace top minus output top");
+Check(LayerShellInsets.ParseSwayTopInset(swayWorkspaces, new System.Drawing.Rectangle(2560, 0, 1920, 1080)) == 0, "sway: an output without bars has no inset");
+
 Console.WriteLine($"RESULT: {failures} failures");
 return failures == 0 ? 0 : 1;

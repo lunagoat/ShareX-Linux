@@ -13,6 +13,12 @@ public static class LayerShellInsets
     /// <summary>Height of the bar(s) covering the top edge of <paramref name="monitor"/> (0 when there is none or the compositor cannot tell).</summary>
     public static int TopInset(Rectangle monitor)
     {
+        if (NiriIpc.IsAvailable) return NiriTopInset(monitor);
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) && string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")))
+        {
+            try { return ParseSwayTopInset(LinuxCaptureProcess.Text("swaymsg", "-t", "get_workspaces", "-r"), monitor); }
+            catch (Exception) { return 0; }
+        }
         if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"))) return 0;
 
         try
@@ -23,6 +29,64 @@ public static class LayerShellInsets
         {
             return 0;
         }
+    }
+
+    /// <summary>
+    /// sway: a visible workspace's rectangle already excludes exclusive bars and nags (swaybar, waybar with an exclusive zone), so the
+    /// distance from the monitor's top edge to the workspace's top edge is the space to stay out of.
+    /// </summary>
+    public static int ParseSwayTopInset(string workspacesJson, Rectangle monitor)
+    {
+        int inset = 0;
+        using JsonDocument document = JsonDocument.Parse(workspacesJson);
+
+        foreach (JsonElement ws in document.RootElement.EnumerateArray())
+        {
+            if (!ws.TryGetProperty("visible", out var visible) || visible.ValueKind != JsonValueKind.True || !ws.TryGetProperty("rect", out var r)) continue;
+            Rectangle rect = new(r.GetProperty("x").GetInt32(), r.GetProperty("y").GetInt32(), r.GetProperty("width").GetInt32(), r.GetProperty("height").GetInt32());
+            if (rect.IntersectsWith(monitor)) inset = Math.Max(inset, Math.Max(0, rect.Y - monitor.Y));
+        }
+
+        return inset;
+    }
+
+    // Surfaces that sit on the top layer but are not bars.
+    private static readonly string[] NotBars = ["notification", "swaync", "mako", "dunst", "fnott", "wob", "swayosd", "launcher", "fuzzel", "wofi", "rofi", "tofi", "lock", "polkit", "osd", "gtk-layer-shell"];
+
+    /// <summary>
+    /// niri lists layer-shell surfaces (namespace, output, layer) but not their size, so an exact bar height is unknown. When a bar-like surface
+    /// is on the top layer of that output, assume a typical bar plus margin; SHAREX_TOOLBAR_INSET=&lt;pixels&gt; overrides it (0 turns it off).
+    /// </summary>
+    public static int NiriTopInset(Rectangle monitor)
+    {
+        if (int.TryParse(Environment.GetEnvironmentVariable("SHAREX_TOOLBAR_INSET"), out int fixedInset)) return Math.Max(0, fixedInset);
+
+        try
+        {
+            string outputName = LinuxScreenCapture.GetMonitors().FirstOrDefault(m => m.Bounds == monitor)?.Name ?? "";
+            return ParseNiriHasTopBar(LinuxCaptureProcess.Text("niri", "msg", "--json", "layers"), outputName) ? 48 : 0;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>`niri msg --json layers`: [{ "namespace": "waybar", "output": "DP-1", "layer": "Top", ... }].</summary>
+    public static bool ParseNiriHasTopBar(string json, string outputName)
+    {
+        using JsonDocument document = JsonDocument.Parse(json);
+
+        foreach (JsonElement surface in document.RootElement.EnumerateArray())
+        {
+            string layer = surface.TryGetProperty("layer", out var l) ? l.GetString() ?? "" : "";
+            string output = surface.TryGetProperty("output", out var o) ? o.GetString() ?? "" : "";
+            string name = (surface.TryGetProperty("namespace", out var n) ? n.GetString() ?? "" : "").ToLowerInvariant();
+
+            if ((layer is "Top" or "Overlay") && (outputName.Length == 0 || output == outputName) && !NotBars.Any(name.Contains)) return true;
+        }
+
+        return false;
     }
 
     /// <summary>

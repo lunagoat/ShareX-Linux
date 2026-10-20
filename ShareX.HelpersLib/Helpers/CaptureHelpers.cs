@@ -49,6 +49,11 @@ namespace ShareX.HelpersLib
 
         public static Rectangle GetActiveScreenBounds()
         {
+            if (OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.LinuxScreenCapture.TryGetFocusedMonitor(out Rectangle focused))
+            {
+                return focused;
+            }
+
             return DesktopScreen.FromPoint(GetCursorPosition()).Bounds;
         }
 

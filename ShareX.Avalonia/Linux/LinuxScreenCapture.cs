@@ -169,6 +169,28 @@ public static class LinuxScreenCapture
         throw new PlatformNotSupportedException("Cannot discover displays. Install xrandr, or use Hyprland/sway compositor IPC.");
     }
 
+    /// <summary>
+    /// The monitor that has keyboard focus, where the compositor can say so (niri). The pointer position cannot be used there: X clients
+    /// (ShareX runs through xwayland-satellite) only see the pointer while it is over their own windows.
+    /// </summary>
+    public static bool TryGetFocusedMonitor(out Rectangle bounds)
+    {
+        bounds = Rectangle.Empty;
+        if (!IsWayland || !NiriIpc.IsAvailable) return false;
+
+        try
+        {
+            LinuxCaptureMonitor? focused = GetMonitors().FirstOrDefault(m => m.Primary);
+            if (focused == null) return false;
+            bounds = focused.Bounds;
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     public static Rectangle DesktopBounds => GetMonitors().Select(m => m.Bounds).Aggregate(Rectangle.Union);
 
     public static Point CursorPosition
