@@ -1,6 +1,6 @@
 # Native overlay: plan (DRAFT, edit me)
 
-Status: approved by the user (Option B, benchmark first). Step 1 completed 2026-10-20: [headless CPU benchmark results](native-overlay-bench.md). No native overlay host built. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
+Status: approved by the user (Option B, benchmark first). Step 1 completed 2026-10-20: [headless CPU benchmark results](native-overlay-bench.md). Step 2 renderer-only C prototype implemented in `ShareX.OverlayRender` (see the C results in the benchmark report); no native surface host, input/Esc path or compositor testing is included. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
 
 ## Goal
 
@@ -102,5 +102,5 @@ GNOME's Mutter does not implement wlr-layer-shell, so layer surfaces are not ava
 | Layer-shell | Hyprland, niri, sway, KDE (checked: nested KWin 6.8 advertises `zwlr_layer_shell_v1` v5 with 2 outputs; still to verify it stacks above Plasma panels) | one overlay-layer surface per output |
 | Fullscreen windows | GNOME (mutter is not installed on this machine, so untested), and KDE only if layer-shell stacking fails | one borderless fullscreen toplevel per output, placed by the compositor (KWin script on KDE; Mutter has no scripting, so test what fullscreen-per-monitor gives) |
 
-All backends share the same renderer, frame cache and input path (Option B). Only surface creation and input plumbing differ. Step 3 of the work plan must verify the KDE and GNOME rows by experiment before relying on them.
+All backends will share the C scene renderer, frame cache and input path (the benchmark-selected fallback; small Avalonia toolbar/text/dialog surfaces remain separate). Only surface creation and input plumbing differ. Step 3 of the work plan must verify the KDE and GNOME rows by experiment before relying on them.
 

@@ -67,6 +67,7 @@ internal static class Program
             .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false, ShouldRenderOnUIThread = true })
             .UseSkia().WithInterFont().SetupWithoutStarting();
         SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
+        if (args.Contains("--native-parity")) return NativeSceneParity.Run();
         var results = new List<Result>();
         foreach (Layout layout in Layouts)
         foreach (string mode in new[] { "A", "B" })

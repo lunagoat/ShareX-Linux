@@ -195,3 +195,177 @@ These CPU results cannot establish whether the full GPU option B meets the targe
 3. B full-monitor hover: worst sampled frame 380.40 ms across layouts; fails the 33 ms no-frame-over target.
 4. Per-monitor dirty copy reduces transfer work, but CPU Skia raster/composition dominates the slow cases; GPU B remains untested.
 5. Use the plan’s C fallback for dim/selection/hover with a static frozen layer and retained, dirty-region annotation rendering; benchmark that change before native hosting.
+
+
+## C: native scene renderer
+
+Step 2 renderer-only C prototype, measured 2026-10-20 on the same machine/SDK as
+A/B above. `ShareX.OverlayRender` targets net10.0 and references **only SkiaSharp**.
+No Avalonia, Wayland, X11, UI toolkit, window creation, native host, input dispatch,
+or compositor interaction occurs in this library or its synthetic benchmark.
+The production application is not switched to this renderer in this step.
+
+### Retained scene and damage
+
+Each monitor owns three BGRA buffers: frozen original, pre-dimmed cache and retained
+output. One retained SKImage shares the immutable original's pixels; updates never
+create a full screenshot snapshot. Dim strength uses the existing rounded black
+alpha (`round(strength / 100 * 255)`, default 51). Active selection takes priority
+over hover and restores the undimmed interior. Chrome copies the current code's
+accent (#3E83F2 by default), 1-physical-pixel border, black alpha-230 [5,5] dashes,
+eight 15-pixel white circular handles with shadow, and 21-pixel centre crosshair.
+HUD dimensions, rings, grid, centre-cell outlines, 12-point semibold text and panel
+colors follow `RegionCaptureWindow.axaml.cs`, its AXAML, `MagnifierPixelGrid` and
+`SelectionResizeNode`. The host can supply theme colors and its Segoe UI/Inter
+SKTypeface; installed font fallback is used in these Linux measurements.
+
+`Update` takes immutable value snapshots in global logical coordinates and returns
+per-monitor physical damage regions plus their smallest enclosing rectangle.
+Rectangles are clipped and nonoverlapping. Damage uses changed layer geometry,
+old/new interior subtraction, thin border/crosshair strips, handle bounds, HUD
+bounds, shape outline/fill bounds and external bitmap bounds/revisions. Geometry
+includes conservative stroke/AA/shadow padding; it is not an exact pixel-diff
+minimum. Identical snapshots do no framebuffer writes. The renderer restores only
+the damage union from the cache and replays the scene once through a Skia region
+clip. There is no full-frame diff, clear, temporary screenshot conversion, or
+full-monitor raster pass on ordinary mouse/selection/rectangle updates. Changing
+full-monitor hover necessarily updates full interiors on the old/new monitors;
+changing dim strength rebuilds the full cache explicitly.
+
+Implemented annotation previews: rectangle/ellipse outlines and fills and line
+strokes (including horizontal/vertical lines), one shape being drawn. This is not
+a committed annotation document. A caller-owned external BGRA bitmap, revision
+and global bounds provide the small Avalonia toolbar slot, composited last.
+All monitors run serially; no worker threads or GPU are used.
+
+### Reproduction and correctness
+
+```bash
+tests/ShareX.OverlayRender.Tests/run.sh
+tests/ShareX.OverlayRender.Tests/run.sh --bench /tmp/native-scene.json
+python3 tests/ShareX.OverlayRender.Tests/report.py /tmp/native-scene.json
+tests/ShareX.OverlayRender.Tests/run.sh --memory Dual
+tests/ShareX.OverlayRender.Tests/run.sh --memory Triple
+tests/ShareX.OverlayBench/run.sh --native-parity
+```
+
+Scripts source `scripts/linux/env.sh`, build Release with the local SDK, and unset
+DISPLAY/WAYLAND_DISPLAY. Only NuGet restore uses the network. The parity mode
+uses Avalonia Headless setup but renders the existing `RegionSelectionOverlay`
+directly to CPU bitmaps; it does not construct a Window. It checks dim strength
+and undimmed pixels to one channel value and loosely compares accent perimeter
+coverage at 1.0/1.5 scales. Native pixel tests check the eight handle centres,
+border color, centre crosshair and full-monitor hover restoration. This is loose
+parity against current source, not proof of exact Windows font/theme rasterization.
+
+The native correctness suite compares 360 randomized retained scenes against
+fresh full redraws at 1.0/1.25/1.5/2.0 scales, including negative origins, HUDs,
+custom text, circle/square magnifiers, options/cache changes, shape fill/outline,
+external bitmaps and removal. Up to 3 channel values are allowed in that oracle
+for Skia antialias/blend rounding under complex region clips. Additional checks
+cover mixed-scale seams, ceil physical dimensions, degenerate lines, local bitmap
+revision damage, nonoverlapping regions and zero writes for identical snapshots.
+Presentation copies must match the entire retained framebuffer **byte for byte**
+after every event, including all 4,480 warmup/measured events. Fresh redraws are
+also checked at the end of warmup and measurement in every benchmark case.
+Untouched monitors must report zero damage; multi-monitor hover must touch exactly
+the old and new monitors, including at shared seams.
+
+Layouts, first-largest-monitor targeting, (220,220) anchor, endpoint sweep
+`400 + i % 160 * 9`, `400 + i % 80 * 7`, full-desktop selection for rectangle
+preview, full-monitor hover switching, 40 warmups and 240 samples match B. Default
+HUD is enabled; hover moves the pointer/HUD onto the target monitor. Single-monitor
+hover alternates visible/absent. Event time includes serial updates of every
+monitor and copying only damage regions to presentation buffers. Input dispatch,
+validation reads, fresh reference rendering and native presentation are excluded.
+Percentiles are nearest rank. The final timing run had no concurrent builds;
+a preliminary run overlapping a solution build was excluded. No pacing, sleeps,
+coalescing or dropped events hide slow frames. As above, this is a shared host,
+not a guaranteed real-time bound.
+
+Raw samples and cache-build samples:
+[native-overlay-render.samples.json.gz](native-overlay-render.samples.json.gz).
+The native report script reads that archive directly.
+
+### Per-event CPU frame cost
+
+All figures are **p50 / p95 / max milliseconds**, 240 measured events per row.
+PASS requires max <=16 ms for mouse and <=33 ms otherwise (so p95 also passes).
+
+| Layout | Event | p50 / p95 / max ms | MiB copied/event | Result |
+| --- | --- | ---: | ---: | --- |
+| 1440p @1.0 | Mouse | 0.42 / 0.46 / 3.48 | 0.13 | PASS |
+| 1440p @1.0 | Selection | 0.58 / 0.65 / 5.06 | 0.26 | PASS |
+| 1440p @1.0 | Rectangle | 0.51 / 0.55 / 4.75 | 0.23 | PASS |
+| 1440p @1.0 | Hover | 2.37 / 3.24 / 8.03 | 14.06 | PASS |
+| 4K @1.5 | Mouse | 0.64 / 0.66 / 0.68 | 0.28 | PASS |
+| 4K @1.5 | Selection | 0.90 / 0.99 / 2.78 | 0.55 | PASS |
+| 4K @1.5 | Rectangle | 0.80 / 0.86 / 3.90 | 0.48 | PASS |
+| 4K @1.5 | Hover | 6.72 / 8.20 / 9.94 | 31.64 | PASS |
+| Dual @1.5 | Mouse | 0.65 / 0.69 / 5.60 | 0.28 | PASS |
+| Dual @1.5 | Selection | 0.92 / 1.01 / 3.92 | 0.55 | PASS |
+| Dual @1.5 | Rectangle | 0.81 / 0.88 / 4.00 | 0.48 | PASS |
+| Dual @1.5 | Hover | 10.38 / 12.56 / 15.64 | 49.44 | PASS |
+| Triple @1.5 | Mouse | 0.66 / 0.70 / 6.08 | 0.28 | PASS |
+| Triple @1.5 | Selection | 0.93 / 1.04 / 5.24 | 0.55 | PASS |
+| Triple @1.5 | Rectangle | 0.83 / 0.91 / 4.26 | 0.48 | PASS |
+| Triple @1.5 | Hover | 11.86 / 15.63 / 19.24 | 54.05 | PASS |
+
+### Memory and cache startup
+
+| Monitor physical size | Original MiB | Dim cache MiB | Retained frame MiB | Library total MiB |
+| --- | ---: | ---: | ---: | ---: |
+| 2560×1440 | 14.06 | 14.06 | 14.06 | 42.19 |
+| 2880×1620 | 17.80 | 17.80 | 17.80 | 53.39 |
+| 3840×2160 | 31.64 | 31.64 | 31.64 | 94.92 |
+
+Pixel storage is `width * height * 4 * 3`, excluding small fonts/paint/HUD objects.
+Isolated ownership-transfer memory runs, with selection/rectangle/default HUD on
+each monitor and no presentation copies, retained **148.32 MiB / 243.24 MiB** for
+Dual/Triple. Their observed process RSS was **198.50 MiB / 293.62 MiB**, including
+about 35.66 MiB baseline runtime. Transfer ownership avoids retaining or allocating
+another caller screenshot; the default API instead clones and leaves ownership
+with the caller. RSS can include allocator-retained pages and depends on workload.
+
+A separate presentation bitmap adds 49.44 MiB / 81.08 MiB for Dual/Triple; the
+triple layout then needs 324.32 MiB in pixel buffers alone. Thus the plan's whole
+process **300 MB** goal is not established: 293.62 MiB is already ~307.9 decimal MB
+before native presentation, toolbar/UI runtime, or extra host buffers. The future
+host must share/reuse retained storage and measure its complete process budget.
+The correctness harness peak was 970.6 MiB because it retains extra source,
+presentation and fresh reference images across all sequential cases; that is not
+the renderer's isolated retained memory.
+
+For one 3840×2160 monitor, building the pre-dimmed cache took **4.67 / 6.70 / 6.87 ms
+p50 / p95 / max**, 20 samples after one warmup. This includes original-to-cache
+copy and black-alpha raster blend; excludes source creation/cloning, font setup,
+SKImage setup and initial retained-frame population. No cache rebuild occurs on
+ordinary events. Startup-to-visible and input-to-presentation latency remain
+unmeasured until a host exists.
+
+### Validation and remaining application work
+
+Release builds passed for the native tests/library, `ShareX.OverlayBench`,
+`ShareX/ShareX.csproj` and the full `ShareX.sln`. The native project/test build had
+zero warnings/errors; application/solution builds had existing warnings and zero
+errors. Correctness and direct production-control pixel checks passed. No real
+or nested compositor/display was contacted, and no window was opened. Git could
+not create `.git/index.lock` (read-only filesystem), so checkpoint changes remain
+uncommitted.
+
+Avalonia/application integration still needs to provide:
+
+- Small toolbar bitmap, revision and bounds; hit testing and toolbar actions.
+- Text-tool editing/shaping/committing, dialogs, menus, color/font pickers.
+- Current capture options/theme/font snapshots; selection/resize/snapping/input logic.
+- Committed annotation storage, remaining annotation tools, undo/delete and final composition.
+- Screenshot acquisition, native presentation buffers, coalesced input, low-level Esc,
+  watchdog/timeouts/fallback and result cropping (outside the renderer).
+
+### Five-line conclusion
+
+1. C meets all sampled mouse and selection/rectangle/hover p95 and max timing targets on Dual/Triple @1.5.
+2. Dirty region restoration and an immutable frozen image remove the full-monitor Avalonia raster bottleneck.
+3. Three retained BGRA buffers cost 94.92 MiB per 4K monitor; the complete 300 MB process budget remains unresolved.
+4. Loose source-visual parity and headless correctness pass; exact Windows typography and full annotation-tool parity remain integration work.
+5. Proceed to native hosting/safety and small Avalonia toolbar/text/dialog integration; no display-host behavior is validated here.
