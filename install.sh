@@ -184,13 +184,10 @@ else
         rm -f "$work/$ASSET" "$work/$ASSET.sha256"
         log "Downloading $base/$ASSET"
         curl -fL --retry 3 --progress-bar -o "$work/$ASSET" "$base/$ASSET" || return 2
-        curl -fsSL -o "$work/$ASSET.sha256" "$base/$ASSET.sha256" || rm -f "$work/$ASSET.sha256"
-        if [ -r "$work/$ASSET.sha256" ]; then
-            ( cd "$work" && sha256sum -c "$ASSET.sha256" >/dev/null 2>&1 ) || return 3
-            log "Checksum OK"
-        else
-            log "Warning: no checksum file available, skipping verification"
-        fi
+        # Releases always publish a checksum; a missing one means a half-published release or a broken proxy, so do not install.
+        curl -fsSL -o "$work/$ASSET.sha256" "$base/$ASSET.sha256" || { rm -f "$work/$ASSET.sha256"; return 3; }
+        ( cd "$work" && sha256sum -c "$ASSET.sha256" >/dev/null 2>&1 ) || return 3
+        log "Checksum OK"
         return 0
     }
 
@@ -209,9 +206,11 @@ else
             build_from_source
             exit 0 ;;
         *)
-            got="$(sha256sum "$work/$ASSET" | cut -d' ' -f1)"
-            die "checksum mismatch twice - refusing to install.
-  expected: $(cut -d' ' -f1 "$work/$ASSET.sha256")
+            got="$(sha256sum "$work/$ASSET" | cut -d' ' -f1 || true)"
+            expected="$(cut -d' ' -f1 "$work/$ASSET.sha256" 2>/dev/null || true)"
+            [ -n "$expected" ] || expected="(no checksum file was published for this release)"
+            die "checksum mismatch twice - refusing to install (the release may have been updated while you downloaded; running the command again usually fixes it).
+  expected: $expected
   got:      $got  ($(stat -c %s "$work/$ASSET") bytes)
   from:     $base/$ASSET
 Check your network/proxy, or build from source instead: install.sh --from-source" ;;

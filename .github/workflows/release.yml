@@ -19,6 +19,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # tags are needed so the archive can carry its exact release name
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: 10.0.x
@@ -29,7 +31,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          gh release create "$TAG" \
-            dist/release/sharex-linux-x64.tar.gz dist/release/sharex-linux-x64.tar.gz.sha256 \
-            --title "ShareX for Linux $TAG" --generate-notes --target "$GITHUB_SHA" \
-          || gh release upload "$TAG" dist/release/sharex-linux-x64.tar.gz dist/release/sharex-linux-x64.tar.gz.sha256 --clobber
+          files="dist/release/sharex-linux-x64.tar.gz dist/release/sharex-linux-x64.tar.gz.sha256"
+          notes=()
+          if [ -f "release-notes/$TAG.md" ]; then notes=(--notes-file "release-notes/$TAG.md"); else notes=(--generate-notes); fi
+
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # Re-run of an existing release: replace the assets (the checksum goes last).
+            gh release upload "$TAG" dist/release/sharex-linux-x64.tar.gz --clobber
+            gh release upload "$TAG" dist/release/sharex-linux-x64.tar.gz.sha256 --clobber
+          else
+            # A draft is invisible to users and to install.sh's "latest" lookup until every file is uploaded.
+            gh release create "$TAG" $files --draft --title "ShareX for Linux $TAG" "${notes[@]}" --target "$GITHUB_SHA"
+            gh release edit "$TAG" --draft=false --latest
+          fi
