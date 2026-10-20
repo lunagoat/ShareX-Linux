@@ -158,11 +158,33 @@ public static class AvaloniaBootstrapper
         }
     }
 
+    /// <summary>
+    /// The tray UI is light, and loading the GPU driver (GLX/EGL) into the process costs about 100 MB of memory and 50 ms of startup.
+    /// So software rendering is the default on Wayland desktops that use the native region overlay (everything except GNOME);
+    /// GNOME and X11 sessions keep GPU rendering because their region selector is a full-desktop window.
+    /// SHAREX_RENDERING=gpu|software overrides the choice.
+    /// </summary>
+    public static bool UseSoftwareRendering()
+    {
+        if (!OperatingSystem.IsLinux()) return false;
+        string? choice = Environment.GetEnvironmentVariable("SHAREX_RENDERING");
+        if (choice == "software") return true;
+        if (choice == "gpu") return false;
+        bool wayland = Environment.GetEnvironmentVariable("XDG_SESSION_TYPE") == "wayland" || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
+        bool gnome = (Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "").Contains("GNOME", StringComparison.OrdinalIgnoreCase);
+        return wayland && !gnome;
+    }
+
     private static AppBuilder BuildAvaloniaApp()
     {
         AppBuilder builder = AppBuilder.Configure<ShareXAvaloniaApplication>()
             .UsePlatformDetect()
             .WithInterFont();
+
+        if (UseSoftwareRendering())
+        {
+            builder = builder.With(new Avalonia.X11PlatformOptions { RenderingMode = [Avalonia.X11RenderingMode.Software] });
+        }
 
 #if DEBUG
         builder = builder.LogToTrace();
