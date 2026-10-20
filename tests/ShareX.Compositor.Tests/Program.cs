@@ -94,5 +94,58 @@ const string niriWs = """
 Check(LinuxScreenCapture.ParseNiriFocusedOutput(niriWs) == "HDMI-A-1", "niri: focused output comes from the focused workspace");
 Check(LinuxScreenCapture.ParseNiriFocusedOutput("[]") == null, "niri: no workspaces, no focused output");
 
+// ---- DoctorDisplays: xrandr --listmonitors dual-monitor XWayland fixture
+const string xrandrDual = """
+WARNING: running xrandr against an Xwayland server. See the xrandr man page for details.
+Monitors: 2
+ 0: +*DP-1 2560/600x1440/340+0+0  DP-1
+ 1: +DP-2 1920/540x1080/300+2560+0  DP-2
+""";
+var xMonitors = DoctorDisplays.ParseXRandRListMonitors(xrandrDual);
+Check(xMonitors.Length == 2, "xrandr: parsed two monitors ignoring warning");
+Check(xMonitors[0].Name == "DP-1" && xMonitors[0].Bounds == new System.Drawing.Rectangle(0, 0, 2560, 1440) && xMonitors[0].Primary, "xrandr: primary monitor bounds and flag");
+Check(xMonitors[1].Name == "DP-2" && xMonitors[1].Bounds == new System.Drawing.Rectangle(2560, 0, 1920, 1080) && !xMonitors[1].Primary, "xrandr: second monitor bounds and primary=false");
+
+// ---- DoctorDisplays: kscreen-doctor JSON dual-monitor layout
+const string kscreenDoctorDual = """
+{
+  "outputs": [
+    { "id": 1, "name": "eDP-1", "enabled": true, "connected": true, "primary": true, "pos": { "x": 0, "y": 0 }, "size": { "width": 1920, "height": 1080 }, "scale": 1.0, "rotation": 1 },
+    { "id": 2, "name": "HDMI-A-1", "enabled": true, "connected": true, "primary": false, "pos": { "x": 1920, "y": 0 }, "size": { "width": 3840, "height": 2160 }, "scale": 2.0, "rotation": 1 },
+    { "id": 3, "name": "DP-1", "enabled": false, "connected": false, "primary": false, "pos": { "x": 0, "y": 0 }, "size": { "width": 1920, "height": 1080 }, "scale": 1.0, "rotation": 1 }
+  ]
+}
+""";
+var kdeMonitors = DoctorDisplays.ParseKScreenDoctorJson(kscreenDoctorDual);
+Check(kdeMonitors.Length == 2, "kscreen json: parsed 2 enabled outputs");
+Check(kdeMonitors[0].Name == "eDP-1" && kdeMonitors[0].Bounds == new System.Drawing.Rectangle(0, 0, 1920, 1080) && kdeMonitors[0].Primary, "kscreen json: primary output");
+Check(kdeMonitors[1].Name == "HDMI-A-1" && kdeMonitors[1].Bounds == new System.Drawing.Rectangle(1920, 0, 1920, 1080) && kdeMonitors[1].Scale == 2.0, "kscreen json: scaled output logical bounds");
+
+// ---- DoctorDisplays: pointer monitor resolution & disagreement detection
+var pOnFirst = new System.Drawing.Point(500, 500);
+var pOnSecond = new System.Drawing.Point(2500, 500);
+var pOutside = new System.Drawing.Point(9000, 9000);
+Check(DoctorDisplays.FindMonitorForPoint(kdeMonitors, pOnFirst)?.Name == "eDP-1", "pointer: pOnFirst falls on eDP-1");
+Check(DoctorDisplays.FindMonitorForPoint(kdeMonitors, pOnSecond)?.Name == "HDMI-A-1", "pointer: pOnSecond falls on HDMI-A-1");
+Check(DoctorDisplays.FindMonitorForPoint(kdeMonitors, pOutside) == null, "pointer: pOutside is outside any monitor");
+
+// Pointer disagreement: X11 thinks cursor is on eDP-1, compositor knows it is on HDMI-A-1
+var verdictsDisagreed = DoctorDisplays.EvaluateVerdicts(kdeMonitors, null, pOnFirst, pOnSecond);
+Check(verdictsDisagreed.Any(v => v.Contains("pointer") && v.Contains("differs")), "pointer: flags monitor disagreement in verdicts");
+
+// Pointer agreement: identical coords
+var verdictsAgreed = DoctorDisplays.EvaluateVerdicts(kdeMonitors, null, pOnFirst, pOnFirst);
+Check(verdictsAgreed.Count == 0, "pointer: no false warning when positions agree");
+
+// Monitor layout mismatch detection between XWayland and compositor
+const string xrandrMismatched = """
+Monitors: 2
+ 0: +DP-1 1920x1080+0+0  eDP-1
+ 1: +HDMI-1 1920x1080+0+1080  HDMI-A-1
+""";
+var xMismatched = DoctorDisplays.ParseXRandRListMonitors(xrandrMismatched);
+var verdictsMismatch = DoctorDisplays.EvaluateVerdicts(kdeMonitors, xMismatched, null, null);
+Check(verdictsMismatch.Any(v => v.Contains("layout mismatch")), "verdicts: flags monitor layout mismatch between XWayland and compositor");
+
 Console.WriteLine($"RESULT: {failures} failures");
 return failures == 0 ? 0 : 1;
