@@ -99,6 +99,12 @@ fi
 
 version="$(sed -n 's:.*<Version>\(.*\)</Version>.*:\1:p' "$root/Directory.build.props" | head -n1)"
 [ -n "$version" ] || version="unknown"
+# A release archive carries the exact release tag (make-release.sh); a source checkout uses git, otherwise the project version.
+if [ -s "$root/VERSION" ]; then
+    version="$(head -n1 "$root/VERSION") (${version})"
+elif tag="$(git -C "$root" describe --tags --always 2>/dev/null)" && [ -n "$tag" ]; then
+    version="$tag (${version})"
+fi
 
 log "Installing ShareX $version"
 log "  application : $libdir"

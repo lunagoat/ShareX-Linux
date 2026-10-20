@@ -40,6 +40,8 @@ cp -a "$app/." "$top/dist/$rid/"
 cp "$root/scripts/linux/install-user.sh" "$top/scripts/linux/"
 cp -a "$root/packaging/linux/." "$top/packaging/linux/"
 cp "$root/Directory.build.props" "$root/LICENSE.txt" "$root/README.linux.md" "$top/"
+# The exact release (v21.0.0-linux.N) so `sharex --version` and `sharex --doctor` can tell builds apart.
+git -C "$root" describe --tags --always 2>/dev/null > "$top/VERSION" || true
 cp "$root/docs/CLI.md" "$top/docs/"
 [ "$rid" = "linux-x64" ] || sed -i "s#dist/linux-x64#dist/$rid#g" "$top/scripts/linux/install-user.sh"
 

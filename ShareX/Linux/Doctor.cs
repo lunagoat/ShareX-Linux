@@ -48,7 +48,8 @@ internal static class Doctor
 
     public static int Execute()
     {
-        Console.WriteLine("ShareX doctor - " + ApplicationInfo.VersionText);
+        string versionFile = Path.Combine(AppContext.BaseDirectory, "version");
+        Console.WriteLine("ShareX doctor - release " + (File.Exists(versionFile) ? File.ReadAllText(versionFile).Trim() : "(development build)"));
 
         string desktop = Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP") ?? "?";
         Section("Session");
@@ -56,6 +57,24 @@ internal static class Doctor
         string display = DisplayGuard.Check();
         if (display == null) Ok("an X server is reachable (ShareX's windows need one)");
         else Problem(display.Split('\n')[0], "see docs/COMPATIBILITY.md");
+
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")))
+        {
+            Info("niri: " + (Run("niri", "msg", "version")?.Split('\n').FirstOrDefault()?.Trim() ?? "(niri command not found)"));
+            try
+            {
+                string workspaces = Run("niri", "msg", "--json", "workspaces");
+                string windows = Run("niri", "msg", "--json", "windows");
+                if (workspaces != null && windows != null)
+                {
+                    JArray ws = JArray.Parse(workspaces);
+                    Info($"workspaces: {ws.Count}, active: {string.Join(",", ws.Where(x => (bool?)x["is_active"] == true).Select(x => "#" + x["idx"] + " on " + x["output"]))}");
+                    foreach (JToken w in JArray.Parse(windows).Where(x => (string)x["app_id"] == "ShareX"))
+                        Info($"ShareX window \"{w["title"]}\" is on workspace id {w["workspace_id"]}");
+                }
+            }
+            catch (Exception) { }
+        }
 
         bool wlroots = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("NIRI_SOCKET")) || !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SWAYSOCK")) ||
             !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE"));
