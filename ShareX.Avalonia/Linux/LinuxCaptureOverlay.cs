@@ -40,30 +40,51 @@ public static class LinuxCaptureOverlay
     private static async Task PlaceNiriAsync(Window window)
     {
         string title = window.Title ?? "";
-        for (int attempt = 0; attempt < 30 && window.IsVisible; attempt++)
+
+        // niri floats a window with a fixed size (ours) as soon as the X11 size hints arrive, which can be after we ask for fullscreen, and then it
+        // sits below an exclusive bar with the frozen screenshot shifted. So keep checking and ask again until it stays out of floating mode.
+        int stable = 0;
+        for (int attempt = 0; attempt < 40 && window.IsVisible && stable < 3; attempt++)
         {
-            long? id = await Task.Run(() =>
+            (long Id, bool Floating)? state = await Task.Run(() =>
             {
                 try
                 {
                     using JsonDocument windows = JsonDocument.Parse(LinuxCaptureProcess.Text("niri", "msg", "--json", "windows"));
                     foreach (JsonElement w in windows.RootElement.EnumerateArray())
                     {
-                        if (w.TryGetProperty("title", out var t) && t.GetString() == title) return (long?)w.GetProperty("id").GetInt64();
+                        if (w.TryGetProperty("title", out var t) && t.GetString() == title)
+                        {
+                            bool floating = w.TryGetProperty("is_floating", out var f) && f.ValueKind == JsonValueKind.True;
+                            return ((long Id, bool Floating)?)(w.GetProperty("id").GetInt64(), floating);
+                        }
                     }
                 }
                 catch (Exception) { }
                 return null;
             });
 
-            if (id != null)
+            if (state == null)
             {
-                await Task.Run(() => LinuxCaptureProcess.Run("niri", "msg", "action", "fullscreen-window", "--id", id.Value.ToString()));
-                await Task.Delay(200); // let the compositor resize the surface before the overlay measures itself
-                return;
+                await Task.Delay(40);
+                continue;
             }
 
-            await Task.Delay(40);
+            if (state.Value.Floating)
+            {
+                stable = 0;
+                await Task.Run(() =>
+                {
+                    try { LinuxCaptureProcess.Run("niri", "msg", "action", "fullscreen-window", "--id", state.Value.Id.ToString()); }
+                    catch (Exception) { }
+                });
+                await Task.Delay(120);
+            }
+            else
+            {
+                stable++;
+                await Task.Delay(100);
+            }
         }
     }
 
