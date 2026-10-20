@@ -106,6 +106,8 @@ clock.Advance(29999); Check(watchdog.Check() == null, "before first-frame deadli
 clock = new(); watchdog = new(clock, TimeSpan.FromSeconds(2)); watchdog.FrameCompleted(); watchdog.Input();
 clock.Advance(1999); watchdog.Input(); Check(watchdog.Check() == null, "frame watchdog pending"); clock.Advance(1); Check(watchdog.Check()!.Contains("Frame completion"), "continuous input cannot postpone watchdog");
 clock = new(); watchdog = new(clock); watchdog.FrameCompleted(); clock.Advance(45000); Check(watchdog.Check()!.Contains("No input"), "idle timeout");
+Check(OverlayCancelReasons.IsUserCancel(watchdog.Check()) && OverlayCancelReasons.IsUserCancel("Escape") && OverlayCancelReasons.IsUserCancel("Mouse action"), "idle, Escape and mouse-action cancels are user cancels (no window-overlay fallback)");
+Check(!OverlayCancelReasons.IsUserCancel("Frame completion watchdog expired.") && !OverlayCancelReasons.IsUserCancel("No first frame within 30 seconds.") && !OverlayCancelReasons.IsUserCancel("Overlay session closed."), "stalls and compositor closes are failures that fall back");
 clock = new(); var pacer = new FramePacer(clock); Check(pacer.TryBegin(true) && !pacer.TryBegin(true), "pacer first"); clock.Advance(7); Check(!pacer.TryBegin(true), "pacer early"); clock.Advance(1); Check(pacer.TryBegin(true) && !pacer.TryBegin(false), "pacer deadline and clean");
 
 using (var fixture = new Fixture(layout))

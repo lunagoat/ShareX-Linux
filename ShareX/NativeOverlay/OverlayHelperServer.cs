@@ -129,7 +129,7 @@ internal static class OverlayHelperServer
             var result = host.Completion.GetAwaiter().GetResult();
             if (result.Capture is not { } capture)
             {
-                if (result.CancellationReason == "Escape") Send(new("cancelled", "Escape"));
+                if (OverlayCancelReasons.IsUserCancel(result.CancellationReason)) Send(new("cancelled", result.CancellationReason));
                 else Send(new("error", result.CancellationReason));
             }
             else

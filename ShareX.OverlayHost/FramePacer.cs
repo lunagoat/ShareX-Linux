@@ -50,8 +50,17 @@ public sealed class OverlayWatchdog
     {
         long now = clock.Now.Ticks, frame = Interlocked.Read(ref lastFrame), pending = Interlocked.Read(ref outstanding);
         if (frame < 0 && now - opened >= TimeSpan.FromSeconds(30).Ticks) return "No first frame within 30 seconds.";
-        if (now - Interlocked.Read(ref lastInput) >= TimeSpan.FromSeconds(45).Ticks) return "No input for 45 seconds.";
+        if (now - Interlocked.Read(ref lastInput) >= TimeSpan.FromSeconds(45).Ticks) return OverlayCancelReasons.Idle;
         if (pending >= 0 && now - Math.Max(frame, pending) >= FrameTimeout.Ticks) return "Frame completion watchdog expired.";
         return null;
     }
+}
+
+/// <summary>Cancel reasons that mean the user is done (or gone), as opposed to a failure that should fall back to the window overlay.</summary>
+public static class OverlayCancelReasons
+{
+    public const string Escape = "Escape";
+    public const string MouseAction = "Mouse action";
+    public const string Idle = "No input for 45 seconds.";
+    public static bool IsUserCancel(string? reason) => reason is Escape or MouseAction or Idle;
 }
