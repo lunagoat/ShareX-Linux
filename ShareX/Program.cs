@@ -87,6 +87,7 @@ internal static class Program
         }
 
         DebugHelper.Init(AppPaths.LogsFilePath);
+        ShareX.AvaloniaUI.Linux.LinuxCaptureOverlay.Diagnostic = message => DebugHelper.WriteLine(message); // placement problems land in the ShareX log
 
         StartupOptions.IsAdmin = Helpers.IsAdministrator();
         StartupOptions.MultiInstance = ApplicationCommandLine.IsCommandPresent("multi", "m");

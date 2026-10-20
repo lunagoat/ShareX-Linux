@@ -62,7 +62,6 @@ makedepends=('dotnet-sdk')
 optdepends=(
     'ffmpeg: screen recording, video conversion and GIF encoding'
     'grim: screen capture on wlroots compositors (Hyprland, sway)'
-    'slurp: region selection on wlroots compositors (Hyprland, sway)'
     'gpu-screen-recorder: hardware accelerated screen recording on Wayland'
     'wl-clipboard: clipboard images, text and file lists on Wayland'
     'xdg-desktop-portal: screenshot, screen cast and global shortcut portals'

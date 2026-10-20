@@ -28,8 +28,8 @@ Recommended packages by session:
 
 | Session | Install |
 | --- | --- |
-| Hyprland | `grim slurp wl-clipboard ffmpeg gpu-screen-recorder tesseract xdg-desktop-portal xdg-desktop-portal-hyprland libnotify xdg-utils` |
-| sway / wlroots | `grim slurp wl-clipboard ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-wlr libnotify xdg-utils` |
+| Hyprland | `grim wl-clipboard ffmpeg gpu-screen-recorder tesseract xdg-desktop-portal xdg-desktop-portal-hyprland libnotify xdg-utils` |
+| sway / wlroots | `grim wl-clipboard ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-wlr libnotify xdg-utils` |
 | GNOME | `ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-gnome libnotify xdg-utils` (+ the AppIndicator extension for the tray) |
 | KDE Plasma | `ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-kde libnotify xdg-utils` |
 | X11 | `ffmpeg tesseract xclip xdotool libnotify xdg-utils` |
@@ -70,7 +70,7 @@ makepkg -f -i        # add --nodeps if you use the user-local SDK in ~/.dotnet
 ```
 
 `packaging/arch/PKGBUILD` builds from the checkout with `dotnet publish` and installs to
-`/usr`. Optional dependencies (ffmpeg, grim, slurp, wl-clipboard, portals, tesseract, …)
+`/usr`. Optional dependencies (ffmpeg, grim, wl-clipboard, portals, tesseract, …)
 are listed there and in the package metadata.
 
 ### Flatpak (draft)
@@ -222,7 +222,7 @@ exercised on that session · ⚠️ works with caveats/permissions/extra package
 | Clipboard: text | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
 | Clipboard: images / file list | ⚠️ `wl-clipboard` | ⚠️ `wl-clipboard` | ⚠️ `wl-clipboard` | ⚠️ `wl-clipboard` | ⚠️ `xclip` |
 | Fullscreen / monitor capture | ✅ `grim` | 🟢 `grim` | 🟢 Screenshot portal | 🟢 Screenshot portal | 🟢 `XGetImage` |
-| Region capture + overlay editor | ✅ frozen overlay + `grim` | 🟢 `grim`/`slurp` | ⚠️ portal permission prompt | ⚠️ portal permission prompt | 🟢 Xlib overlay |
+| Region capture + overlay editor | ✅ frozen overlay + `grim` | 🟢 frozen overlay + `grim` | ⚠️ portal permission prompt | ⚠️ portal permission prompt | 🟢 Xlib overlay |
 | Active window capture | ✅ `hyprctl` | 🟢 `swaymsg` | ⚠️ no portal window API | ⚠️ KWin D-Bus | 🟢 EWMH |
 | Window list / window under cursor | ✅ `hyprctl` | 🟢 `swaymsg` | ❌ (use region capture) | ⚠️ KWin script | 🟢 EWMH |
 | Scrolling capture | ⚠️ needs synthetic input | ⚠️ needs synthetic input | ⚠️ portal RemoteDesktop | ⚠️ portal RemoteDesktop | 🟢 XTest |
@@ -273,7 +273,7 @@ to see the output immediately.
 and the session-specific backend (`xdg-desktop-portal-hyprland`, `-wlr`, `-gtk`, `-gnome`,
 `-kde`). Test it with `dbus-send --session --print-reply --dest=org.freedesktop.portal.Desktop
 /org/freedesktop/portal/desktop org.freedesktop.DBus.Properties.Get string:org.freedesktop.portal.Screenshot string:version`.
-On Hyprland, region capture also needs `grim` (and preferably `slurp`) on `PATH` and
+On Hyprland, region capture also needs `grim` on `PATH` and
 `HYPRLAND_INSTANCE_SIGNATURE` visible to the app (it is, when started from the session).
 
 **Recording produces no audio.** ShareX records the PipeWire/PulseAudio monitor of the

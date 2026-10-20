@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/lunagoat/ShareX-Linux/main/install.
 ```
 
 Per-user (`~/.local`), no sudo, no .NET needed (the release is self-contained), x86-64. The installer verifies a
-SHA-256 checksum and prints which optional helpers (`grim`, `slurp`, `wl-clipboard`, `ffmpeg`, `tesseract`, …) are
+SHA-256 checksum and prints which optional helpers (`grim`, `wl-clipboard`, `ffmpeg`, `tesseract`, …) are
 missing for your distribution. Then run `sharex`.
 
 ```bash

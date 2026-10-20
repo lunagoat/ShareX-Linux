@@ -22,7 +22,7 @@ No decompiling is needed — the source is the spec. Read the C# for intended be
   wlr-screencopy / ext-image-copy-capture / the Screenshot+ScreenCast portals, no window positioning/always-on-top by the client.
   Solve them the way a real Linux app would (portals, `grim`, compositor IPC such as `hyprctl`/`swaymsg`, D-Bus, `wl-clipboard`),
   and **detect the session/compositor at runtime** (`XDG_SESSION_TYPE`, `XDG_CURRENT_DESKTOP`, `HYPRLAND_INSTANCE_SIGNATURE`, `SWAYSOCK`).
-- Tools installed on the dev machine: grim slurp wl-copy wl-paste xdotool xclip ffmpeg tesseract mpv gpu-screen-recorder pw-record parec pactl
+- Tools installed on the dev machine: grim wl-copy wl-paste xdotool xclip ffmpeg tesseract mpv gpu-screen-recorder pw-record parec pactl
   v4l2-ctl notify-send gdbus busctl 7z jq satty. Not installed: wf-recorder, ydotool, wtype, sway, weston. Prefer **native C# (D-Bus / P/Invoke to libX11, libwayland not required)**
   over shelling out when practical; shelling out to the tools above is acceptable where it is the robust option, but check they exist and degrade gracefully with a clear message.
   D-Bus from C#: use `Tmds.DBus.Protocol` (add to `Directory.Packages.props`).
@@ -131,7 +131,7 @@ Main window, application settings, task settings, hotkey settings, uploader conf
 Also the browser extension native-messaging host (`ShareX.NativeMessagingHost`, manifest locations for Firefox/Chromium on Linux).
 
 ### WP7 — Packaging, CLI & docs (`packaging/`, `README.md`, `docs/`)
-`PKGBUILD` (Arch/CachyOS, builds from source with `dotnet publish`, optional deps listed: ffmpeg, grim, slurp, wl-clipboard, tesseract, gpu-screen-recorder, xdg-desktop-portal-*), a Flatpak manifest draft, `.desktop` + icons (hicolor, from `ShareX_Icon.ico`/SVG), AppStream metainfo, MIME xml, `sharex` wrapper script, install script for `~/.local` (`scripts/linux/install-user.sh`, idempotent, no sudo), Hyprland/sway/KDE/GNOME keybinding examples,
+`PKGBUILD` (Arch/CachyOS, builds from source with `dotnet publish`, optional deps listed: ffmpeg, grim, wl-clipboard, tesseract, gpu-screen-recorder, xdg-desktop-portal-*), a Flatpak manifest draft, `.desktop` + icons (hicolor, from `ShareX_Icon.ico`/SVG), AppStream metainfo, MIME xml, `sharex` wrapper script, install script for `~/.local` (`scripts/linux/install-user.sh`, idempotent, no sudo), Hyprland/sway/KDE/GNOME keybinding examples,
 Linux README with feature support matrix by session type (what works on Hyprland/sway/GNOME/KDE/X11), troubleshooting (portals, PipeWire, ffmpeg), self-contained single-file `dotnet publish -r linux-x64` profile that actually starts.
 
 ## Integration protocol

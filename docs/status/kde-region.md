@@ -5,7 +5,7 @@
 * Real KDE hardware, portal raster layout on mixed-DPI monitors and KWin overlay placement: untested.
 
 * X11 overlay sizing: desktop bounds are physical pixels, so divide by Avalonia RenderScaling; Wayland bounds remain logical. Hardware verification pending.
-* Region selection policy: fixture verified. KDE ignores saved ActiveMonitorMode for region capture. Wayland defaults to installed slurp; X11 and explicit overlay use full-desktop KWin placement. Doctor prints the same policy decision.
+* Region selection policy: fixture verified. KDE ignores saved ActiveMonitorMode for region capture. Every KDE session (Wayland and X11) uses the ShareX overlay with full-desktop KWin placement; if placement cannot be verified, ShareX logs it and continues with the plain overlay window. Doctor prints the same policy decision.
 * KWin placement and cursor: fake verified, not hardware verified. Temporary D-Bus scripts scope changes to the unique capture caption, retry and measure actual geometry, and reject persistent single-monitor placement. Wayland cursor comes from workspace.cursorPos, with full-desktop capture on scripting failure. No stale XQueryPointer is used on KDE Wayland.
 * D-Bus integration: verified on a private dbus-run-session with fake org.kde.KWin; loadScript/run/Result/unloadScript and temporary file cleanup, including denial paths. No windows opened.
 * Validation: scripts/linux/build.sh; dotnet run --project tests/ShareX.Compositor.Tests; dbus-run-session -- env SHAREX_TEST_PRIVATE_BUS=1 DISPLAY= WAYLAND_DISPLAY= dotnet run --project tests/ShareX.Compositor.Tests --no-build -- --fake-kwin.
@@ -22,7 +22,6 @@ Certain code findings:
 * KWin's old layers.cpp comment claims keep-above is above docks, but Plasma 6.5 `Window::belongsToLayer()` places docks and keep-above windows in `AboveLayer`. Thus `keepAbove` alone does not guarantee coverage. Placement now explicitly calls `workspace.raiseWindow(w)` and verifies that no visible intersecting dock follows the overlay in `workspace.stackingOrder`. `layer` is read-only; it is not assigned. Fullscreen remains false to avoid a compositor-selected single-output rectangle. Skip-taskbar/pager/switcher are set on the uniquely titled disposable overlay only.
 * No panels, persistent rules, other windows or workareas are modified. Closing the transient overlay removes its window state (including on placement failure); every request still unloads its script and deletes its private file. No restoration of panel state is needed.
 * KScreen output geometry and portal crops use full bounds, including the top strip, independent of panel reservations. `LayerShellInsets.TopInset` only moves toolbar controls and defaults to zero on KDE; it does not crop or translate the frozen image. A synthetic fixture pairs KScreen output data with KWin workarea/panel metadata for a 44px top reservation (this is not a claim that kscreen-doctor emits workareas). Full bounds and portal pixels at rows 0..43 are verified at 1x and 2x.
-* With slurp, ShareX creates no overlay and runs no placement script. These window fixes do not change slurp's rendering.
 
 The stacking omission and frame-only verification are certain defects; which, if either, caused this report remains inferred. Normal borderless placement across the full output union plus a verified raise is preferred over maximizing to a workarea or fullscreen on one output. Persistent KWin constraints are rejected rather than assumed away.
 
@@ -34,13 +33,10 @@ If the KDE user still sees a gap, request these terminal outputs from the same s
 
 ```sh
 sharex --doctor > sharex-doctor.txt 2>&1
-SHAREX_REGION_SELECTOR=overlay sharex --doctor > sharex-doctor-overlay.txt 2>&1
-SHAREX_REGION_SELECTOR=slurp sharex --doctor > sharex-doctor-slurp.txt 2>&1
 kscreen-doctor -j > kscreen.json 2>&1
 qdbus6 org.kde.KWin /KWin org.kde.KWin.supportInformation > kwin-support.txt 2>&1
-slurp -v > slurp-version.txt 2>&1
 ```
 
-Use `qdbus` in place of `qdbus6` on Plasma 5. Send the files plus ShareX version, launch method, the actual `SHAREX_REGION_SELECTOR` setting, which monitor is affected, the strip height, panel visibility mode, and whether the strip shows a live panel, live wallpaper, black/transparent area, titlebar, or only a missing toolbar. State whether the selector had ShareX's frozen preview/annotation toolbar or slurp's live selection. Doctor with an override predicts that path; it does not change an already-running instance's environment or test placement. A photo/video of the symptom is useful. These diagnostic commands open no capture windows.
+Use `qdbus` in place of `qdbus6` on Plasma 5. Send the files plus ShareX version, launch method, which monitor is affected, the strip height, panel visibility mode, and whether the strip shows a live panel, live wallpaper, black/transparent area, titlebar, or only a missing toolbar.
 
 Follow-up validation (2026-10-19): `scripts/linux/build.sh` succeeded with zero errors; compositor fixtures/fakes and private-bus `--fake-kwin` checks passed. The headless, isolated `--doctor` smoke run printed the new KDE path and unavailable-workarea fallback without a KWin service; its exit status was 1 because the isolated configuration had no Hyprland config (inherited session environment). It was not a KDE hardware test. No capture window was opened and no processes were killed by name.
