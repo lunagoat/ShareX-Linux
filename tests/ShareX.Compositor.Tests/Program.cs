@@ -17,6 +17,22 @@ void Check(bool ok, string name) { Console.WriteLine((ok ? "PASS: " : "FAIL: ") 
     Check(LinuxScreenCapture.DecodePpm(System.Text.Encoding.ASCII.GetBytes("P5\n1 1\n255\nx")) == null && LinuxScreenCapture.DecodePpm([]) == null, "ppm: other formats and empty input are rejected");
 }
 
+// ---- rendering policy: software (no GPU driver in the process) except on GNOME/X11, overridable
+{
+    string?[] saved = [Environment.GetEnvironmentVariable("SHAREX_RENDERING"), Environment.GetEnvironmentVariable("XDG_SESSION_TYPE"), Environment.GetEnvironmentVariable("XDG_CURRENT_DESKTOP"), Environment.GetEnvironmentVariable("WAYLAND_DISPLAY")];
+    bool Policy(string? rendering, string? session, string? desktop)
+    {
+        Environment.SetEnvironmentVariable("SHAREX_RENDERING", rendering); Environment.SetEnvironmentVariable("XDG_SESSION_TYPE", session);
+        Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", desktop); Environment.SetEnvironmentVariable("WAYLAND_DISPLAY", null);
+        return ShareX.AvaloniaUI.Integration.AvaloniaBootstrapper.UseSoftwareRendering();
+    }
+    Check(Policy(null, "wayland", "Hyprland") && Policy(null, "wayland", "niri") && Policy(null, "wayland", "KDE"), "rendering: software by default on non-GNOME Wayland");
+    Check(!Policy(null, "wayland", "ubuntu:GNOME") && !Policy(null, "x11", "KDE") && !Policy(null, null, null), "rendering: GPU kept on GNOME and X11 sessions");
+    Check(Policy("software", "x11", "GNOME") && !Policy("gpu", "wayland", "Hyprland"), "rendering: SHAREX_RENDERING overrides the default");
+    Environment.SetEnvironmentVariable("SHAREX_RENDERING", saved[0]); Environment.SetEnvironmentVariable("XDG_SESSION_TYPE", saved[1]);
+    Environment.SetEnvironmentVariable("XDG_CURRENT_DESKTOP", saved[2]); Environment.SetEnvironmentVariable("WAYLAND_DISPLAY", saved[3]);
+}
+
 // ---- niri outputs: a 4K panel at 1.5 scale and a 1080p monitor to its right; a disabled output has no "logical"
 const string niriOutputs = """
 {
