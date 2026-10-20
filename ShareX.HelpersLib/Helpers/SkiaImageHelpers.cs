@@ -474,7 +474,9 @@ public static partial class SkiaImageHelpers
 
     public static string ImageToBase64(SKBitmap bitmap, ImageFileFormat format)
     {
-        using MemoryStream stream = new(); bitmap.Save(stream, format); return Convert.ToBase64String(stream.ToArray());
+        using MemoryStream stream = new();
+        bitmap.Save(stream, format);
+        return Convert.ToBase64String(stream.GetBuffer(), 0, checked((int)stream.Length));
     }
 
     public static void FlipInPlace(this SKBitmap bitmap, bool horizontal, bool vertical)

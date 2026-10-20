@@ -42,7 +42,9 @@ public sealed class SkiaAnimatedImage : IDisposable
 
     public SkiaAnimatedImage(string filePath)
     {
-        data = SKData.CreateCopy(File.ReadAllBytes(filePath));
+        // Read straight into the retained native snapshot without a full managed file copy.
+        using FileStream stream = File.OpenRead(filePath);
+        data = SKData.Create(stream);
         codec = SKCodec.Create(data);
         if (codec == null)
         {
