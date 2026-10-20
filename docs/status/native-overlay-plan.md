@@ -99,8 +99,8 @@ GNOME's Mutter does not implement wlr-layer-shell, so layer surfaces are not ava
 
 | Backend | Compositors | How |
 | --- | --- | --- |
-| Layer-shell | Hyprland, niri, sway, (KDE if KWin's layer-shell proves reliable) | one overlay-layer surface per output |
-| Fullscreen windows | GNOME, and KDE if layer-shell is not reliable | one borderless fullscreen toplevel per output, placed by the compositor (KWin script on KDE; Mutter has no scripting, so test what fullscreen-per-monitor gives) |
+| Layer-shell | Hyprland, niri, sway, KDE (checked: nested KWin 6.8 advertises `zwlr_layer_shell_v1` v5 with 2 outputs; still to verify it stacks above Plasma panels) | one overlay-layer surface per output |
+| Fullscreen windows | GNOME (mutter is not installed on this machine, so untested), and KDE only if layer-shell stacking fails | one borderless fullscreen toplevel per output, placed by the compositor (KWin script on KDE; Mutter has no scripting, so test what fullscreen-per-monitor gives) |
 
 All backends share the same renderer, frame cache and input path (Option B). Only surface creation and input plumbing differ. Step 3 of the work plan must verify the KDE and GNOME rows by experiment before relying on them.
 
