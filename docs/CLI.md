@@ -33,9 +33,12 @@ These are handled by the `sharex` shell wrapper, before ShareX itself is started
 | --- | --- |
 | `-h`, `--help` | Print the short usage summary and exit. |
 | `--version` | Print the ShareX version and exit. |
+| `--doctor` | Diagnose why hotkeys or captures fail; inspects session, hotkeys, compositor key binds, logs, and displays. |
 | `--install-binds [hyprland\|hyprland-conf\|sway] [--global]` | Write ShareX key binds into your Hyprland/sway config (marked block, timestamped backup, keys you already bind are skipped, then reloads the compositor). Autodetects the compositor. Safe to repeat. |
 | `--remove-binds [...]` | Remove that block again. |
 | `--print-binds [hyprland\|hyprland-conf\|sway\|niri\|gnome\|kde] [--global]` | Print key-bind lines for *your* configured hotkeys (default `hyprland`, the Lua syntax; `niri` prints KDL for `config.kdl`, `gnome` prints a `gsettings` script to pipe into `sh`, `kde` explains the System Settings route). `--global` prints `hl.dsp.global("sharex:<Action>")` binds for the portal shortcuts instead of `sharex -<Action>` commands. Needs no display. |
+
+The `--doctor` command includes a **Displays** diagnostic section designed for troubleshooting multi-monitor issues. It prints the desktop session environment, display geometry and scaling as ShareX detects them alongside cross-checking views (`xrandr --listmonitors`, `kscreen-doctor`, `wlr-randr`), pointer coordinates from both X11 and the compositor, the active region selector and overlay placement backend, and automated verdict warnings for coordinate or monitor layout mismatches.
 
 The wrapper also translates file-manager/MIME invocations: a `.sxcu` file becomes
 `-CustomUploader <file>` and a `.sxie` file becomes `-ImageEffect <file>`, which is what
