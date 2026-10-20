@@ -1,6 +1,6 @@
 # Native overlay: plan (DRAFT, edit me)
 
-Status: approved by the user (Option B, benchmark first). Step 1 completed 2026-10-20: [headless CPU benchmark results](native-overlay-bench.md). Step 2 renderer-only C prototype implemented in `ShareX.OverlayRender` (see the C results in the benchmark report); no native surface host, input/Esc path or compositor testing is included. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
+Status: approved by the user (Option B, benchmark first). Step 1 completed 2026-10-20: [headless CPU benchmark results](native-overlay-bench.md). Step 2 renderer-only C prototype implemented in `ShareX.OverlayRender` (see the C results in the benchmark report); Step 4b headless Avalonia annotation layer implemented in `ShareX.OverlayAvaloniaLayer` and benchmarked across all 4 layouts (all 20 targets PASS; see benchmark report); no native surface host, input/Esc path or compositor testing is included. The first attempt is archived at tag `backup/native-overlay-2026-10-19` (never pushed); we are starting over with this spec.
 
 ## Goal
 

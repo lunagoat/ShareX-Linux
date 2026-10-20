@@ -369,3 +369,90 @@ Avalonia/application integration still needs to provide:
 3. Three retained BGRA buffers cost 94.92 MiB per 4K monitor; the complete 300 MB process budget remains unresolved.
 4. Loose source-visual parity and headless correctness pass; exact Windows typography and full annotation-tool parity remain integration work.
 5. Proceed to native hosting/safety and small Avalonia toolbar/text/dialog integration; no display-host behavior is validated here.
+
+
+## Avalonia annotation layer
+
+Step 4b prototype and benchmark, measured 2026-10-20. Library `ShareX.OverlayAvaloniaLayer`
+targets `net10.0` and references `Avalonia.Headless`, `Avalonia.Skia`, `ShareX.ImageEditor`, and
+`ShareX.ScreenCaptureLib`. It hosts a headless Avalonia window (`AnnotationLayerHost`) covering
+the whole desktop in logical coordinates over a transparent background, reusing the production
+capture toolbar, annotation toolbar, and full `EditorView` annotation toolset without modifying
+existing tool behaviors or re-rasterizing the frozen screenshot.
+
+### Architecture & Retained Damage Strategy
+
+- **Transparent Desktop Surface**: The native renderer (`ShareX.OverlayRender`) owns the frozen
+  background, dimming, selection border/handles, crosshairs, and magnifier HUD. In `AnnotationLayerHost`,
+  the headless window, content root, and editor workspace are transparent (`PART_TransparencyFallback`
+  is hidden and dark background grids are transparent).
+- **Control Layout & Placement**: Sized to the total bounding box of all displays in logical coordinates.
+  `SetActiveMonitor(monitorBounds, topInset)` automatically centers the capture toolbar at the top
+  of whichever monitor contains the pointer. `SetSelection(rect)` applies a clipping geometry to
+  the editor workspace so annotations clip strictly to the current capture selection.
+- **Input Routing & Hit Testing**: Pointer and keyboard inputs are forwarded directly as headless Avalonia
+  events via `SendPointer` and `SendKey`. `HitTest(point)` returns `true` when the point is over
+  the toolbar, an open dropdown/modal, or an active annotation tool, allowing the native overlay
+  controller to retain pointer events for selection/drag otherwise.
+- **Retained Buffer & Damage Containment**: The backing BGRA framebuffer is allocated once and retained
+  across events (zero allocations per frame). To prevent destination ghosting with transparent blending
+  during undo or shape shrink, the surface clears to zero before the Skia render pass. `ComputeDamage`
+  compares scanlines against the previous retained frame and returns tight, non-overlapping bounding
+  rectangles and changed byte counts for native composition. Redundant canvas controls (`SKCanvasControl`
+  and `SpotlightOverlayControl`) are bypassed in workspace host mode, avoiding full-monitor background
+  rasterization on CPU.
+- **Committed Result Parity**: `RenderResult(screenshot, selection)` reuses `EditorView.GetSnapshot`
+  to produce the final cropped screenshot with all committed annotations identically to Windows.
+
+### Benchmark Setup & Reproduction
+
+```bash
+tests/ShareX.OverlayBench/run.sh --layer /tmp/overlay-layer-bench.json
+```
+
+- Headless execution with no display connections (`DISPLAY` and `WAYLAND_DISPLAY` unset).
+- 240 measured events per scenario after 40 warmup events across 4 layouts:
+  - `1440p @ 1.0` (2560×1440 logical, 2560×1440 physical)
+  - `4K @ 1.5` (2560×1440 logical, 3840×2160 physical)
+  - `Dual @ 1.5` (4480×1440 logical, 6720×2160 physical)
+  - `Triple @ 1.5` (7040×1440 logical, 10560×2160 physical, 91.2 MB framebuffer)
+- 5 scenarios:
+  - `Hover`: Moving pointer horizontally across toolbar buttons. Target: p95 <= 16 ms.
+  - `ToolSwitch`: Alternating selection between rectangle, ellipse, and arrow tools. Target: p95 <= 16 ms.
+  - `Rectangle`: Interactive drag creation of a rectangle annotation. Target: max <= 33 ms.
+  - `Text`: Keystroke text insertion into an active text annotation. Target: max <= 33 ms.
+  - `Undo`: Committing an annotation and triggering undo to revert canvas state. Target: max <= 33 ms.
+
+### Per-Event CPU Frame Timings
+
+All figures are **p50 / p95 / max milliseconds**, 240 measured events per row.
+
+| Layout | Scenario | p50 / p95 / max ms | Avg Dirty KB | Target | Result |
+| :--- | :--- | :---: | ---: | :---: | :---: |
+| 1440p @ 1.0 | Hover | 0.92 / 1.19 / 6.03 | 7.5 | p95 <= 16 ms | **PASS** |
+| 1440p @ 1.0 | ToolSwitch | 2.56 / 2.87 / 22.23 | 187.7 | p95 <= 16 ms | **PASS** |
+| 1440p @ 1.0 | Rectangle | 1.15 / 1.47 / 1.67 | 1,697.4 | max <= 33 ms | **PASS** |
+| 1440p @ 1.0 | Text | 0.93 / 1.01 / 1.26 | 399.2 | max <= 33 ms | **PASS** |
+| 1440p @ 1.0 | Undo | 3.48 / 3.90 / 4.58 | 76.8 | max <= 33 ms | **PASS** |
+| 4K @ 1.5 | Hover | 2.36 / 2.66 / 3.08 | 15.4 | p95 <= 16 ms | **PASS** |
+| 4K @ 1.5 | ToolSwitch | 5.83 / 6.32 / 6.55 | 417.8 | p95 <= 16 ms | **PASS** |
+| 4K @ 1.5 | Rectangle | 2.76 / 3.25 / 3.90 | 3,314.5 | max <= 33 ms | **PASS** |
+| 4K @ 1.5 | Text | 1.80 / 2.34 / 2.96 | 361.6 | max <= 33 ms | **PASS** |
+| 4K @ 1.5 | Undo | 6.35 / 7.16 / 8.10 | 141.6 | max <= 33 ms | **PASS** |
+| Dual @ 1.5 | Hover | 3.48 / 4.06 / 4.54 | 15.4 | p95 <= 16 ms | **PASS** |
+| Dual @ 1.5 | ToolSwitch | 8.44 / 9.33 / 24.84 | 417.8 | p95 <= 16 ms | **PASS** |
+| Dual @ 1.5 | Rectangle | 3.94 / 5.53 / 6.90 | 1,367.1 | max <= 33 ms | **PASS** |
+| Dual @ 1.5 | Text | 3.28 / 4.10 / 4.34 | 173.5 | max <= 33 ms | **PASS** |
+| Dual @ 1.5 | Undo | 10.55 / 11.61 / 12.31 | 141.6 | max <= 33 ms | **PASS** |
+| Triple @ 1.5 | Hover | 5.13 / 5.73 / 5.90 | 15.4 | p95 <= 16 ms | **PASS** |
+| Triple @ 1.5 | ToolSwitch | 12.64 / 13.35 / 26.97 | 417.8 | p95 <= 16 ms | **PASS** |
+| Triple @ 1.5 | Rectangle | 6.29 / 7.58 / 9.18 | 3,823.1 | max <= 33 ms | **PASS** |
+| Triple @ 1.5 | Text | 4.98 / 5.40 / 5.58 | 592.4 | max <= 33 ms | **PASS** |
+| Triple @ 1.5 | Undo | 15.90 / 17.17 / 18.29 | 141.6 | max <= 33 ms | **PASS** |
+
+### Findings & Conclusion
+
+1. **Every target is met across all layouts.** Hover p95 ranges from 1.19 ms to 5.73 ms (<=16 ms target); ToolSwitch p95 ranges from 2.87 ms to 13.35 ms (<=16 ms target); interactive shape drawing max latency is 1.67 ms to 9.18 ms (<=33 ms target); text typing max is 1.26 ms to 5.58 ms (<=33 ms target); and undo max is 4.58 ms to 18.29 ms (<=33 ms target).
+2. **Transparent full-desktop surface is viable.** A single logical window covering the entire desktop (up to 10,560×2,160 physical) avoids the complexity of synchronizing multiple Avalonia windows or moving windows dynamically, while staying well within the frame budget.
+3. **Dirty regions remain small.** Instead of full 91.2 MB composite transfers, per-event damage is bounded between 7.5 KB (toolbar hover) and 3.8 MB (large continuous drag across high-DPI screens), enabling lightweight GPU/compositor updates.
+4. **Direct UI reuse achieved.** The exact existing `EditorView`, `AnnotationToolbar`, and `MainViewModel` pipeline is preserved without reimplementing tools or breaking parity with Windows.

@@ -67,6 +67,7 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayHost.Tests", "tests\ShareX.OverlayHost.Tests\ShareX.OverlayHost.Tests.csproj", "{702A484E-5306-4FFF-9D2F-DDA2F1535452}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayHost.Smoke", "tests\ShareX.OverlayHost.Smoke\ShareX.OverlayHost.Smoke.csproj", "{CA26E661-E8DF-4F86-A238-ADC1FF861A89}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ShareX.OverlayAvaloniaLayer", "ShareX.OverlayAvaloniaLayer\ShareX.OverlayAvaloniaLayer.csproj", "{82DEFF1D-1C3E-410E-816F-78097A03C9FC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -1088,6 +1089,46 @@ Global
 		{CA26E661-E8DF-4F86-A238-ADC1FF861A89}.Steam|Any CPU.Build.0 = Debug|Any CPU
 		{CA26E661-E8DF-4F86-A238-ADC1FF861A89}.Steam|x86.ActiveCfg = Debug|Any CPU
 		{CA26E661-E8DF-4F86-A238-ADC1FF861A89}.Steam|x86.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|ARM64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|ARM64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|x64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Debug|x86.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|ARM64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|ARM64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|x64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|x64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|Any CPU.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|Any CPU.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|x86.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStore|x86.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|ARM64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|ARM64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|x64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|x64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|Any CPU.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|Any CPU.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|x86.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.MicrosoftStoreDebug|x86.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|ARM64.ActiveCfg = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|ARM64.Build.0 = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|x64.ActiveCfg = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|x64.Build.0 = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|x86.ActiveCfg = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Release|x86.Build.0 = Release|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|ARM64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|ARM64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x64.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x64.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|Any CPU.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|Any CPU.Build.0 = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x86.ActiveCfg = Debug|Any CPU
+		{82DEFF1D-1C3E-410E-816F-78097A03C9FC}.Steam|x86.Build.0 = Debug|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

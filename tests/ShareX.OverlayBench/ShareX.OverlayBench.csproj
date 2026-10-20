@@ -8,6 +8,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia.Headless" />
+    <ProjectReference Include="../../ShareX.OverlayAvaloniaLayer/ShareX.OverlayAvaloniaLayer.csproj" />
     <ProjectReference Include="../../ShareX.OverlayRender/ShareX.OverlayRender.csproj" />
     <ProjectReference Include="../../ShareX.ScreenCaptureLib/ShareX.ScreenCaptureLib.csproj" />
   </ItemGroup>
