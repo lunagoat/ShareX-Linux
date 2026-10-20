@@ -31,7 +31,24 @@ unit tests, but nobody has run it on the real desktop yet. **Hyprland is tested 
   Recording asks which screen to share each time (the portal's picker).
 * **X11 sessions:** nothing special; `xclip`/`xdotool` help.
 
-## Region selection and ShareX's own overlay on niri and sway
+## Region selection: the native overlay
+
+On every compositor that offers **wlr-layer-shell** (Hyprland, sway, niri, KDE Plasma) region capture uses ShareX's **native overlay**: a helper
+process (`sharex --overlay-helper`) draws the frozen screenshot, dim, selection, magnifier and ShareX's own toolbar and annotation tools as
+layer-shell surfaces, one per monitor, so one selection can span every monitor (mixed scales included) on any desktop. It shows in `sharex --doctor`
+as "region selection: native layer-shell overlay".
+
+* Esc cancels at any time, also if the overlay's drawing thread is stuck. After 45 seconds without input the overlay closes by itself.
+* If the helper cannot start, crashes or stops answering, ShareX logs why and falls back to the window overlay described below.
+* `SHAREX_OVERLAY=window` forces the window overlay, `SHAREX_OVERLAY=native` forces the native one.
+* **GNOME** has no layer-shell, so it keeps the window overlay for now.
+* Like the Windows version, the selector does not draw over fullscreen games; the fullscreen and active-window hotkeys work there.
+* Tested: nested Hyprland (two outputs, 1.0x and 1.6x, automated end-to-end test) and real Hyprland desktops (3 monitors with a 1.5x one; a laptop
+  at 1.25x). Not yet tested on real KDE, niri or sway.
+
+## The window overlay (GNOME, and the fallback)
+
+### Window overlay placement on niri and sway
 
 ShareX's region capture, colour picker and recording UIs are ordinary X11 windows laid over the screen, so each compositor has to be
 told where to put them. Hyprland, sway and niri are all handled through their IPC (tested in nested niri 26.04 and sway 1.12 sessions):
