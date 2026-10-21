@@ -26,6 +26,7 @@
 using Microsoft.VisualBasic.FileIO;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -317,20 +318,26 @@ namespace ShareX.HelpersLib
                 string folderPath = Path.GetDirectoryName(filePath);
                 string fileName = Path.GetFileNameWithoutExtension(filePath);
                 string fileExtension = Path.GetExtension(filePath);
-                int number = 1;
+                long number = 1;
 
                 Match regex = Regex.Match(fileName, @"^(.+) \((\d+)\)$");
 
-                if (regex.Success)
+                if (regex.Success && long.TryParse(regex.Groups[2].Value, NumberStyles.None, CultureInfo.InvariantCulture, out long suffix) && suffix < long.MaxValue)
                 {
                     fileName = regex.Groups[1].Value;
-                    number = int.Parse(regex.Groups[2].Value);
+                    number = suffix;
                 }
 
                 do
                 {
+                    if (number == long.MaxValue)
+                    {
+                        fileName = Path.GetFileNameWithoutExtension(filePath);
+                        number = 1;
+                    }
+
                     number++;
-                    string newFileName = $"{fileName} ({number}){fileExtension}";
+                    string newFileName = $"{fileName} ({number.ToString(CultureInfo.InvariantCulture)}){fileExtension}";
                     filePath = Path.Combine(folderPath, newFileName);
                 }
                 while (File.Exists(filePath));

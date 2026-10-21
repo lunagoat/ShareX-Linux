@@ -730,7 +730,10 @@ namespace ShareX.UploadersLib
             string errorText = sb.ToString();
             Errors ??= new UploaderErrorManager();
             Errors.Add(errorText);
-            DebugHelper.WriteLine("Error:\r\n" + errorText);
+            // URLs, response headers/bodies and exception messages can contain credentials.
+            // Keep the full details in Errors for the error UI, never in the persistent log.
+            string status = responseInfo == null ? "" : $", Status code: {(int)responseInfo.StatusCode}";
+            DebugHelper.WriteLine($"HTTP request failed. Exception: {exception.GetType().Name}{status}");
             return responseInfo?.ResponseText;
         }
 
