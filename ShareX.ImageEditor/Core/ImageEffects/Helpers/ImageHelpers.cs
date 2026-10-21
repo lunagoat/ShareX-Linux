@@ -39,10 +39,10 @@ public static class ImageHelpers
         if (bitmap is null) throw new ArgumentNullException(nameof(bitmap));
 
         SKRectI bounded = new SKRectI(
-            Math.Max(0, rect.Left),
-            Math.Max(0, rect.Top),
-            Math.Min(bitmap.Width, rect.Right),
-            Math.Min(bitmap.Height, rect.Bottom));
+            Math.Clamp(rect.Left, 0, bitmap.Width),
+            Math.Clamp(rect.Top, 0, bitmap.Height),
+            Math.Clamp(rect.Right, 0, bitmap.Width),
+            Math.Clamp(rect.Bottom, 0, bitmap.Height));
 
         if (bounded.Width <= 0 || bounded.Height <= 0)
         {
@@ -55,7 +55,11 @@ public static class ImageHelpers
 
     public static SKBitmap Crop(SKBitmap bitmap, int x, int y, int width, int height)
     {
-        return Crop(bitmap, new SKRectI(x, y, x + width, y + height));
+        // Add in 64 bits before clipping so large positive extents cannot wrap
+        // into negative coordinates or an enormous allocation.
+        int right = (int)Math.Clamp((long)x + width, int.MinValue, int.MaxValue);
+        int bottom = (int)Math.Clamp((long)y + height, int.MinValue, int.MaxValue);
+        return Crop(bitmap, new SKRectI(x, y, right, bottom));
     }
 
     /// <summary>
@@ -149,7 +153,11 @@ public static class ImageHelpers
         if (bitmap is null) throw new ArgumentNullException(nameof(bitmap));
         if (string.IsNullOrWhiteSpace(filePath)) throw new ArgumentException("File path cannot be empty.", nameof(filePath));
 
-        Directory.CreateDirectory(Path.GetDirectoryName(filePath) ?? string.Empty);
+        string? directory = Path.GetDirectoryName(filePath);
+        if (!string.IsNullOrEmpty(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
 
         SKEncodedImageFormat format = GetEncodedFormat(filePath);
         using SKImage image = SKImage.FromBitmap(bitmap);
@@ -281,23 +289,39 @@ public static class ImageHelpers
     /// </summary>
     internal static SKRectI? FindContentBounds(SKBitmap source, SKColor background, int tolerance)
     {
-        int minX = source.Width, minY = source.Height, maxX = -1, maxY = -1;
-
-        for (int y = 0; y < source.Height; y++)
+        // Only the outermost content pixels determine the crop. Scan inward
+        // from each edge and stop at the first non-background pixel.
+        bool RowMatches(int y)
         {
             for (int x = 0; x < source.Width; x++)
             {
-                if (!ColorsMatch(source.GetPixel(x, y), background, tolerance))
-                {
-                    minX = Math.Min(minX, x);
-                    minY = Math.Min(minY, y);
-                    maxX = Math.Max(maxX, x);
-                    maxY = Math.Max(maxY, y);
-                }
+                if (!ColorsMatch(source.GetPixel(x, y), background, tolerance)) return false;
             }
+            return true;
         }
 
-        return maxX < 0 ? null : new SKRectI(minX, minY, maxX + 1, maxY + 1);
+        bool ColumnMatches(int x, int top, int bottom)
+        {
+            for (int y = top; y <= bottom; y++)
+            {
+                if (!ColorsMatch(source.GetPixel(x, y), background, tolerance)) return false;
+            }
+            return true;
+        }
+
+        int minY = 0;
+        while (minY < source.Height && RowMatches(minY)) minY++;
+        if (minY == source.Height) return null;
+
+        int maxY = source.Height - 1;
+        while (maxY > minY && RowMatches(maxY)) maxY--;
+
+        int minX = 0;
+        while (minX < source.Width && ColumnMatches(minX, minY, maxY)) minX++;
+        int maxX = source.Width - 1;
+        while (maxX > minX && ColumnMatches(maxX, minY, maxY)) maxX--;
+
+        return new SKRectI(minX, minY, maxX + 1, maxY + 1);
     }
 
     internal static SKBitmap CropToContentBounds(SKBitmap source, SKRectI? bounds)

@@ -41,20 +41,36 @@ namespace ShareX.ImageEffectsLib
         {
             SKBitmap result = (SKBitmap)bmp.Copy();
 
-            if (Effects != null && Effects.Count > 0)
+            try
             {
-                foreach (ImageEffect effect in Effects.Where(x => x.Enabled))
+                if (Effects != null && Effects.Count > 0)
                 {
-                    result = effect.Apply(result);
-
-                    if (result == null)
+                    foreach (ImageEffect effect in Effects.Where(x => x.Enabled))
                     {
-                        break;
+                        SKBitmap previous = result;
+                        result = effect.Apply(previous);
+
+                        // Some effects consume their input, others replace it or edit
+                        // it in place. Dispose is idempotent, but keep in-place results.
+                        if (!ReferenceEquals(previous, result))
+                        {
+                            previous.Dispose();
+                        }
+
+                        if (result == null)
+                        {
+                            break;
+                        }
                     }
                 }
-            }
 
-            return result;
+                return result;
+            }
+            catch
+            {
+                result?.Dispose();
+                throw;
+            }
         }
 
         public override string ToString()
