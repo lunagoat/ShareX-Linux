@@ -1,0 +1,40 @@
+# Editor bug and performance audit
+
+All execution used console or Avalonia headless tests. No display, release script, process-name control, or non-NuGet network access was used. Git commits are blocked: `.git/index.lock` cannot be created (read-only filesystem). Changes are left uncommitted.
+
+## Changes
+
+1. **Auto-crop boundary scanning** — `ShareX.ImageEditor/Core/ImageEffects/Helpers/ImageHelpers.cs`, `tests/ShareX.Editor.Perf.Tests/`. Scan inward from each edge, stopping at the outermost content instead of reading every pixel. Exact comparisons still use Skia's color conversion and the existing alpha/tolerance rules. 450 deterministic cases cover BGRA/RGBA/RGB565, translucent pixels, uniform images, edge content, and tolerances -1/0/1/30/255. Serialized Release Stopwatch measurements (3840×2160, two warmups, eight iterations, complete auto-crop including output allocation): dense **86.694 → 1.022 ms/op**; 100px border **85.337 → 15.119 ms/op**; uniform **83.269 → 80.994 ms/op**. Uniform remains O(width×height); no parallel scheduling or extra pixel array is introduced.
+2. **Relative-filename export** — `ImageHelpers.cs`, perf test console. `SaveBitmap(source, "image.png")` previously threw `ArgumentException` by trying to create an empty directory. Only create a parent directory when present. Tests decode both bare and nested filenames and check dimensions/color. Correctness fix; no timing claim.
+3. **Preset intermediate bitmap disposal** — `ShareX.ImageEffectsLib/ImageEffectPreset.cs`, perf test console. Release replaced inputs and null-result inputs, and release the current intermediate when an effect throws. Preserve in-place outputs and the caller's source. Existing effects mix input-consuming operations with replacement operations (for example `Manipulations/Crop.cs` and `Filters/RGBSplit.cs`); SKBitmap disposal is idempotent, so central cleanup supports both. Regression tests retain input references and inspect native handles for replacement, in-place, already-consumed, null, and exception paths. Three replacement effects at 1920×1080 previously left **3 live inputs / 24,883,200 pixel bytes per call**, now **0**. Ten-iteration Stopwatch run: **67.127 → 69.472 ms/op**; this fixes native resource retention, not throughput. Test baseline explicitly cleans leaked inputs after timing to bound memory.
+4. **Overflow-safe crop bounds** — `ImageHelpers.cs`, perf test console. Add extents in 64 bits and clamp each rectangle edge to the bitmap bounds before subtracting. Concrete failure: `Crop(new SKBitmap(4, 4), 1, 1, int.MaxValue, int.MaxValue)` previously attempted an enormous allocation and threw; it now returns the intended 3×3 intersection. Tests also cover inverted extreme coordinates, spanning extreme coordinates, and negative dimensions. Correctness fix; no timing claim.
+5. **Rejected cutout preserves undo/redo** — `ShareX.ImageEditor/Core/Editor/EditorCore.cs`, perf test console. Validate whole-image removal before creating a canvas memento. Repro: resize 4×4 to 2×2, undo, reject `CutOut(0, 4, true)`, redo. Previously rejection cleared redo and created a spurious undo entry; now both stacks and the redo result are preserved. Also avoids the unnecessary source/annotation snapshot on that rejected path; no standalone performance claim.
+
+## Findings left unchanged
+
+- **Destructive history copies** — `Core/History/EditorHistory.cs` and `EditorCore.RestoreState`: destructive operations copy the source into a memento, and restoring copies it again. Ordinary annotation history already omits source copies. Destructive history is bounded to five canvas mementos; five 4K BGRA snapshots alone contain about 166 MB. Shared immutable storage needs an audit of all mutation and ownership paths; changing that contract was not safe as a local fix.
+- **Image annotation snapshots** — `Core/Annotations/Shapes/ImageAnnotation.cs::Clone` deep-copies embedded image pixels for every annotation snapshot. Images are mutable and independently disposed, so sharing them requires a reference-counted ownership change. No unproven sharing optimization applied.
+- **Delayed annotation cleanup** — `EditorMemento.Dispose` clears its annotation list without disposing elements because restoration transfers them; `EditorCore.RestoreState` and `ClearAll` also clear old lists. Abandoned native bitmap wrappers can therefore await finalization. Explicitly distinguishing restored/transferred snapshots from discarded snapshots needs broader lifecycle tests before changing disposal.
+- **Preview duplication** — `ImageEffectsLib/Presentation/ImageEffectsViewModel.cs` copies the source for the background task, then `ImageEffectPreset.ApplyEffects` copies again. Removing the outer copy requires protecting the source against disposal while an async preview is running. The present copy is a lifetime boundary; no unsafe removal applied.
+- **Region effect fractional bounds** — blur/pixelate/highlight/magnify convert floating width/height and rectangle edges separately. Fractional bounds can yield different integer spans (e.g. left 0.8, right 2.2); changing this needs matching interaction-cache, rotated-rendering and export parity tests. Candidate only; not claimed as a reproduced visual bug.
+- **Managed RGB split loop** — `ImageEffectsLib/Filters/RGBSplit.cs` reads three shifted pixels and writes each result in nested loops. Parallelization/filter replacement requires alpha, edge-clamping and pixel-format parity benchmarks; no performance claim without those measurements.
+- **Other helper size arithmetic** — `ImageHelpers.ResizeCanvas` adds padding with unchecked int arithmetic, and `ImageHelpers.CutOut` assumes in-range endpoints. The editor validates cutout coordinates, while pathological padding still needs validation across both the editor helper and the separate canvas effect. Left for consistent API/parameter validation; no user-facing failing flow was established in this audit.
+- **Retained framebuffer size arithmetic** — `ShareX.OverlayAvaloniaLayer/RetainedHeadlessFrames.cs::LockCore` computes `width * 4` as int before native allocation. Potential overflow for hostile enormous surface sizes; not reproduced through a real headless surface request. Input validation and allocation-failure/lifecycle handling should be addressed together.
+
+## Validation
+
+Run the added console with `source scripts/linux/env.sh; dotnet run --project tests/ShareX.Editor.Perf.Tests -c Release`. Timing is machine-specific; assertions check correctness and native handle ownership, not timing thresholds. Later end-to-end runs varied; the final run measured dense 0.840 ms, border 15.621 ms, uniform 75.388 ms, and preset 63.651 ms. Other runs reached 91.308 ms for uniform and 92.353 ms for preset, so those timings should not be interpreted as reliable speedups.
+
+Final validation (all passed):
+
+- `dotnet build ShareX.sln -c Release`: **0 errors**, 50 existing platform warnings.
+- `tests/ShareX.OverlayHost.Tests/run.sh`: **121 checks**, no display/window APIs.
+- `tests/ShareX.OverlayRender.Tests/run.sh`: retained/full-redraw equivalence, damage containment, mixed scales, pixel/HUD/shape/external-bitmap/no-op checks.
+- `tests/ShareX.OverlayIntegration.Tests/run.sh --headless`: all checks passed, including helper termination and fallback diagnostics.
+- `dotnet run --project tests/ShareX.Compositor.Tests -c Release`: **0 failures**.
+- `dotnet run --project tests/ShareX.Editor.Tests -c Release`: **0 failures**, including tools, history, image operations, and PNG/JPEG/WebP round trips.
+- `dotnet run --project tests/ShareX.Effects.Tests -c Release`: **51 effects passed, 0 failures**.
+- `dotnet run --project tests/ShareX.Editor.Perf.Tests -c Release`: 450 auto-crop reference comparisons plus export, bitmap ownership, overflow and rejected-cutout regressions passed.
+- `git diff --check`: clean.
+
+An initial overlapping build failed to resolve Avalonia's generated `!AvaloniaResources` type. The serialized full build and final validation above succeeded. All final verification was serialized to avoid shared-output build races.

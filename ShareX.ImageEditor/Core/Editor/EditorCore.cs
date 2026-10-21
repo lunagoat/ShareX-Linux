@@ -534,13 +534,12 @@ public class EditorCore : IDisposable
             return false;
         }
 
-        _history.CreateCanvasMemento();
-
         if (endPos - startPos >= imageLength)
         {
             return false;
         }
 
+        _history.CreateCanvasMemento();
         ApplyCutOut(SourceImage, startPos, endPos, isVertical);
 
         AnnotationsRestored?.Invoke();
