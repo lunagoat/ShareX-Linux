@@ -27,6 +27,7 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace ShareX.HelpersLib
@@ -60,6 +61,8 @@ namespace ShareX.HelpersLib
         }
 
         private const int bufferSize = 32768;
+        private readonly object downloadLock = new object();
+        private CancellationTokenSource downloadCancellation;
 
         public FileDownloader()
         {
@@ -73,27 +76,54 @@ namespace ShareX.HelpersLib
 
         public async Task<bool> StartDownload()
         {
-            if (!IsDownloading && !string.IsNullOrEmpty(URL))
+            CancellationTokenSource cancellation;
+
+            lock (downloadLock)
             {
+                if (IsDownloading || string.IsNullOrEmpty(URL))
+                {
+                    return false;
+                }
+
                 IsDownloading = true;
                 IsCanceled = false;
                 FileSize = -1;
                 DownloadedSize = 0;
                 DownloadSpeed = 0;
-
-                return await DoWork();
+                cancellation = new CancellationTokenSource();
+                downloadCancellation = cancellation;
             }
 
-            return false;
+            try
+            {
+                return await DoWork(cancellation.Token);
+            }
+            finally
+            {
+                lock (downloadLock)
+                {
+                    downloadCancellation = null;
+                    IsDownloading = false;
+                    cancellation.Dispose();
+                }
+            }
         }
 
         public void StopDownload()
         {
-            IsCanceled = true;
+            lock (downloadLock)
+            {
+                if (IsDownloading)
+                {
+                    IsCanceled = true;
+                    downloadCancellation.Cancel();
+                }
+            }
         }
 
-        private async Task<bool> DoWork()
+        private async Task<bool> DoWork(CancellationToken cancellationToken)
         {
+            bool fileCreated = false;
             try
             {
                 HttpClient client = HttpClientFactory.Create();
@@ -105,7 +135,7 @@ namespace ShareX.HelpersLib
                         requestMessage.Headers.Accept.ParseAdd(AcceptHeader);
                     }
 
-                    using (HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead))
+                    using (HttpResponseMessage responseMessage = await client.SendAsync(requestMessage, HttpCompletionOption.ResponseHeadersRead, cancellationToken))
                     {
                         responseMessage.EnsureSuccessStatusCode();
 
@@ -113,69 +143,65 @@ namespace ShareX.HelpersLib
 
                         FileSizeReceived?.Invoke();
 
-                        if (FileSize > 0)
+                        Stopwatch timer = Stopwatch.StartNew();
+                        Stopwatch progressEventTimer = Stopwatch.StartNew();
+                        long speedTest = 0;
+                        byte[] buffer = new byte[bufferSize];
+
+                        cancellationToken.ThrowIfCancellationRequested();
+
+                        using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync(cancellationToken))
+                        using (FileStream fileStream = new FileStream(DownloadLocation, FileMode.Create, FileAccess.Write, FileShare.Read))
                         {
-                            Stopwatch timer = new Stopwatch();
-                            Stopwatch progressEventTimer = new Stopwatch();
-                            long speedTest = 0;
+                            fileCreated = true;
 
-                            byte[] buffer = new byte[(int)Math.Min(bufferSize, FileSize)];
-                            int bytesRead;
-
-                            using (Stream responseStream = await responseMessage.Content.ReadAsStreamAsync())
-                            using (FileStream fileStream = new FileStream(DownloadLocation, FileMode.Create, FileAccess.Write, FileShare.Read))
+                            while (FileSize < 0 || DownloadedSize < FileSize)
                             {
-                                while (DownloadedSize < FileSize && !IsCanceled)
+                                int count = FileSize < 0 ? buffer.Length : (int)Math.Min(buffer.Length, FileSize - DownloadedSize);
+                                int bytesRead = await responseStream.ReadAsync(buffer, 0, count, cancellationToken);
+
+                                if (bytesRead == 0)
                                 {
-                                    if (!timer.IsRunning)
+                                    if (FileSize >= 0 && DownloadedSize < FileSize)
                                     {
-                                        timer.Start();
+                                        throw new EndOfStreamException("The download ended before the declared content length was reached.");
                                     }
 
-                                    if (!progressEventTimer.IsRunning)
-                                    {
-                                        progressEventTimer.Start();
-                                    }
-
-                                    bytesRead = await responseStream.ReadAsync(buffer, 0, buffer.Length);
-                                    await fileStream.WriteAsync(buffer, 0, bytesRead);
-
-                                    DownloadedSize += bytesRead;
-                                    speedTest += bytesRead;
-
-                                    if (timer.ElapsedMilliseconds > 500)
-                                    {
-                                        DownloadSpeed = (double)speedTest / timer.ElapsedMilliseconds * 1000;
-                                        speedTest = 0;
-                                        timer.Reset();
-                                    }
-
-                                    if (progressEventTimer.ElapsedMilliseconds > 100)
-                                    {
-                                        ProgressChanged?.Invoke();
-
-                                        progressEventTimer.Reset();
-                                    }
+                                    break;
                                 }
 
-                                ProgressChanged?.Invoke();
+                                await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                                DownloadedSize += bytesRead;
+                                speedTest += bytesRead;
+
+                                if (timer.ElapsedMilliseconds > 500)
+                                {
+                                    DownloadSpeed = (double)speedTest / timer.ElapsedMilliseconds * 1000;
+                                    speedTest = 0;
+                                    timer.Restart();
+                                }
+
+                                if (progressEventTimer.ElapsedMilliseconds > 100)
+                                {
+                                    ProgressChanged?.Invoke();
+                                    progressEventTimer.Restart();
+                                }
                             }
 
-                            return true;
+                            ProgressChanged?.Invoke();
+                            cancellationToken.ThrowIfCancellationRequested();
                         }
+
+                        return true;
                     }
                 }
             }
-            catch
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                if (!IsCanceled)
-                {
-                    throw;
-                }
             }
             finally
             {
-                if (IsCanceled)
+                if (IsCanceled && fileCreated)
                 {
                     try
                     {
@@ -188,8 +214,6 @@ namespace ShareX.HelpersLib
                     {
                     }
                 }
-
-                IsDownloading = false;
             }
 
             return false;

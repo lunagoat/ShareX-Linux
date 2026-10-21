@@ -254,7 +254,11 @@ namespace ShareX.UploadersLib
 
         private static string NormalizeParameters(Dictionary<string, string> parameters)
         {
-            return string.Join("&", parameters.OrderBy(x => x.Key).ThenBy(x => x.Value).Select(x => x.Key + "=" + URLHelpers.URLEncode(x.Value)).ToArray());
+            return string.Join("&", parameters
+                .Select(x => new KeyValuePair<string, string>(URLHelpers.URLEncode(x.Key), URLHelpers.URLEncode(x.Value)))
+                .OrderBy(x => x.Key, StringComparer.Ordinal)
+                .ThenBy(x => x.Value, StringComparer.Ordinal)
+                .Select(x => x.Key + "=" + x.Value));
         }
     }
 }

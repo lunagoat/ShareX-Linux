@@ -50,7 +50,7 @@ namespace ShareX.HelpersLib
                     }
                 }
 
-                string fullName = Directory.CreateDirectory(Path.GetFullPath(destination)).FullName;
+                string fullName = Path.TrimEndingDirectorySeparator(Directory.CreateDirectory(Path.GetFullPath(destination)).FullName);
                 // Include the separator so a sibling with the same name prefix is not treated as a child.
                 string fullNameWithSeparator = Path.EndsInDirectorySeparator(fullName) ? fullName : fullName + Path.DirectorySeparatorChar;
 
@@ -79,7 +79,7 @@ namespace ShareX.HelpersLib
 
                     string fullPath = Path.GetFullPath(Path.Combine(fullName, entryName));
 
-                    if (fullPath.StartsWith(fullNameWithSeparator, StringComparison.Ordinal))
+                    if (fullPath.StartsWith(fullNameWithSeparator, StringComparison.Ordinal) && !ContainsReparsePoint(fullPath, fullName))
                     {
                         if (Path.GetFileName(fullPath).Length == 0)
                         {
@@ -96,6 +96,32 @@ namespace ShareX.HelpersLib
                     }
                 }
             }
+        }
+
+        private static bool ContainsReparsePoint(string path, string destination)
+        {
+            // A lexical child path can still escape through an existing symlink or junction.
+            // Check the output file as well as every directory below the selected destination.
+            while (!string.Equals(path, destination, StringComparison.Ordinal))
+            {
+                try
+                {
+                    if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
+                    {
+                        return true;
+                    }
+                }
+                catch (FileNotFoundException)
+                {
+                }
+                catch (DirectoryNotFoundException)
+                {
+                }
+
+                path = Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(path));
+            }
+
+            return false;
         }
 
         private static void ExtractToFile(ZipArchiveEntry source, string destinationFileName, bool overwrite)

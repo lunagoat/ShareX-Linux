@@ -219,9 +219,8 @@ namespace ShareX
                         }
                         else if (task.Status == TaskStatus.Failed)
                         {
-                            string errors = info.Result.Errors.ToString();
-
-                            DebugHelper.WriteLine($"Task failed. File name: {info.FileName}, Errors:\r\n{errors}");
+                            // Uploader error details can include credentials and remain available in the error UI.
+                            DebugHelper.WriteLine($"Task failed. File name: {info.FileName}, Error count: {info.Result.Errors.Count}");
 
                             TaskHelpers.PlayNotificationSoundAsync(NotificationSound.Error, info.TaskSettings);
 

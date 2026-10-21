@@ -27,6 +27,7 @@ using System;
 using System.IO;
 using System.Net;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Net.Sockets;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -44,7 +45,7 @@ namespace ShareX.HelpersLib
 
                 HttpClient client = HttpClientFactory.Create();
 
-                using (HttpResponseMessage responseMessage = await client.GetAsync(url))
+                using (HttpResponseMessage responseMessage = await client.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
                 {
                     if (responseMessage.IsSuccessStatusCode)
                     {
@@ -125,17 +126,18 @@ namespace ShareX.HelpersLib
                 using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Head, url))
                 using (HttpResponseMessage responseMessage = await client.SendAsync(requestMessage))
                 {
-                    if (responseMessage.Content.Headers.ContentDisposition != null)
-                    {
-                        string contentDisposition = responseMessage.Content.Headers.ContentDisposition.ToString();
+                    ContentDispositionHeaderValue disposition = responseMessage.Content.Headers.ContentDisposition;
+                    fileName = disposition?.FileNameStar ?? disposition?.FileName;
 
-                        if (!string.IsNullOrEmpty(contentDisposition))
+                    if (!string.IsNullOrEmpty(fileName))
+                    {
+                        // Treat server-supplied paths as names, including Windows separators on Unix.
+                        fileName = Path.GetFileName(fileName.Trim('"').Replace('\\', '/'));
+                        fileName = FileHelpers.SanitizeFileName(fileName);
+
+                        if (string.IsNullOrEmpty(fileName) || fileName == "." || fileName == "..")
                         {
-                            string fileNameMarker = "filename=\"";
-                            int beginIndex = contentDisposition.IndexOf(fileNameMarker, StringComparison.OrdinalIgnoreCase);
-                            contentDisposition = contentDisposition.Substring(beginIndex + fileNameMarker.Length);
-                            int fileNameLength = contentDisposition.IndexOf("\"");
-                            fileName = contentDisposition.Substring(0, fileNameLength);
+                            fileName = null;
                         }
                     }
                 }
