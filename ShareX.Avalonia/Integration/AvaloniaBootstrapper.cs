@@ -183,6 +183,11 @@ public static class AvaloniaBootstrapper
             .UsePlatformDetect()
             .WithInterFont();
 
+        if (OperatingSystem.IsLinux())
+        {
+            builder = builder.With(Linux.LinuxFonts.CreateOptions());
+        }
+
         if (UseSoftwareRendering())
         {
             builder = builder.With(new Avalonia.X11PlatformOptions { RenderingMode = [Avalonia.X11RenderingMode.Software] });

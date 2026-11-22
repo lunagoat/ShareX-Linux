@@ -95,7 +95,7 @@ internal static class OverlayHelperServer
             // Everything that does not need the screenshot happens first, so the parent can take the screenshot while we start up.
             AppBuilder.Configure<OverlayHelperApplication>()
                 .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false, ShouldRenderOnUIThread = true })
-                .UseSkia().WithInterFont().SetupWithoutStarting();
+                .UseSkia().WithInterFont().With(ShareX.AvaloniaUI.Linux.LinuxFonts.CreateOptions()).SetupWithoutStarting();
             SynchronizationContext.SetSynchronizationContext(new AvaloniaSynchronizationContext());
             Mark("Avalonia headless set up");
             WaylandOverlay.Register();

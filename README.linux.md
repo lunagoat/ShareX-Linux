@@ -94,37 +94,27 @@ SX_SANDBOX=/tmp/sx-mytest timeout 60 scripts/linux/run.sh     # run with an isol
 ## First run
 
 * On first start ShareX offers its start screen; the main window and the tray icon follow.
-* ShareX keeps its state in a single **personal folder**. On a normal desktop that is
-  `~/Documents/ShareX` (it uses the desktop's XDG *Documents* user directory, so it follows
-  `xdg-user-dirs`):
+* ShareX keeps its files in the XDG folders (they follow `$XDG_CONFIG_HOME`, `$XDG_DATA_HOME`
+  and `$HOME`, so a throw-away `HOME` isolates them):
 
-  | What | Location (inside the personal folder) |
+  | What | Location |
   | --- | --- |
-  | Settings | `ApplicationConfig.json`, `UploadersConfig.json`, `HotkeysConfig.json` |
-  | History | `History.db` |
-  | Logs | `Logs/ShareX-Log-<yyyy-MM>.txt` |
-  | Screenshots, image effects, backups | `Screenshots/`, `ImageEffects/`, `Backup/` |
+  | Settings and their backups | `~/.config/ShareX/` (`ApplicationConfig.json`, `UploadersConfig.json`, `HotkeysConfig.json`, `Backup/`) |
+  | History | `~/.local/share/ShareX/History.db` |
+  | Logs | `~/.local/share/ShareX/Logs/ShareX-Log-<yyyy-MM>.txt` |
+  | Screenshots, image effects | `~/.local/share/ShareX/Screenshots/`, `~/.local/share/ShareX/ImageEffects/` |
 
-  Note that this is **not** an XDG config/data layout and it is **not** redirected by
-  overriding `$HOME` (`XDG_CONFIG_HOME`/`XDG_DATA_HOME` do not move it either) — it follows
-  the desktop user's Documents directory. Because of that, the `SX_SANDBOX`-style
-  throw-away homes used by the test scripts do not isolate ShareX's own files; see
-  `docs/status/wp7-packaging.md` for details and a workaround. Change the folder in
-  *Application settings → Paths*, or use `sharex -portable`, which keeps everything next to
-  the executable.
-  `-portable` expects a `ShareX/` folder next to the executable, so it only works when the
-  executable itself is not named `ShareX` (on this port the packaged binary *is* named
-  `ShareX`, so `-portable` fails with a *ShareX – Error* dialog and the personal folder is
-  used instead; see `docs/status/wp7-packaging.md`).
+  *Application settings → Paths* can move everything into one personal folder of your choice,
+  and the screenshots folder separately. `sharex -portable` (or a file named `Portable` next to
+  the executable) keeps everything in a `ShareX-Data/` folder next to the executable.
 
   The single-file build also unpacks its native libraries on first start into
   `~/.net/ShareX/` (this one does honour `$HOME`; override with
   `DOTNET_BUNDLE_EXTRACT_BASE_DIR`).
 
 * Logs record the parsed command line ("Flags: …") and every action/error.
-  `sharex -sandbox` starts a throw-away instance that does not read or write your settings
-  or history, but it still appends its log lines to the personal folder's `Logs/`
-  (a known limitation tracked in `docs/status/wp7-packaging.md`).
+  `sharex -sandbox` starts a throw-away instance that does not read or write your settings,
+  history or logs.
 * ShareX is single-instance: a second `sharex -RectangleRegion` is handed over to the
   running instance through a per-user socket. Use `-multi` for a separate instance.
 
