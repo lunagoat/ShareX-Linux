@@ -17,6 +17,7 @@ Commits:
 | `f113de468` | .NET 11 |
 | `7d75f428d` | install-user.sh always publishes from a checkout (it had installed a stale build); monitors matched by output name (XWayland lays them out differently from Hyprland) |
 | `6ede8176d` | Found in live testing (Hyprland 0.57 Lua config, FFmpeg 9.1, mixed 1x/1.5x monitors): recording failed with FFmpeg 9 (`-thread_queue_size` is output-only now); recording windows were tiled (legacy hyprctl dispatchers rejected by a Lua config); OCR/recording/pin region selection now uses the native overlay; the window overlay no longer snaps to its own window; `%pn` uses the kernel process name for Chromium/Electron apps |
+| `1e1d86454` | Found in live testing: the recording frame and region outline were black inside (XWayland ignores the X bounding shape) and sized for the wrong scale on the 1.5x monitor (force_zero_scaling); the recorder bar landed off-screen. Windows now use their transparent background, convert between compositor and window pixels, and turn off Hyprland blur/shadow/border for themselves |
 
 ## Decisions
 
