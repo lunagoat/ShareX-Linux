@@ -153,6 +153,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         }
     }
     public void RequestStop() { lock (sync) { stop = true; clock.Stop(); } }
+    private const string OutputToken = "\u0001sharex-output\u0001";
     /// <summary>Stops without writing the output: the final encode is skipped and <see cref="Completion"/> is cancelled.</summary>
     public void RequestAbort() { lock (sync) { aborted = true; stop = true; clock.Stop(); } }
     public Task<RecordingResult> StopAsync()
@@ -292,10 +293,11 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
                 .Replace("$area_height$", N(region.Height), StringComparison.OrdinalIgnoreCase)
                 .Replace("$cursor$", options.IncludeCursor ? "1" : "0", StringComparison.OrdinalIgnoreCase)
                 .Replace("$duration$", (options.Duration > TimeSpan.Zero ? Math.Max(0.1, (options.Duration - Elapsed).TotalSeconds) : 86400).ToString(CultureInfo.InvariantCulture), StringComparison.OrdinalIgnoreCase)
-                .Replace("$output$", path, StringComparison.OrdinalIgnoreCase);
+                .Replace("$output$", OutputToken, StringComparison.OrdinalIgnoreCase);
             if (!options.CustomCommands.Contains("$output$", StringComparison.OrdinalIgnoreCase))
                 throw new ArgumentException("Custom recording commands must use $output$ for the segment output path.");
-            args = SplitArguments(command).ToList();
+            // The path is inserted after splitting, so spaces or quotes in the output folder stay one argument.
+            args = SplitArguments(command).Select(argument => argument.Replace(OutputToken, path, StringComparison.Ordinal)).ToList();
         }
         using Process encoder = LinuxProcess.Start(options.FFmpegPath, args, true);
         Task<string> errors = encoder.StandardError.ReadToEndAsync();

@@ -275,6 +275,10 @@ namespace ShareX
                     HotkeyType.FolderUpload or
                     HotkeyType.QRCode or
                     HotkeyType.ImageEditor or
+                    HotkeyType.PhotoEditor or
+                    HotkeyType.PixelEditor or
+                    HotkeyType.VideoTrimmer or
+                    HotkeyType.AnimatedGifTrimmer or
                     HotkeyType.ImageEffects or
                     HotkeyType.ImageViewer or
                     HotkeyType.ImageBeautifier or

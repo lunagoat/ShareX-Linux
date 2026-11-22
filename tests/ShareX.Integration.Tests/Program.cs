@@ -34,6 +34,8 @@ internal static class Program
             ApplicationState.Settings.AutoCheckUpdate = false;
             ApplicationState.UpdateManager = new ShareXUpdateManager();
             HelpersOptions.ShareXSpecialFolders["ShareXImageEffects"] = AppPaths.ImageEffectsFolder;
+            CheckCommandLine();
+            Console.WriteLine("PASS editor command line takes its file");
             CheckWindows();
             Console.WriteLine("PASS settings windows and pages");
             Wait(NetworkChecks.RunAsync(sandbox));
@@ -86,6 +88,19 @@ internal static class Program
         if (!task.IsCompleted) throw new TimeoutException("Integration check timed out");
         task.GetAwaiter().GetResult();
     }
+    // Regression: a file after -PhotoEditor/-VideoTrimmer used to become a separate argument, which ShareX uploads.
+    private static void CheckCommandLine()
+    {
+        ShareXCLIManager cli = new(["-PhotoEditor", "/tmp/a b.png", "-PixelEditor", "/tmp/s.png", "-VideoTrimmer", "/tmp/clip.mp4",
+            "-AnimatedGifTrimmer", "/tmp/a.gif", "-RectangleRegion", "-silent"]);
+        if (!cli.ParseCommands()) throw new InvalidOperationException("command line did not parse");
+        string[] expected = ["PhotoEditor=/tmp/a b.png", "PixelEditor=/tmp/s.png", "VideoTrimmer=/tmp/clip.mp4",
+            "AnimatedGifTrimmer=/tmp/a.gif", "RectangleRegion=", "silent="];
+        string[] actual = cli.Commands.Select(c => (c.IsCommand ? "" : "file:") + c.Command + "=" + c.Parameter).ToArray();
+        if (!actual.SequenceEqual(expected))
+            throw new InvalidOperationException("unexpected commands: " + string.Join(", ", actual));
+    }
+
     private static void Show(Window window) { window.Show(); Pump(); }
     private static void Pump() { Dispatcher.UIThread.RunJobs(); }
 }

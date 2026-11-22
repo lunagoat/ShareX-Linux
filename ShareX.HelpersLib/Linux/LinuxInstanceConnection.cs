@@ -25,7 +25,9 @@ internal sealed class LinuxInstanceConnection : IDisposable
         string identity = Environment.UserName + "\n" + config + "\n" + name;
         string hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(identity)))[..20];
         string runtime = Environment.GetEnvironmentVariable("XDG_RUNTIME_DIR");
-        if (string.IsNullOrWhiteSpace(runtime)) runtime = System.IO.Path.GetTempPath();
+        // Without XDG_RUNTIME_DIR (su, ssh, sessions without logind) use the user's own cache folder, not the shared
+        // /tmp: another user could pre-create a predictable /tmp/sharex-<hash> and own the lock file and socket.
+        if (string.IsNullOrWhiteSpace(runtime)) runtime = LinuxPaths.CacheHome;
         string directory = System.IO.Path.Combine(runtime, "sharex-" + hash);
         Directory.CreateDirectory(directory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         path = System.IO.Path.Combine(directory, "commands.sock");

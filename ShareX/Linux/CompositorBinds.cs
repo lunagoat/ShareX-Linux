@@ -184,13 +184,9 @@ internal static class CompositorBinds
 
         try
         {
-            ProcessStartInfo psi = dialect == BindDialect.Sway ? new ProcessStartInfo("swaymsg", "reload") : new ProcessStartInfo("hyprctl", "reload");
-            psi.RedirectStandardOutput = true;
-            psi.RedirectStandardError = true;
-            psi.UseShellExecute = false;
-            using Process process = Process.Start(psi);
-            process.WaitForExit(5000);
-            return process.ExitCode == 0 ? "Compositor configuration reloaded." : "Reload it yourself (the reload command failed).";
+            (bool success, _) = LinuxDesktop.RunAsync(dialect == BindDialect.Sway ? "swaymsg" : "hyprctl", ["reload"], 5000)
+                .GetAwaiter().GetResult();
+            return success ? "Compositor configuration reloaded." : "Reload it yourself (the reload command failed).";
         }
         catch (Exception)
         {

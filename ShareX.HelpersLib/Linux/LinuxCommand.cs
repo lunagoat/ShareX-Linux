@@ -22,7 +22,7 @@ public static class LinuxCommand
             process.Start();
             Task<string> output = process.StandardOutput.ReadToEndAsync();
             Task<string> error = process.StandardError.ReadToEndAsync();
-            if (!process.WaitForExit(2000)) { process.Kill(true); return null; }
+            if (!process.WaitForExit(2000)) { process.Kill(true); process.WaitForExit(); return null; }
             return process.ExitCode == 0 ? output.GetAwaiter().GetResult() : null;
         }
         catch (Exception exception) when (exception is System.ComponentModel.Win32Exception or IOException or InvalidOperationException)

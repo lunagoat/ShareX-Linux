@@ -12,8 +12,13 @@ executable accept on Linux. It was derived from the source:
 
 ## How commands are parsed
 
-* An argument starting with `-` is a **command**; the next argument that does not start
-  with `-` is taken as that command's **parameter**.
+* An argument starting with `-` is a **command**. Commands that act on a file or name
+  (`-task`, `-workflow`, `-CustomUploader`, `-ImageEffect`, `-ImageEditor`, `-PhotoEditor`,
+  `-PixelEditor`, `-ImageEffects`, `-ImageViewer`, `-ImageBeautifier`, `-FileUpload`,
+  `-FolderUpload`, `-PinToScreen`, `-PinToScreenFromFile`, `-OCR`, `-QRCode`, `-HashCheck`,
+  `-Metadata`, `-StripMetadata`, `-AnalyzeImage`, `-VideoConverter`, `-VideoTrimmer`,
+  `-AnimatedGifTrimmer`) take the next argument that does not start with `-` as their
+  **parameter**; other commands take none, so `sharex -RectangleRegion -silent` works.
 * Command names are compared case-insensitively (`-rectangleRegion` == `-RectangleRegion`);
   parameters (task/workflow names, file paths) are compared exactly.
 * An argument that is not a command is treated as a **file path or URL**: URLs are
@@ -114,6 +119,7 @@ description column is the same string ShareX shows in its hotkey list
 | `-CustomWindow` | Capture pre configured window |
 | `-ActiveMonitor` | Capture active monitor |
 | `-RectangleRegion` | Capture region |
+| `-RectangleTransparent` | Capture region (Transparent): select over the live desktop instead of a frozen screenshot |
 | `-CustomRegion` | Capture pre configured region |
 | `-LastRegion` | Capture last region |
 | `-ScrollingCapture` | Start/Stop scrolling capture |
@@ -144,6 +150,7 @@ description column is the same string ShareX shows in its hotkey list
 | `-ColorPicker` | Color picker |
 | `-ScreenColorPicker` | Screen color picker |
 | `-Ruler` | Ruler |
+| `-ClassicRuler` | Classic ruler |
 | `-MouseHighlighter` | Toggle mouse highlighter |
 | `-PinToScreen` | Pin to screen |
 | `-PinToScreenFromScreen` | Pin to screen (From screen) |
@@ -151,6 +158,8 @@ description column is the same string ShareX shows in its hotkey list
 | `-PinToScreenFromFile` | Pin to screen (From file) |
 | `-PinToScreenCloseAll` | Pin to screen (Close all) |
 | `-ImageEditor` | Image editor |
+| `-PhotoEditor` | Photo editor (layers, selections, adjustments); opens the given file, if any |
+| `-PixelEditor` | Pixel editor; opens the given file, if any |
 | `-ImageBeautifier` | Image beautifier |
 | `-ImageEffects` | Image effects |
 | `-ImageViewer` | Image viewer |

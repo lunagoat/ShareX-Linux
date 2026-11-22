@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace ShareX;
 
@@ -37,9 +38,16 @@ internal static class Doctor
             ProcessStartInfo psi = new(file) { RedirectStandardOutput = true, RedirectStandardError = true, UseShellExecute = false };
             foreach (string a in args) psi.ArgumentList.Add(a);
             using Process p = Process.Start(psi);
-            string output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(3000);
-            return output;
+            // Drain both pipes and bound the wait, so a stuck compositor tool cannot hang --doctor.
+            Task<string> output = p.StandardOutput.ReadToEndAsync();
+            Task<string> error = p.StandardError.ReadToEndAsync();
+            if (!p.WaitForExit(3000))
+            {
+                p.Kill(entireProcessTree: true);
+                p.WaitForExit();
+                return "";
+            }
+            return output.GetAwaiter().GetResult();
         }
         catch (Exception)
         {

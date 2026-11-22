@@ -33,7 +33,12 @@ internal static class LinuxProcess
         Task<string> error = process.StandardError.ReadToEndAsync();
         using CancellationTokenSource timeout = new(limit);
         try { await process.WaitForExitAsync(timeout.Token).ConfigureAwait(false); }
-        catch { if (!process.HasExited) process.Kill(true); throw; }
+        catch
+        {
+            if (!process.HasExited) process.Kill(true);
+            await process.WaitForExitAsync().ConfigureAwait(false);
+            throw;
+        }
         string message = await error.ConfigureAwait(false);
         if (process.ExitCode != 0) throw new IOException($"{executable} exited with {process.ExitCode}: {message}");
         return await output.ConfigureAwait(false);

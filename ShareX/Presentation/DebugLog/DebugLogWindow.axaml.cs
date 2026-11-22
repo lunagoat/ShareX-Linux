@@ -123,12 +123,22 @@ public partial class DebugLogWindow : Window
     {
         StringBuilder builder = new();
         string? directoryPath = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+        // A single-file build embeds the application's assemblies, which then have no file location.
+        bool singleFile = string.IsNullOrEmpty(Assembly.GetExecutingAssembly().Location);
 
         foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
-            if (!assembly.IsDynamic
-                && directoryPath != null
-                && assembly.Location.StartsWith(directoryPath, StringComparison.OrdinalIgnoreCase))
+            if (assembly.IsDynamic)
+            {
+                continue;
+            }
+
+            if (singleFile && string.IsNullOrEmpty(assembly.Location))
+            {
+                builder.AppendLine(assembly.GetName().Name + ".dll");
+            }
+            else if (!singleFile && directoryPath != null &&
+                assembly.Location.StartsWith(directoryPath, StringComparison.OrdinalIgnoreCase))
             {
                 builder.AppendLine(assembly.ManifestModule.Name);
             }

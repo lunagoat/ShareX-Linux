@@ -142,6 +142,7 @@ public partial class RegionCaptureWindow : Window
     private bool _closing;
     private Exception? _startupException;
     private double _appliedPixelScaling;
+    private bool _escapeHandledOnKeyDown;
 
     public RegionCaptureWindow()
     {
@@ -273,6 +274,8 @@ public partial class RegionCaptureWindow : Window
         if (e.Key == Key.Escape && e.KeyModifiers == KeyModifiers.None)
         {
             e.Handled = true;
+            // OnKeyUp would otherwise treat the release of this same press as a second Escape and close the capture.
+            _escapeHandledOnKeyDown = true;
             if (!_regionToolActive && _editorWorkspace.CancelActiveInteractionOrSelection())
             {
                 return;
@@ -366,6 +369,12 @@ public partial class RegionCaptureWindow : Window
         }
 
         e.Handled = true;
+
+        if (_escapeHandledOnKeyDown)
+        {
+            _escapeHandledOnKeyDown = false;
+            return;
+        }
 
         if (!_regionToolActive && _editorWorkspace.CancelActiveInteractionOrSelection())
         {
