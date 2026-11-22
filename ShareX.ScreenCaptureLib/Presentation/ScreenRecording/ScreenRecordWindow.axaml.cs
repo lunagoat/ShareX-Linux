@@ -42,6 +42,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using AvaloniaBitmap = Avalonia.Media.Imaging.Bitmap;
 using DrawingColor = System.Drawing.Color;
 using DrawingRectangle = System.Drawing.Rectangle;
@@ -78,6 +79,8 @@ public partial class ScreenRecordWindow : Window, IDisposable
     private PixelPoint _dragPointerOrigin;
     private PixelPoint _dragWindowOrigin;
     private double _windowScaling = 1;
+    // X pixels per compositor pixel: above 1 on a scaled monitor when Hyprland gives XWayland native pixels.
+    private double _windowPixelsPerLogicalPixel = 1;
     private int _frameLeftPixels;
     private int _frameTopPixels;
     private int _toolbarLeftPixels;
@@ -185,6 +188,10 @@ public partial class ScreenRecordWindow : Window, IDisposable
     public ScreenRecordWindow(DrawingRectangle regionRectangle)
     {
         _recordingRegion = regionRectangle;
+        if (OperatingSystem.IsLinux())
+        {
+            _windowPixelsPerLogicalPixel = RecordingWindowPlatform.WindowPixelsPerLogicalPixel(regionRectangle);
+        }
         _captureWidth = regionRectangle.Width;
         _captureHeight = regionRectangle.Height;
         _initialPosition = new PixelPoint(regionRectangle.X - BorderPixels, regionRectangle.Y - BorderPixels);
@@ -604,8 +611,7 @@ public partial class ScreenRecordWindow : Window, IDisposable
         double scaling = GetScreenScaling(_initialPosition);
         ConfigureGeometry(scaling);
         Helpers.EnsureWindowPosition(this, _initialPosition.X - _frameLeftPixels, _initialPosition.Y - _frameTopPixels);
-        RecordingWindowPlatform.Place(this, _initialPosition.X - _frameLeftPixels, _initialPosition.Y - _frameTopPixels,
-            (int)Math.Ceiling(Width * _windowScaling), (int)Math.Ceiling(Height * _windowScaling));
+        _ = PlaceOnCompositorAsync();
         WindowGeometryLog.Record(this, "Screen recording frame",
             new DrawingRectangle(_initialPosition.X - _frameLeftPixels, _initialPosition.Y - _frameTopPixels, 0, 0));
         ApplyCaptureExclusion();
@@ -615,6 +621,33 @@ public partial class ScreenRecordWindow : Window, IDisposable
         if (ActivateWindow)
         {
             Activate();
+        }
+    }
+
+    /// <summary>Hyprland: place the window in compositor pixels, and lay the frame out again if the window did not get
+    /// the X pixel size expected for its monitor, so the frame stays around the region.</summary>
+    private async Task PlaceOnCompositorAsync()
+    {
+        for (int attempt = 0; attempt < 2 && !_disposed; attempt++)
+        {
+            int width = (int)Math.Ceiling(Width * _windowScaling);
+            await RecordingWindowPlatform.Place(this, _initialPosition.X - _frameLeftPixels, _initialPosition.Y - _frameTopPixels,
+                width, (int)Math.Ceiling(Height * _windowScaling), seeThrough: true);
+            if (!RecordingWindowPlatform.IsHyprland || _disposed || width <= 0)
+            {
+                return;
+            }
+
+            await Task.Delay(150);
+            double actual = ClientSize.Width * GetRenderScaling() / width;
+            if (!double.IsFinite(actual) || actual <= 0 || Math.Abs(actual - _windowPixelsPerLogicalPixel) < 0.05)
+            {
+                return;
+            }
+
+            DebugHelper.WriteLine($"Recording frame: {actual:0.##} window pixels per compositor pixel instead of {_windowPixelsPerLogicalPixel:0.##}; laying it out again.");
+            _windowPixelsPerLogicalPixel = actual;
+            ConfigureGeometry(GetScreenScaling(Position));
         }
     }
 
@@ -641,7 +674,7 @@ public partial class ScreenRecordWindow : Window, IDisposable
             int recordingLeft = Position.X + _frameLeftPixels + BorderPixels;
             int recordingTop = Position.Y + _frameTopPixels + BorderPixels;
 
-            _windowScaling = Math.Max(0.5, scaling);
+            _windowScaling = Math.Max(0.25, scaling);
 
             int frameWidthPixels = _captureWidth + BorderPixels * 2;
             int frameHeightPixels = _captureHeight + BorderPixels * 2;
@@ -721,9 +754,22 @@ public partial class ScreenRecordWindow : Window, IDisposable
         }
     }
 
+    /// <summary>Region pixels per DIP.</summary>
     private double GetScreenScaling(PixelPoint point)
     {
+        // The region is in compositor pixels and the window's content in X pixels; they differ on a scaled monitor
+        // when Hyprland gives XWayland native pixels.
+        if (RecordingWindowPlatform.IsHyprland)
+        {
+            return GetRenderScaling() / _windowPixelsPerLogicalPixel;
+        }
+
         return Screens.ScreenFromPoint(point)?.Scaling ?? Screens.Primary?.Scaling ?? 1;
+    }
+
+    private double GetRenderScaling()
+    {
+        return double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
     }
 
     // Mark the frame as a tool window before it is first shown, and keep the style whenever Avalonia rewrites it.
@@ -763,17 +809,23 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
     private void ApplyNativeWindowRegion()
     {
-        int width = _captureWidth + BorderPixels * 2;
-        int height = _captureHeight + BorderPixels * 2;
-        int top = _frameTopPixels;
+        // The layout is in region pixels and the shape in the window's X pixels.
+        double renderScaling = GetRenderScaling();
+        double toWindowPixels = renderScaling / _windowScaling;
+        int Px(int value) => (int)Math.Round(value * toWindowPixels);
+        int left = Px(_frameLeftPixels);
+        int top = Px(_frameTopPixels);
+        int right = Px(_frameLeftPixels + _captureWidth + BorderPixels * 2);
+        int bottom = Px(_frameTopPixels + _captureHeight + BorderPixels * 2);
+        int border = Math.Max(1, Px(BorderPixels));
         RecordingWindowPlatform.Shape(this,
         [
-            new(_frameLeftPixels, top, width, BorderPixels),
-            new(_frameLeftPixels, top + height - BorderPixels, width, BorderPixels),
-            new(_frameLeftPixels, top + BorderPixels, BorderPixels, height - BorderPixels * 2),
-            new(_frameLeftPixels + width - BorderPixels, top + BorderPixels, BorderPixels, height - BorderPixels * 2),
-            new(_toolbarLeftPixels, _toolbarTopPixels,
-                (int)Math.Ceiling(DisplayedToolbarWidth * _windowScaling), (int)Math.Ceiling(ToolbarHeight * _windowScaling))
+            new(left, top, right - left, border),
+            new(left, bottom - border, right - left, border),
+            new(left, top + border, border, bottom - top - border * 2),
+            new(right - border, top + border, border, bottom - top - border * 2),
+            new(Px(_toolbarLeftPixels), Px(_toolbarTopPixels),
+                (int)Math.Ceiling(DisplayedToolbarWidth * renderScaling), (int)Math.Ceiling(ToolbarHeight * renderScaling))
         ]);
     }
 

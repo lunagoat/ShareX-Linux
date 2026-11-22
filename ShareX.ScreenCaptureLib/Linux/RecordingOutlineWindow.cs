@@ -22,11 +22,15 @@ public sealed class RecordingOutlineWindow : Window
         Content = border;
         Opened += (_, _) =>
         {
-            double scale = Screens.ScreenFromPoint(Position)?.Scaling ?? 1;
-            Width = (region.Width + 2) / scale; Height = (region.Height + 2) / scale;
+            // The compositor places the window in logical pixels; its content and input shape are in X pixels, which
+            // differ on a scaled monitor when Hyprland gives XWayland native pixels (force_zero_scaling).
+            double windowPixels = RecordingWindowPlatform.WindowPixelsPerLogicalPixel(region);
+            double renderScaling = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
             int w = region.Width + 2, h = region.Height + 2;
-            RecordingWindowPlatform.Place(this, region.X - 1, region.Y - 1, w, h);
-            RecordingWindowPlatform.Shape(this, [new(0, 0, w, 1), new(0, h - 1, w, 1), new(0, 1, 1, h - 2), new(w - 1, 1, 1, h - 2)], true);
+            Width = w * windowPixels / renderScaling; Height = h * windowPixels / renderScaling;
+            _ = RecordingWindowPlatform.Place(this, region.X - 1, region.Y - 1, w, h, seeThrough: true);
+            int pw = (int)System.Math.Round(w * windowPixels), ph = (int)System.Math.Round(h * windowPixels);
+            RecordingWindowPlatform.Shape(this, [new(0, 0, pw, 1), new(0, ph - 1, pw, 1), new(0, 1, 1, ph - 2), new(pw - 1, 1, 1, ph - 2)], true);
         };
     }
 }

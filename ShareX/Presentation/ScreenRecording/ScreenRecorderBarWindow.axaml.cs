@@ -497,6 +497,11 @@ internal partial class ScreenRecorderBarWindow : Window
     private void PositionNearRegion()
     {
         if (_closed || !IsVisible) return;
+        if (RecordingWindowPlatform.IsHyprland)
+        {
+            PositionNearRegionOnHyprland();
+            return;
+        }
         var screen = Screens.ScreenFromBounds(new PixelRect(RecordingRegion.X, RecordingRegion.Y, RecordingRegion.Width, RecordingRegion.Height)) ?? Screens.Primary;
         if (screen == null) return;
         PixelRect work = screen.WorkingArea;
@@ -512,7 +517,35 @@ internal partial class ScreenRecorderBarWindow : Window
         if (right <= left) { left = work.X; right = work.Right; }
         Position = new PixelPoint(left + (right - left - width) / 2, top);
         ClampToScreen();
-        RecordingWindowPlatform.Place(this, Position.X, Position.Y, width, height);
+        _ = RecordingWindowPlatform.Place(this, Position.X, Position.Y, width, height);
+    }
+
+    /// <summary>
+    /// Hyprland places windows in compositor (logical) pixels, which is what the region is in, while XWayland lays
+    /// its screens out differently (and in native pixels with force_zero_scaling); Avalonia's screens put the bar on
+    /// the wrong monitor, or past the edge of every monitor. Lay it out against the compositor's monitor instead.
+    /// </summary>
+    private void PositionNearRegionOnHyprland()
+    {
+        DesktopScreen? monitor = DesktopScreen.FromRectangle(RecordingRegion);
+        if (monitor == null) return;
+        DrawingRectangle bounds = monitor.Bounds;
+        int topInset = ShareX.AvaloniaUI.Linux.LayerShellInsets.TopInset(bounds);
+        DrawingRectangle work = new(bounds.X, bounds.Y + topInset, bounds.Width, Math.Max(1, bounds.Height - topInset));
+        double renderScaling = double.IsFinite(RenderScaling) && RenderScaling > 0 ? RenderScaling : 1;
+        double logicalPerDip = renderScaling / RecordingWindowPlatform.WindowPixelsPerLogicalPixel(RecordingRegion);
+        int width = (int)Math.Ceiling(Bounds.Width * logicalPerDip);
+        int height = (int)Math.Ceiling(Bounds.Height * logicalPerDip);
+        int gap = (int)Math.Ceiling(8 * logicalPerDip);
+        int top = RecordingRegion.Top - height - gap;
+        // Regions at the screen's top edge keep the bar just inside that edge.
+        if (top < work.Y) top = Math.Max(RecordingRegion.Top, work.Y) + gap;
+        int left = Math.Max(RecordingRegion.Left, work.X);
+        int right = Math.Min(RecordingRegion.Right, work.Right);
+        if (right <= left) { left = work.X; right = work.Right; }
+        left = Math.Clamp(left + (right - left - width) / 2, work.X, Math.Max(work.X, work.Right - width));
+        top = Math.Clamp(top, work.Y, Math.Max(work.Y, work.Bottom - height));
+        _ = RecordingWindowPlatform.Place(this, left, top, width, height);
     }
 
     private void ClampToScreen()
