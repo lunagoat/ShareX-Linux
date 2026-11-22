@@ -550,7 +550,9 @@ internal static class Program
             player.IsMuted = true; // Do not play test audio on the user's desktop.
             player.Volume = .3;
             player.Play();
-            await Task.Delay(450);
+            // Wait for playback to advance rather than a fixed delay: earlier checks (OCR recognition in the OCR
+            // window) can still be using the CPU when playback starts.
+            for (int wait = 0; wait < 30 && error == null && position <= .1; wait++) await Task.Delay(100);
             Require(error == null && position > .1, "Playback did not advance: " + error);
             player.Pause();
             double paused = position;
