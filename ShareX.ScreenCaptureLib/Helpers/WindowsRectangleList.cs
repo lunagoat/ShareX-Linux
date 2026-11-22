@@ -50,8 +50,11 @@ namespace ShareX.ScreenCaptureLib
         {
             if (OperatingSystem.IsLinux())
             {
+                // ShareX's own windows (the full-desktop selection overlay above all) are never capture targets. The
+                // overlay's X11 handle is in IgnoreHandleList, but Wayland compositors list windows by their own ids.
                 return ShareX.AvaloniaUI.Linux.LinuxCaptureWindows.GetWindows()
-                    .Where(w => !IgnoreHandleList.Contains(w.Handle) && !IgnoreClassNameList.Contains(w.ClassName))
+                    .Where(w => w.ProcessId != Environment.ProcessId &&
+                        !IgnoreHandleList.Contains(w.Handle) && !IgnoreClassNameList.Contains(w.ClassName))
                     .Select(w => new SimpleWindowInfo(w.Handle, w.Rectangle) { IsWindow = true }).ToList();
             }
             windows = new List<SimpleWindowInfo>();

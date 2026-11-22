@@ -24,6 +24,7 @@
 #endregion License Information (GPL v3)
 
 using Avalonia.Threading;
+using ShareX.AvaloniaUI.Linux;
 using ShareX.AvaloniaUI.Windows;
 using ShareX.HelpersLib;
 using ShareX.HistoryLib;
@@ -1382,8 +1383,8 @@ namespace ShareX
                     {
                         if (LinuxWindowSystem.Backend == "Hyprland")
                         {
-                            string addr = $"0x{handle.ToInt64():x}";
-                            LinuxCommand.Run("hyprctl", "dispatch", "pin", $"address:{addr}");
+                            string selector = $"address:0x{handle.ToInt64():x}";
+                            HyprlandCaptureIpc.Dispatch("pin", selector, $"hl.dsp.window.pin({{window={HyprlandCaptureIpc.Quote(selector)}}})");
                             PlayNotificationSoundAsync(NotificationSound.ActionCompleted, taskSettings);
                         }
                         else

@@ -46,6 +46,12 @@ public static class RegionCaptureIntegration
     /// <summary>Screen rectangles of the last captured regions. Holds more than one item after a multi region capture.</summary>
     public static IReadOnlyList<Rectangle> LastRegionRectangles { get; private set; } = [];
 
+    /// <summary>
+    /// Set by the app on Linux: region selections for tools (OCR, screen recording, pin to screen, ...) then use the same
+    /// overlay as the region capture hotkey, the native layer-shell overlay when the compositor supports it.
+    /// </summary>
+    public static Func<RegionCaptureOptions, Task<AvaloniaRegionCaptureResult?>>? SelectRegionOverride { get; set; }
+
     // Public: the Linux native layer-shell overlay (ShareX/NativeOverlay) records its selection here too.
     public static void SetLastRegion(Rectangle bounds, IReadOnlyList<Rectangle> regions)
     {

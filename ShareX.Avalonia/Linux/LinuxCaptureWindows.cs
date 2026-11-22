@@ -30,7 +30,8 @@ using System.Text.Json;
 namespace ShareX.AvaloniaUI.Linux;
 
 /// <summary>Capture-local window seam until WP2's WindowInfo backend is integrated.</summary>
-public sealed record LinuxCaptureWindow(nint Handle, Rectangle Rectangle, string Title, string ClassName, bool Active);
+/// <param name="ProcessId">0 when the compositor does not report it (X11 matches windows by handle instead).</param>
+public sealed record LinuxCaptureWindow(nint Handle, Rectangle Rectangle, string Title, string ClassName, bool Active, int ProcessId = 0);
 
 public static class LinuxCaptureWindows
 {
@@ -66,7 +67,8 @@ public static class LinuxCaptureWindows
                         new Rectangle(w.GetProperty("at")[0].GetInt32(), w.GetProperty("at")[1].GetInt32(), w.GetProperty("size")[0].GetInt32(), w.GetProperty("size")[1].GetInt32()),
                         w.GetProperty("title").GetString() ?? "",
                         w.GetProperty("class").GetString() ?? "",
-                        isActive);
+                        isActive,
+                        w.TryGetProperty("pid", out var pid) && pid.ValueKind == JsonValueKind.Number ? pid.GetInt32() : 0);
                 })
                 .OrderByDescending(w => w.Active)
                 .ToArray();
@@ -81,7 +83,8 @@ public static class LinuxCaptureWindows
                 {
                     var r = node.GetProperty("rect");
                     windows.Add(new LinuxCaptureWindow((nint)node.GetProperty("id").GetInt64(), new Rectangle(r.GetProperty("x").GetInt32(), r.GetProperty("y").GetInt32(), r.GetProperty("width").GetInt32(), r.GetProperty("height").GetInt32()),
-                        node.GetProperty("name").GetString() ?? "", app.ValueKind == JsonValueKind.String ? app.GetString()! : "", node.GetProperty("focused").GetBoolean()));
+                        node.GetProperty("name").GetString() ?? "", app.ValueKind == JsonValueKind.String ? app.GetString()! : "", node.GetProperty("focused").GetBoolean(),
+                        node.TryGetProperty("pid", out var pid) && pid.ValueKind == JsonValueKind.Number ? pid.GetInt32() : 0));
                 }
                 foreach (string child in new[] { "nodes", "floating_nodes" })
                     if (node.TryGetProperty(child, out var children)) foreach (var item in children.EnumerateArray()) Visit(item);
@@ -92,7 +95,7 @@ public static class LinuxCaptureWindows
         if (LinuxScreenCapture.IsWayland && NiriIpc.IsAvailable)
         {
             return NiriIpc.GetWindows().Where(w => w.Visible && w.Bounds.Width > 0 && w.Bounds.Height > 0)
-                .Select(w => new LinuxCaptureWindow((nint)w.Id, w.Bounds, w.Title, w.AppId, w.Focused)).ToArray();
+                .Select(w => new LinuxCaptureWindow((nint)w.Id, w.Bounds, w.Title, w.AppId, w.Focused, w.Pid)).ToArray();
         }
         if (!LinuxScreenCapture.IsWayland) return X11CaptureWindows.GetWindows();
         return [];

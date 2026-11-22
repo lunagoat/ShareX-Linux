@@ -26,6 +26,10 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
     private long dropped;
     private int pauseGeneration;
     private bool cameraDisabled;
+    // FFmpeg 9 made -thread_queue_size an output (muxer) option and rejects it before an input, so recording failed
+    // at once ("Broken pipe"); older versions need it on live inputs (audio, camera) to avoid dropouts.
+    private string[] inputQueue = [];
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, bool> InputQueueSupport = new();
     public Task<RecordingResult> Completion => completed.Task;
     public VideoEncoderInfo? Encoder { get; private set; }
     public CameraCaptureInfo? Camera { get; private set; }
@@ -54,6 +58,18 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         cancellationToken.ThrowIfCancellationRequested();
         if (prepared) return;
         await LinuxProcess.Run(options.FFmpegPath, "-version").WaitAsync(cancellationToken).ConfigureAwait(false);
+        if (!InputQueueSupport.TryGetValue(options.FFmpegPath, out bool inputQueueSupported))
+        {
+            try
+            {
+                await LinuxProcess.Run(options.FFmpegPath, "-hide_banner", "-v", "error", "-thread_queue_size", "8", "-f", "lavfi",
+                    "-i", "nullsrc=s=16x16:d=0.04", "-frames:v", "1", "-f", "null", "-").WaitAsync(cancellationToken).ConfigureAwait(false);
+                inputQueueSupported = true;
+            }
+            catch (IOException) { inputQueueSupported = false; }
+            InputQueueSupport[options.FFmpegPath] = inputQueueSupported;
+        }
+        inputQueue = inputQueueSupported ? ["-thread_queue_size", "64"] : [];
         bool wayland = !string.IsNullOrEmpty(Environment.GetEnvironmentVariable("WAYLAND_DISPLAY"));
         backend = wayland ? (File.Exists(LinuxProcess.Find("grim")) &&
             (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("HYPRLAND_INSTANCE_SIGNATURE")) ||
@@ -226,7 +242,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         bool End() => EndSegment || generation != Volatile.Read(ref pauseGeneration);
         int width = region.Width & ~1, height = region.Height & ~1;
         if (backend == "portal") { await CapturePortal(path); return; }
-        List<string> args = ["-hide_banner", "-loglevel", "warning", "-filter_complex_threads", "1", "-thread_queue_size", "64"];
+        List<string> args = ["-hide_banner", "-loglevel", "warning", "-filter_complex_threads", "1", .. inputQueue];
         if (vaapiDevice != null) args.AddRange(["-vaapi_device", vaapiDevice]);
         if (backend == "grim") args.AddRange(["-f", "image2pipe", "-framerate", N(options.FramesPerSecond), "-probesize", "32", "-analyzeduration", "0", "-i", "pipe:0"]);
         else args.AddRange(["-f", "x11grab", "-draw_mouse", options.IncludeCursor ? "1" : "0", "-framerate", N(options.FramesPerSecond), "-video_size", $"{width}x{height}", "-i", $"{Environment.GetEnvironmentVariable("DISPLAY")}+{region.X},{region.Y}"]);
@@ -242,7 +258,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
             AddAudio(options.MicrophoneDeviceId ?? "default", options.MicrophoneGain);
         void AddAudio(string device, float gain)
         {
-            args.AddRange(["-thread_queue_size", "64", "-f", "pulse", "-sample_rate", "48000", "-channels", "2", "-i", device]);
+            args.AddRange([.. inputQueue, "-f", "pulse", "-sample_rate", "48000", "-channels", "2", "-i", device]);
             audio.Add((audio.Count + 1, gain));
         }
         StringBuilder filters = new($"[0:v]scale={width}:{height},setsar=1[v]");
@@ -257,7 +273,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
                 int cw = options.CameraResolution == CameraCaptureResolution.Size640x480 ? 640 : options.CameraResolution == CameraCaptureResolution.Size1920x1080 ? 1920 : 1280;
                 int ch = cw == 640 ? 480 : cw == 1920 ? 1080 : 720;
                 int index = audio.Count + 1;
-                args.AddRange(["-thread_queue_size", "64", "-f", "v4l2", "-framerate", N(options.CameraFramesPerSecond), "-video_size", $"{cw}x{ch}", "-i", device.Id]);
+                args.AddRange([.. inputQueue, "-f", "v4l2", "-framerate", N(options.CameraFramesPerSecond), "-video_size", $"{cw}x{ch}", "-i", device.Id]);
                 int overlayWidth = Math.Max(2, width * options.CameraWidthPercent / 100) & ~1;
                 int overlayHeight = options.CameraShape == CameraOverlayShape.Circle ? overlayWidth : overlayWidth * ch / cw;
                 overlayHeight = Math.Min(height, overlayHeight);
@@ -329,7 +345,15 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
                     // Duplicate the newest frame when capture is slower than the requested rate, preserving A/V time.
                     while (written < due)
                     {
-                        await encoder.StandardInput.BaseStream.WriteAsync(png).ConfigureAwait(false);
+                        try { await encoder.StandardInput.BaseStream.WriteAsync(png).ConfigureAwait(false); }
+                        catch (IOException ex)
+                        {
+                            // FFmpeg exited (bad arguments, missing device, ...): report its own message, not "Broken pipe".
+                            string reason = "";
+                            try { reason = (await errors.WaitAsync(TimeSpan.FromSeconds(2)).ConfigureAwait(false)).Trim(); }
+                            catch (TimeoutException) { }
+                            throw new IOException("FFmpeg recording failed: " + (reason.Length > 0 ? reason : ex.Message), ex);
+                        }
                         written++;
                         if (written < due) dropped++;
                     }

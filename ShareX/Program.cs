@@ -172,6 +172,10 @@ internal static class Program
     private static async Task StartApplicationAsync()
     {
         ImageEditorIntegration.Initialize();
+        if (OperatingSystem.IsLinux())
+        {
+            ShareX.ScreenCaptureLib.Presentation.RegionCapture.RegionCaptureIntegration.SelectRegionOverride = NativeRegionCapture.SelectRegionAsync;
+        }
 
         DebugHelper.WriteLine("Hotkey host init started.");
         MainForm hotkeyHost = new();

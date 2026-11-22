@@ -130,6 +130,35 @@ internal static class NativeRegionCapture
         return (windows, pointer);
     }
 
+    /// <summary>
+    /// Region selection for the tools that go through RegionCaptureTasks (OCR, screen recording, pin to screen, ...):
+    /// the same overlay as the region capture hotkey. They used the full-desktop window overlay directly, which is one
+    /// XWayland surface and so cannot follow the compositor's monitor layout and mixed scales.
+    /// </summary>
+    internal static async Task<AvaloniaRegionCaptureResult?> SelectRegionAsync(ShareX.ScreenCaptureLib.RegionCaptureOptions options)
+    {
+        using PrewarmedHelper? prewarmed = Prewarm(options, new ShareX.ImageEditor.Integration.ImageEditorOptions(), false);
+        bool activeMonitorMode = KdeCapture.UseActiveMonitor(options.ActiveMonitorMode, KdeCapture.IsSession, NiriIpc.IsAvailable);
+        if (Choose(options, out _)) activeMonitorMode = false;
+        Rectangle screenBounds = activeMonitorMode ? ShareX.HelpersLib.CaptureHelpers.GetActiveScreenBounds() : ShareX.HelpersLib.CaptureHelpers.GetScreenBounds();
+        SKBitmap? screenshot = new ShareX.ScreenCaptureLib.Screenshot { CaptureCursor = false }.CaptureRectangle(screenBounds);
+        if (screenshot == null || screenshot.Handle == IntPtr.Zero)
+        {
+            screenshot?.Dispose();
+            return null;
+        }
+
+        return await CaptureAsync(new AvaloniaRegionCaptureRequest
+        {
+            Screenshot = screenshot,
+            ScreenshotIsOpaque = true,
+            ScreenBounds = screenBounds,
+            RegionCaptureOptions = options,
+            ImageEditorOptions = new ShareX.ImageEditor.Integration.ImageEditorOptions(),
+            EnableAnnotations = false
+        }, prewarmed);
+    }
+
     internal static async Task<AvaloniaRegionCaptureResult?> CaptureAsync(AvaloniaRegionCaptureRequest request, PrewarmedHelper? prewarmed = null)
     {
         bool native = Choose(request.RegionCaptureOptions, out string reason);

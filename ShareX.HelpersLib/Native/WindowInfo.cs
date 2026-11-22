@@ -47,7 +47,24 @@ namespace ShareX.HelpersLib
             {
                 using (Process process = Process)
                 {
-                    return process?.ProcessName;
+                    string name = process?.ProcessName;
+
+                    // Linux: .NET names a process after its first command-line entry, which Chromium and Electron apps
+                    // rewrite into their whole command line ("vesktop --ozone-platform=wayland ..."), and that ended up in
+                    // %pn file names. The kernel's name for the process (what ps shows) is the program name.
+                    if (OperatingSystem.IsLinux() && process != null && name != null && name.Contains(' '))
+                    {
+                        try
+                        {
+                            string comm = System.IO.File.ReadAllText($"/proc/{process.Id}/comm").Trim();
+                            if (comm.Length > 0) name = comm;
+                        }
+                        catch (Exception e) when (e is System.IO.IOException or UnauthorizedAccessException)
+                        {
+                        }
+                    }
+
+                    return name;
                 }
             }
         }

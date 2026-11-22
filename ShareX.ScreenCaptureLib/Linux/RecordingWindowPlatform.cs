@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Text.Json;
 using System.Threading.Tasks;
 using ShareX.HelpersLib;
+using ShareX.AvaloniaUI.Linux;
 
 namespace ShareX.ScreenCaptureLib;
 
@@ -52,13 +53,20 @@ public static class RecordingWindowPlatform
                 {
                     if (client.GetProperty("pid").GetInt32() != Environment.ProcessId) continue;
                     if (!string.IsNullOrEmpty(title) && client.GetProperty("title").GetString() != title) continue;
-                    string address = client.GetProperty("address").GetString()!;
-                    await Command("dispatch", "setfloating", "address:" + address);
-                    if (width >= 10 && height >= 10)
+                    // Hyprland with a Lua config (hyprland.lua) only accepts hl.dsp.* dispatchers; the helper picks the form.
+                    string selector = "address:" + client.GetProperty("address").GetString();
+                    string target = HyprlandCaptureIpc.Quote(selector);
+                    await Task.Run(() =>
                     {
-                        await Command("dispatch", "resizewindowpixel", $"exact {width} {height},address:{address}");
-                    }
-                    await Command("dispatch", "movewindowpixel", $"exact {x} {y},address:{address}");
+                        HyprlandCaptureIpc.Dispatch("setfloating", selector, $"hl.dsp.window.float({{action=\"enable\",window={target}}})");
+                        if (width >= 10 && height >= 10)
+                        {
+                            HyprlandCaptureIpc.Dispatch("resizewindowpixel", $"exact {width} {height},{selector}",
+                                $"hl.dsp.window.resize({{x={width},y={height},relative=false,window={target}}})");
+                        }
+                        HyprlandCaptureIpc.Dispatch("movewindowpixel", $"exact {x} {y},{selector}",
+                            $"hl.dsp.window.move({{x={x},y={y},relative=false,window={target}}})");
+                    });
                     found = true;
                     break;
                 }

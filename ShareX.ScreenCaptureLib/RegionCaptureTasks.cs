@@ -130,6 +130,11 @@ public static class RegionCaptureTasks
     {
         options ??= new RegionCaptureOptions();
 
+        if (RegionCaptureIntegration.SelectRegionOverride is { } selectRegion)
+        {
+            return await selectRegion(options);
+        }
+
         Screenshot screenshot = new Screenshot
         {
             CaptureCursor = false
