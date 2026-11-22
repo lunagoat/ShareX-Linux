@@ -14,7 +14,8 @@ Commits:
 | `f2a7c4834` | Bugs found in review (several predate the merge): CLI file arguments, IPC fallback folder, Escape in the overlay, `$output$` splitting, process timeouts |
 | `faa4bd2bf` | Playback check waits for progress; this status page |
 | `32c2b7977` | Desktop fonts for Windows font names (monospace views were proportional); README file locations |
-| (this commit) | .NET 11 |
+| `f113de468` | .NET 11 |
+| `7d75f428d` | install-user.sh always publishes from a checkout (it had installed a stale build); monitors matched by output name (XWayland lays them out differently from Hyprland) |
 
 ## Decisions
 
