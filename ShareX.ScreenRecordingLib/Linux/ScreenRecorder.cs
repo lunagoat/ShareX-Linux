@@ -18,7 +18,7 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
     private readonly TaskCompletionSource started = new(TaskCreationOptions.RunContinuationsAsynchronously);
     private Task? worker;
     private Rectangle region;
-    private bool prepared, stop, paused, disposed, ownsOutput;
+    private bool prepared, stop, aborted, paused, disposed, ownsOutput;
     private string? workspace;
     private string backend = "";
     private string videoEncoder = "libx264";
@@ -153,6 +153,8 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
         }
     }
     public void RequestStop() { lock (sync) { stop = true; clock.Stop(); } }
+    /// <summary>Stops without writing the output: the final encode is skipped and <see cref="Completion"/> is cancelled.</summary>
+    public void RequestAbort() { lock (sync) { aborted = true; stop = true; clock.Stop(); } }
     public Task<RecordingResult> StopAsync()
     {
         if (worker == null) throw new InvalidOperationException("Recording has not started.");
@@ -188,7 +190,12 @@ public sealed class ScreenRecorder : IDisposable, IAsyncDisposable
                 }
                 segments.Add(segment);
             }
-            lock (sync) { clock.Stop(); IsRecording = false; }
+            lock (sync)
+            {
+                clock.Stop();
+                IsRecording = false;
+                if (aborted) throw new OperationCanceledException("Recording aborted.");
+            }
             if (segments.Count == 0) throw new OperationCanceledException("Recording stopped before the first frame.");
             await FinalizeOutput(segments).ConfigureAwait(false);
             string probe = await LinuxProcess.Run("ffprobe", "-v", "error", "-count_frames", "-show_entries", "stream=codec_type,nb_read_frames:format=duration", "-of", "json", options.OutputPath).ConfigureAwait(false);

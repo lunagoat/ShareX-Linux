@@ -24,7 +24,7 @@ using ShareX.ImageEditor.Integration;
 using ShareX.ImageEditor.Presentation.Controls;
 using ShareX.ImageEditor.Presentation.ViewModels;
 using ShareX.ImageEditor.Presentation.Views;
-using ShareX.ScreenCaptureLib.Localization;
+using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using SkiaSharp;
 
 namespace ShareX.OverlayAvaloniaLayer;
@@ -46,7 +46,6 @@ public sealed class AnnotationLayerHost : IDisposable
     private readonly Canvas _toolbarCanvas;
     private readonly Grid _captureToolbar;
     private readonly AnnotationToolbar _annotationToolbar;
-    private readonly Button _regionToolButton;
     private readonly AnnotationLayerOptions _options;
     private MainViewModel _viewModel = null!;
 
@@ -130,15 +129,6 @@ public sealed class AnnotationLayerHost : IDisposable
             ShowEditingActions = false
         };
 
-        _regionToolButton = new Button
-        {
-            Classes = { "toolbar-button", "active" },
-            Content = LucideIcons.scan
-        };
-        ToolTip.SetTip(_regionToolButton, Strings.RegionCaptureWindow_RectangleRegionTab);
-        _regionToolButton.Click += (s, e) => ActivateRegionTool();
-
-        _annotationToolbar.MainToolbarLeadingContent = _regionToolButton;
         _captureToolbar.Children.Add(_annotationToolbar);
         _toolbarCanvas.Children.Add(_captureToolbar);
 
@@ -241,22 +231,40 @@ public sealed class AnnotationLayerHost : IDisposable
             ShowBottomToolbar = false,
             ShowToolbars = false,
             ShowStartScreen = false,
-            UseContinueWorkflow = false
+            UseContinueWorkflow = false,
+            AllowAutoExpandCanvas = false
         };
 
-        _viewModel.SetHostToolbarFilter(item =>
-            _options.EnableAnnotations &&
-            item.Tool.HasValue &&
-            item.Tool.Value is not EditorTool.Crop and not EditorTool.CutOut);
-
+        // The region tool is a host toolbar item, as in RegionCaptureWindow. This overlay draws rectangle selections
+        // only; NativeRegionCapture.Choose uses the window overlay when ellipse or freehand regions are enabled.
+        _viewModel.SetHostToolbarItems(_options.EnableAnnotations
+            ? RegionCaptureToolbar.CreateItems(_options.RegionCaptureOptions.ToolbarItems)
+                .Where(item => !item.IsHostItem || item.Id == RegionCaptureToolbar.RectangleRegionItemId)
+                .ToList()
+            : []);
         _viewModel.PropertyChanged += OnViewModelPropertyChanged;
         _viewModel.ToolSelectionRequested += OnAnnotationToolSelected;
+        _viewModel.HostToolbarItemRequested += OnHostToolbarItemRequested;
 
         _editorWorkspace.DataContext = _viewModel;
         _annotationToolbar.DataContext = _viewModel.ToolbarAdapter;
         _editorWorkspace.AttachHostAnnotationToolbar(_annotationToolbar);
         _annotationToolbar.IsVisible = _options.EnableAnnotations;
         _annotationToolbar.ShowToolOptions = false;
+
+        if (_options.RegionCaptureOptions.CompactToolbar)
+        {
+            _annotationToolbar.IsCompact = true;
+            _annotationToolbar.MainToolbarCornerRadius = new CornerRadius(3);
+        }
+    }
+
+    private void OnHostToolbarItemRequested(object? sender, string id)
+    {
+        if (id == RegionCaptureToolbar.RectangleRegionItemId)
+        {
+            ActivateRegionTool();
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -275,8 +283,8 @@ public sealed class AnnotationLayerHost : IDisposable
     public void ActivateRegionTool()
     {
         _isRegionToolActive = true;
-        _regionToolButton.Classes.Set("active", true);
         _viewModel?.SetHostToolbarToolsActive(false);
+        _viewModel?.SetActiveHostToolbarItem(RegionCaptureToolbar.RectangleRegionItemId);
         _annotationToolbar.ShowToolOptions = false;
         _editorWorkspace.CancelActiveInteractionOrSelection();
         _editorWorkspace.IsHitTestVisible = false;
@@ -287,7 +295,7 @@ public sealed class AnnotationLayerHost : IDisposable
         if (!_options.EnableAnnotations) return;
 
         _isRegionToolActive = false;
-        _regionToolButton.Classes.Set("active", false);
+        _viewModel?.SetActiveHostToolbarItem(null);
         _viewModel?.SetHostToolbarToolsActive(true);
         _annotationToolbar.ShowToolOptions = true;
         _editorWorkspace.IsHitTestVisible = true;

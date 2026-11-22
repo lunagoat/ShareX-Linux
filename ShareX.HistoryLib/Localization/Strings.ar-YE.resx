@@ -72,11 +72,17 @@
   <data name="HistoryWindow_NoItemsMatchCurrentFilters" xml:space="preserve">
     <value>لا توجد عناصر تطابق عوامل التصفية الحالية</value>
   </data>
+  <data name="HistoryWindow_ProcessName" xml:space="preserve">
+    <value>اسم العملية</value>
+  </data>
   <data name="HistoryWindow_Rename" xml:space="preserve">
     <value>إعادة تسمية</value>
   </data>
   <data name="HistoryWindow_RenameFile" xml:space="preserve">
     <value>إعادة تسمية الملف</value>
+  </data>
+  <data name="HistoryWindow_ResetColumns" xml:space="preserve">
+    <value>إعادة تعيين الأعمدة</value>
   </data>
   <data name="HistoryWindow_SelectFolderToImport" xml:space="preserve">
     <value>حدد المجلد المراد استيراده</value>
@@ -86,6 +92,9 @@
   </data>
   <data name="HistoryWindow_SuccessfullyImportedFilesFormat" xml:space="preserve">
     <value>تم استيراد {0:N0} ملفات بنجاح.</value>
+  </data>
+  <data name="HistoryWindow_Tag" xml:space="preserve">
+    <value>العلامة</value>
   </data>
   <data name="HistoryWindow_TheseFilesFormat" xml:space="preserve">
     <value>هذه الملفات وعددها {0:N0}</value>
@@ -101,6 +110,9 @@
   </data>
   <data name="HistoryWindow_Unfavorite" xml:space="preserve">
     <value>إزالة من المفضلة</value>
+  </data>
+  <data name="HistoryWindow_WindowTitle" xml:space="preserve">
+    <value>عنوان النافذة</value>
   </data>
   <data name="HistoryWindows_Advanced" xml:space="preserve">
     <value>متقدم</value>
@@ -149,6 +161,9 @@
   </data>
   <data name="HistoryWindows_Done" xml:space="preserve">
     <value>تـم</value>
+  </data>
+  <data name="HistoryWindows_EditImageInPhotoEditor" xml:space="preserve">
+    <value>تعديل في محرر الصور...</value>
   </data>
   <data name="HistoryWindows_Edit_history_item" xml:space="preserve">
     <value>تحرير عنصر السجل</value>
@@ -436,5 +451,146 @@
   </data>
   <data name="ImageHistoryWindow_ThisItem" xml:space="preserve">
     <value>هذا العنصر</value>
+  </data>
+  <data name="StatsWindow_AboutADay" xml:space="preserve">
+    <value>نحو {0} يوميًا</value>
+  </data>
+  <data name="StatsWindow_AboutAWeek" xml:space="preserve">
+    <value>نحو {0} أسبوعيًا</value>
+  </data>
+  <data name="StatsWindow_ActiveDays" xml:space="preserve">
+    <value>{0} من {1} نشطة</value>
+  </data>
+  <data name="StatsWindow_Afternoon" xml:space="preserve">
+    <value>بعد الظهر</value>
+  </data>
+  <data name="StatsWindow_All" xml:space="preserve">
+    <value>الكل</value>
+  </data>
+  <data name="StatsWindow_AllYears" xml:space="preserve">
+    <value>كل السنوات</value>
+  </data>
+  <data name="StatsWindow_BeforeHistory" xml:space="preserve">
+    <value>قبل بدء السجل</value>
+  </data>
+  <data name="StatsWindow_BusiestDay" xml:space="preserve">
+    <value>أنشط يوم</value>
+  </data>
+  <data name="StatsWindow_BusiestOn" xml:space="preserve">
+    <value>الأنشط يوم {0}</value>
+  </data>
+  <data name="StatsWindow_BusiestTime" xml:space="preserve">
+    <value>ذروة النشاط {0}</value>
+  </data>
+  <data name="StatsWindow_CountingSince" xml:space="preserve">
+    <value>العدّ منذ {0} · {1}</value>
+  </data>
+  <data name="StatsWindow_DayOfWeek" xml:space="preserve">
+    <value>يوم الأسبوع</value>
+  </data>
+  <data name="StatsWindow_Days" xml:space="preserve">
+    <value>{0} يومًا</value>
+  </data>
+  <data name="StatsWindow_Destinations" xml:space="preserve">
+    <value>الوجهات</value>
+  </data>
+  <data name="StatsWindow_Evening" xml:space="preserve">
+    <value>المساء</value>
+  </data>
+  <data name="StatsWindow_EveryDay" xml:space="preserve">
+    <value>كل يوم</value>
+  </data>
+  <data name="StatsWindow_FileTypes" xml:space="preserve">
+    <value>أنواع الملفات</value>
+  </data>
+  <data name="StatsWindow_Images" xml:space="preserve">
+    <value>الصور</value>
+  </data>
+  <data name="StatsWindow_Less" xml:space="preserve">
+    <value>أقل</value>
+  </data>
+  <data name="StatsWindow_LongestStreak" xml:space="preserve">
+    <value>الأطول {0} حتى {1}</value>
+  </data>
+  <data name="StatsWindow_LongestYet" xml:space="preserve">
+    <value>الأطول حتى الآن</value>
+  </data>
+  <data name="StatsWindow_More" xml:space="preserve">
+    <value>أكثر</value>
+  </data>
+  <data name="StatsWindow_Morning" xml:space="preserve">
+    <value>الصباح</value>
+  </data>
+  <data name="StatsWindow_Night" xml:space="preserve">
+    <value>الليل</value>
+  </data>
+  <data name="StatsWindow_NoData" xml:space="preserve">
+    <value>لا توجد بيانات بعد</value>
+  </data>
+  <data name="StatsWindow_NoHistory" xml:space="preserve">
+    <value>لا يوجد ما يُحصى بعد. ستظهر اللقطات وعمليات الرفع هنا بمجرد حفظها في السجل.</value>
+  </data>
+  <data name="StatsWindow_NoneInPrevious7Days" xml:space="preserve">
+    <value>لا شيء في الأيام السبعة السابقة</value>
+  </data>
+  <data name="StatsWindow_NonePrevious7DaysEither" xml:space="preserve">
+    <value>ولا شيء في الأيام السبعة السابقة أيضًا</value>
+  </data>
+  <data name="StatsWindow_NothingYet" xml:space="preserve">
+    <value>لا شيء بعد</value>
+  </data>
+  <data name="StatsWindow_OneDay" xml:space="preserve">
+    <value>{0} يوم</value>
+  </data>
+  <data name="StatsWindow_Other" xml:space="preserve">
+    <value>أخرى</value>
+  </data>
+  <data name="StatsWindow_OtherFiles" xml:space="preserve">
+    <value>ملفات أخرى</value>
+  </data>
+  <data name="StatsWindow_Past7Days" xml:space="preserve">
+    <value>آخر 7 أيام</value>
+  </data>
+  <data name="StatsWindow_PastYear" xml:space="preserve">
+    <value>آخر 12 شهرًا</value>
+  </data>
+  <data name="StatsWindow_Recordings" xml:space="preserve">
+    <value>التسجيلات</value>
+  </data>
+  <data name="StatsWindow_Refresh" xml:space="preserve">
+    <value>تحديث</value>
+  </data>
+  <data name="StatsWindow_Share" xml:space="preserve">
+    <value>مشاركة</value>
+  </data>
+  <data name="StatsWindow_ShareToolTip" xml:space="preserve">
+    <value>التقط صورة لهذه الإحصائيات وشغّل عليها مهام ما بعد الالتقاط.</value>
+  </data>
+  <data name="StatsWindow_Stats" xml:space="preserve">
+    <value>الإحصاءات</value>
+  </data>
+  <data name="StatsWindow_Streak" xml:space="preserve">
+    <value>أيام متتالية</value>
+  </data>
+  <data name="StatsWindow_TimeOfDay" xml:space="preserve">
+    <value>أوقات اليوم</value>
+  </data>
+  <data name="StatsWindow_Title" xml:space="preserve">
+    <value>ShareX - الإحصاءات</value>
+  </data>
+  <data name="StatsWindow_Today" xml:space="preserve">
+    <value>اليوم</value>
+  </data>
+  <data name="StatsWindow_TopApps" xml:space="preserve">
+    <value>التطبيقات الأكثر التقاطًا</value>
+  </data>
+  <data name="StatsWindow_Total" xml:space="preserve">
+    <value>الإجمالي</value>
+  </data>
+  <data name="StatsWindow_TotalCount" xml:space="preserve">
+    <value>الإجمالي: {0}</value>
+  </data>
+  <data name="StatsWindow_VsPrevious7Days" xml:space="preserve">
+    <value>مقارنةً بالأيام السبعة السابقة</value>
   </data>
 </root>

@@ -772,6 +772,9 @@ namespace ShareX.HelpersLib.Localization {
         public static string HotkeyType_ImageEditor {
             get { return ResourceManager.GetString("HotkeyType_ImageEditor", resourceCulture); }
         }
+        public static string HotkeyType_PhotoEditor {
+            get { return ResourceManager.GetString("HotkeyType_PhotoEditor", resourceCulture); }
+        }
         public static string HotkeyType_ImageEffects {
             get { return ResourceManager.GetString("HotkeyType_ImageEffects", resourceCulture); }
         }
@@ -858,6 +861,9 @@ namespace ShareX.HelpersLib.Localization {
         }
         public static string HotkeyType_Ruler {
             get { return ResourceManager.GetString("HotkeyType_Ruler", resourceCulture); }
+        }
+        public static string HotkeyType_ClassicRuler {
+            get { return ResourceManager.GetString("HotkeyType_ClassicRuler", resourceCulture); }
         }
         public static string HotkeyType_ScreenColorPicker {
             get { return ResourceManager.GetString("HotkeyType_ScreenColorPicker", resourceCulture); }
@@ -1291,9 +1297,6 @@ namespace ShareX.HelpersLib.Localization {
         public static string ToastClickAction_Upload {
             get { return ResourceManager.GetString("ToastClickAction_Upload", resourceCulture); }
         }
-        public static string UpdateChannel_Dev {
-            get { return ResourceManager.GetString("UpdateChannel_Dev", resourceCulture); }
-        }
         public static string UpdateChannel_PreRelease {
             get { return ResourceManager.GetString("UpdateChannel_PreRelease", resourceCulture); }
         }
@@ -1349,5 +1352,20 @@ namespace ShareX.HelpersLib.Localization {
         }
 
         public static string HotkeyType_AnimatedGifTrimmer => ResourceManager.GetString("HotkeyType_AnimatedGifTrimmer", resourceCulture);
+        public static string AfterCaptureTasks_OpenInPhotoEditor => ResourceManager.GetString("AfterCaptureTasks_OpenInPhotoEditor", resourceCulture);
+        public static string HotkeyType_RectangleTransparent => ResourceManager.GetString("HotkeyType_RectangleTransparent", resourceCulture);
+        public static string TaskViewMode_ListView => ResourceManager.GetString("TaskViewMode_ListView", resourceCulture);
+        public static string TaskViewMode_ThumbnailView => ResourceManager.GetString("TaskViewMode_ThumbnailView", resourceCulture);
+        public static string ImagePreviewVisibility_Automatic => ResourceManager.GetString("ImagePreviewVisibility_Automatic", resourceCulture);
+        public static string ImagePreviewVisibility_Hide => ResourceManager.GetString("ImagePreviewVisibility_Hide", resourceCulture);
+        public static string ImagePreviewVisibility_Show => ResourceManager.GetString("ImagePreviewVisibility_Show", resourceCulture);
+        public static string RegionCaptureMagnifierScrollAction_Resize => ResourceManager.GetString("RegionCaptureMagnifierScrollAction_Resize", resourceCulture);
+        public static string RegionCaptureMagnifierScrollAction_Zoom => ResourceManager.GetString("RegionCaptureMagnifierScrollAction_Zoom", resourceCulture);
+        public static string ImagePreviewLocation_Bottom => ResourceManager.GetString("ImagePreviewLocation_Bottom", resourceCulture);
+        public static string ImagePreviewLocation_Side => ResourceManager.GetString("ImagePreviewLocation_Side", resourceCulture);
+        public static string ToastWindowMonitor_ActiveMonitor => ResourceManager.GetString("ToastWindowMonitor_ActiveMonitor", resourceCulture);
+        public static string ToastWindowMonitor_PrimaryMonitor => ResourceManager.GetString("ToastWindowMonitor_PrimaryMonitor", resourceCulture);
+        public static string HotkeyType_PixelEditor => ResourceManager.GetString("HotkeyType_PixelEditor", resourceCulture);
+        public static string RegionCaptureAction_CaptureSelection => ResourceManager.GetString("RegionCaptureAction_CaptureSelection", resourceCulture);
     }
 }

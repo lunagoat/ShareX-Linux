@@ -13,4 +13,7 @@
     <EmbeddedResource Remove="LegacyWindows\**" />
     <None Remove="LegacyWindows\**" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ShareX.HelpersLib\ShareX.HelpersLib.csproj" />
+  </ItemGroup>
 </Project>

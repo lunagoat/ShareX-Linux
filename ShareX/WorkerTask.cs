@@ -534,6 +534,8 @@ namespace ShareX
                     return false;
                 }
 
+                StartHistoryOCR();
+
                 if (!DoFileJobs())
                 {
                     return false;
@@ -602,6 +604,17 @@ namespace ShareX
                 }
             }
 
+            if (Info.TaskSettings.AfterCaptureJob.HasFlag(AfterCaptureTasks.OpenInPhotoEditor))
+            {
+                Bitmap editedImage = TaskHelpers.OpenPhotoEditorTask(Image, Info.TaskSettings);
+
+                if (editedImage != null)
+                {
+                    Image.Dispose();
+                    Image = editedImage;
+                }
+            }
+
             if (Info.TaskSettings.AfterCaptureJob.HasFlag(AfterCaptureTasks.CopyImageToClipboard))
             {
                 ClipboardHelpers.CopyImage(Image, Info.FileName);
@@ -626,7 +639,7 @@ namespace ShareX
             {
                 ImageData imageData = TaskHelpers.PrepareImage(Image, Info.TaskSettings);
                 Data = imageData.ImageStream;
-                Info.FileName = Path.ChangeExtension(Info.FileName, imageData.ImageFormat.GetDescription());
+                Info.FileName = Path.ChangeExtension(Info.FileName, imageData.ImageFormat.GetFileExtension());
 
                 if (Info.TaskSettings.AfterCaptureJob.HasFlagAny(AfterCaptureTasks.SaveImageToFile, AfterCaptureTasks.AnalyzeImage))
                 {
@@ -648,11 +661,24 @@ namespace ShareX
                     bool imageSaved;
                     do
                     {
+                        // List every image format, with the one from the task settings selected.
                         string selectedPath = FileDialogHelpers.SaveFile(
                             Strings.UploadTask_DoAfterCaptureJobs_Choose_a_folder_to_save + " " + Path.GetFileName(Info.FileName),
-                            string.Format("*{0}|*{0}|{1}|*.*", Path.GetExtension(Info.FileName), Strings.WorkerTask_AllFilesFilter),
-                            Info.FileName, initialDirectory, Path.GetExtension(Info.FileName).TrimStart('.'));
+                            SkiaImageHelpers.SaveImageFilter + "|" + Strings.WorkerTask_AllFilesFilter + "|*.*",
+                            Info.FileName, initialDirectory, Path.GetExtension(Info.FileName).TrimStart('.'),
+                            SkiaImageHelpers.GetSaveImageFilterIndex(imageData.ImageFormat));
                         if (string.IsNullOrEmpty(selectedPath)) break;
+
+                        // If another format was picked, encode the image in that format. Later steps, such as
+                        // uploading, then use the same data as the saved file.
+                        if (SkiaImageHelpers.TryGetImageFormat(selectedPath, out EImageFormat selectedFormat) && selectedFormat != imageData.ImageFormat)
+                        {
+                            imageData.ImageStream.Dispose();
+                            imageData.ImageStream = TaskHelpers.SaveImageAsStream(Image, selectedFormat, Info.TaskSettings);
+                            imageData.ImageFormat = selectedFormat;
+                            Data = imageData.ImageStream;
+                        }
+
                         Info.FilePath = selectedPath;
                         HelpersOptions.LastSaveDirectory = Path.GetDirectoryName(Info.FilePath);
                         imageSaved = imageData.Write(Info.FilePath);
@@ -1080,6 +1106,16 @@ namespace ShareX
             if (Image != null && Info.DataType == EDataType.Image)
             {
                 TaskHelpers.OCRImage(Image, Info.TaskSettings).GetAwaiter().GetResult();
+            }
+        }
+
+        // Runs beside saving and uploading on a copy of the final image, since the task disposes its image when it finishes.
+        private void StartHistoryOCR()
+        {
+            if (Image != null && Info.DataType == EDataType.Image && ApplicationState.Settings.HistorySaveTasks &&
+                ApplicationState.Settings.HistorySaveOCRText)
+            {
+                Info.HistoryOCRTask = TaskHelpers.RecognizeTextForHistoryAsync(Image.Copy());
             }
         }
 

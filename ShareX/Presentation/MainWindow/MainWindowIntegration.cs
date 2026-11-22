@@ -169,8 +169,14 @@ public static class MainWindowIntegration
             case MainFormCommand.ImageHistory:
                 TaskHelpers.OpenImageHistory();
                 break;
+            case MainFormCommand.Stats:
+                TaskHelpers.OpenStats();
+                break;
             case MainFormCommand.DebugLog:
                 TaskHelpers.OpenDebugLog();
+                break;
+            case MainFormCommand.DisplayDiagnostics:
+                DisplayDiagnosticsWindowIntegration.Show();
                 break;
             case MainFormCommand.TestImageUpload:
                 UploadManager.UploadImage(ShareXResources.Logo);

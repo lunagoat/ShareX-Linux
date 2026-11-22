@@ -76,7 +76,7 @@ namespace ShareX.Tools
                 double timeSliceElapsed = Options.RandomFrame
                     ? interval * (i + 0.25 + RandomFast.NextDouble() * 0.5)
                     : interval * (i + 1);
-                string fileName = $"{mediaFileName}-{i + 1:000}-{timeSliceElapsed.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)}.{Options.ImageFormat.GetDescription()}";
+                string fileName = $"{mediaFileName}-{i + 1:000}-{timeSliceElapsed.ToString("0.000", System.Globalization.CultureInfo.InvariantCulture)}.{Options.ImageFormat.GetFileExtension()}";
                 string tempThumbnailPath = Path.Combine(GetOutputDirectory(), fileName);
                 Linux.ToolProcess.RunAsync(FFmpegPath, ["-v", "error", "-nostdin", "-ss", timeSliceElapsed.ToString("R", System.Globalization.CultureInfo.InvariantCulture),
                     "-i", Path.GetFullPath(MediaPath), "-frames:v", "1", "-threads", "1", "-y", tempThumbnailPath]).GetAwaiter().GetResult();
@@ -107,7 +107,7 @@ namespace ShareX.Tools
                 {
                     using (SKBitmap img = CombineScreenshots(tempThumbnails))
                     {
-                        string tempFilePath = Path.Combine(GetOutputDirectory(), Path.GetFileNameWithoutExtension(MediaPath) + Options.FilenameSuffix + "." + Options.ImageFormat.GetDescription());
+                        string tempFilePath = Path.Combine(GetOutputDirectory(), Path.GetFileNameWithoutExtension(MediaPath) + Options.FilenameSuffix + "." + Options.ImageFormat.GetFileExtension());
                         SkiaImageHelpers.SaveImage(img, tempFilePath);
                         thumbnails.Add(new VideoThumbnailInfo(tempFilePath));
                     }

@@ -23,8 +23,13 @@
 
 #endregion License Information (GPL v3)
 
+using ShareX.ScreenCaptureLib;
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
+using System.Collections.Generic;
+using System.Drawing;
+using System.Linq;
 using System.Threading.Tasks;
+using Bitmap = SkiaSharp.SKBitmap;
 
 namespace ShareX
 {
@@ -48,14 +53,33 @@ namespace ShareX
 
         protected override TaskMetadata Execute(TaskSettings taskSettings)
         {
-            System.Drawing.Rectangle rect = !RegionCaptureIntegration.LastRegionRectangle.IsEmpty
-                ? RegionCaptureIntegration.LastRegionRectangle
-                : (taskSettings?.CaptureSettings?.CaptureCustomRegion ?? System.Drawing.Rectangle.Empty);
+            Rectangle bounds = RegionCaptureIntegration.LastRegionRectangle;
+            IReadOnlyList<Rectangle> regions = RegionCaptureIntegration.LastRegionRectangles;
 
-            if (!rect.IsEmpty && rect.Width > 0 && rect.Height > 0)
+            // Nothing captured yet in this session (it is kept in memory only): use the configured custom region.
+            if (bounds.IsEmpty)
             {
-                TaskMetadata metadata = CreateMetadata(rect);
-                metadata.Image = TaskHelpers.GetScreenshot(taskSettings).CaptureRectangle(rect);
+                bounds = taskSettings?.CaptureSettings?.CaptureCustomRegion ?? Rectangle.Empty;
+                regions = [];
+            }
+
+            if (!bounds.IsEmpty && bounds.Width > 0 && bounds.Height > 0)
+            {
+                TaskMetadata metadata = CreateMetadata(bounds);
+                Bitmap bmp = TaskHelpers.GetScreenshot(taskSettings).CaptureRectangle(bounds);
+
+                if (bmp != null && regions.Count > 1)
+                {
+                    List<Rectangle> localRegions = regions
+                        .Select(region => new Rectangle(region.X - bounds.X, region.Y - bounds.Y, region.Width, region.Height))
+                        .ToList();
+
+                    Bitmap masked = RegionCaptureTasks.ApplyRegionMask(bmp, localRegions);
+                    bmp.Dispose();
+                    bmp = masked;
+                }
+
+                metadata.Image = bmp;
                 return metadata;
             }
 

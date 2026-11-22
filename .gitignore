@@ -343,3 +343,4 @@ ResXManager.config.xml
 # The Linux publish profile is part of the port and must be committed, even though
 # the Visual Studio template above ignores *.pubxml.
 !ShareX/Properties/PublishProfiles/linux-x64.pubxml
+.claude/skills

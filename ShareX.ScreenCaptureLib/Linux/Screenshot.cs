@@ -55,6 +55,9 @@ namespace ShareX.ScreenCaptureLib
         // Wayland captures the compositor output, including decorations, opacity and shadows.
         // It cannot reconstruct alpha behind an already composited window.
         public Bitmap CaptureWindowTransparent(IntPtr handle) => CaptureWindow(handle);
+        /// <summary>Region capture of a whole window: the region image already shows what the compositor drew
+        /// (corners, shadows), so there is nothing to add. Null keeps the region capture image.</summary>
+        public Bitmap CaptureWindowTransparent(IntPtr handle, Bitmap regionImage, Rectangle screenRectangle) => null;
         public Bitmap CaptureActiveWindowTransparent() => CaptureActiveWindow();
     }
 }

@@ -30,6 +30,7 @@ namespace ShareX.ScreenRecordingLib;
 /// <summary>Linux screen recording. Wayland coordinates use compositor logical desktop pixels.</summary>
 public sealed record RecordingOptions
 {
+    /// <summary>The extension selects the output format (see <see cref="Validate"/> for the supported list).</summary>
     public required string OutputPath { get; init; }
     public Rectangle Region { get; init; }
     /// <summary>When nonzero, capture this window (visible desktop geometry on Wayland) instead of Region.</summary>
@@ -38,6 +39,8 @@ public sealed record RecordingOptions
     public int VideoBitrate { get; init; } = 8_000_000;
     public int AudioBitrate { get; init; } = 192_000;
     public bool IncludeCursor { get; init; } = true;
+    /// <summary>On HDR displays, capture HDR frames and tone map them so HDR-aware apps are not blown out.</summary>
+    public bool HdrToneMapping { get; init; }
     public bool CaptureSystemAudio { get; init; } = true;
     public bool CaptureMicrophone { get; init; }
     /// <summary>PulseAudio source name; null selects the default multimedia render endpoint.</summary>
@@ -69,7 +72,8 @@ public sealed record RecordingOptions
     /// <summary>Complete FFmpeg command; Wayland screen input is PNG at pipe:0. Supports ShareX $...$ placeholders.</summary>
     public string CustomCommands { get; init; } = "";
 
-    internal bool HasAudio => CaptureSystemAudio || CaptureMicrophone;
+    internal bool IsGif => Path.GetExtension(OutputPath).Equals(".gif", StringComparison.OrdinalIgnoreCase);
+    internal bool HasAudio => !IsGif && (CaptureSystemAudio || CaptureMicrophone);
 
     internal void Validate()
     {
@@ -79,8 +83,9 @@ public sealed record RecordingOptions
         if (WindowHandle == 0 && (Region.Width < 2 || Region.Height < 2))
             throw new ArgumentException("Select a window or a region of at least 2 × 2 pixels.", nameof(Region));
         if (FramesPerSecond is < 1 or > 240) throw new ArgumentOutOfRangeException(nameof(FramesPerSecond));
-        if (VideoBitrate is < 100_000 or > 200_000_000) throw new ArgumentOutOfRangeException(nameof(VideoBitrate));
-        if (AudioBitrate is not (96_000 or 128_000 or 160_000 or 192_000)) throw new ArgumentOutOfRangeException(nameof(AudioBitrate));
+        if (IsGif && FramesPerSecond > 100) throw new ArgumentOutOfRangeException(nameof(FramesPerSecond), "GIF frames have a minimum duration of 10 ms.");
+        if (!IsGif && VideoBitrate is < 100_000 or > 200_000_000) throw new ArgumentOutOfRangeException(nameof(VideoBitrate));
+        if (!IsGif && AudioBitrate is not (96_000 or 128_000 or 160_000 or 192_000)) throw new ArgumentOutOfRangeException(nameof(AudioBitrate));
         if (Duration < TimeSpan.Zero) throw new ArgumentOutOfRangeException(nameof(Duration));
         if (!Enum.IsDefined(CameraResolution)) throw new ArgumentOutOfRangeException(nameof(CameraResolution));
         if (!Enum.IsDefined(CameraPosition)) throw new ArgumentOutOfRangeException(nameof(CameraPosition));

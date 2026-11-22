@@ -72,11 +72,17 @@
   <data name="HistoryWindow_NoItemsMatchCurrentFilters" xml:space="preserve">
     <value>Không có mục nào khớp với các bộ lọc hiện tại</value>
   </data>
+  <data name="HistoryWindow_ProcessName" xml:space="preserve">
+    <value>Tên tiến trình</value>
+  </data>
   <data name="HistoryWindow_Rename" xml:space="preserve">
     <value>Đổi tên</value>
   </data>
   <data name="HistoryWindow_RenameFile" xml:space="preserve">
     <value>Đổi tên tệp</value>
+  </data>
+  <data name="HistoryWindow_ResetColumns" xml:space="preserve">
+    <value>Đặt lại cột</value>
   </data>
   <data name="HistoryWindow_SelectFolderToImport" xml:space="preserve">
     <value>Chọn thư mục để nhập</value>
@@ -86,6 +92,9 @@
   </data>
   <data name="HistoryWindow_SuccessfullyImportedFilesFormat" xml:space="preserve">
     <value>Đã nhập thành công {0:N0} tệp.</value>
+  </data>
+  <data name="HistoryWindow_Tag" xml:space="preserve">
+    <value>Thẻ</value>
   </data>
   <data name="HistoryWindow_TheseFilesFormat" xml:space="preserve">
     <value>{0:N0} tệp này</value>
@@ -101,6 +110,9 @@
   </data>
   <data name="HistoryWindow_Unfavorite" xml:space="preserve">
     <value>Bỏ yêu thích</value>
+  </data>
+  <data name="HistoryWindow_WindowTitle" xml:space="preserve">
+    <value>Tiêu đề cửa sổ</value>
   </data>
   <data name="HistoryWindows_Advanced" xml:space="preserve">
     <value>Nâng cao</value>
@@ -149,6 +161,9 @@
   </data>
   <data name="HistoryWindows_Done" xml:space="preserve">
     <value>Đã xong</value>
+  </data>
+  <data name="HistoryWindows_EditImageInPhotoEditor" xml:space="preserve">
+    <value>Chỉnh sửa trong trình chỉnh sửa ảnh...</value>
   </data>
   <data name="HistoryWindows_Edit_history_item" xml:space="preserve">
     <value>Sửa mục lịch sử</value>
@@ -436,5 +451,146 @@
   </data>
   <data name="ImageHistoryWindow_ThisItem" xml:space="preserve">
     <value>mục này</value>
+  </data>
+  <data name="StatsWindow_AboutADay" xml:space="preserve">
+    <value>khoảng {0} mỗi ngày</value>
+  </data>
+  <data name="StatsWindow_AboutAWeek" xml:space="preserve">
+    <value>khoảng {0} mỗi tuần</value>
+  </data>
+  <data name="StatsWindow_ActiveDays" xml:space="preserve">
+    <value>{0} trên {1} có hoạt động</value>
+  </data>
+  <data name="StatsWindow_Afternoon" xml:space="preserve">
+    <value>Chiều</value>
+  </data>
+  <data name="StatsWindow_All" xml:space="preserve">
+    <value>Tất cả</value>
+  </data>
+  <data name="StatsWindow_AllYears" xml:space="preserve">
+    <value>Tất cả các năm</value>
+  </data>
+  <data name="StatsWindow_BeforeHistory" xml:space="preserve">
+    <value>Trước khi lịch sử của bạn bắt đầu</value>
+  </data>
+  <data name="StatsWindow_BusiestDay" xml:space="preserve">
+    <value>Ngày bận rộn nhất</value>
+  </data>
+  <data name="StatsWindow_BusiestOn" xml:space="preserve">
+    <value>bận rộn nhất vào {0}</value>
+  </data>
+  <data name="StatsWindow_BusiestTime" xml:space="preserve">
+    <value>bận rộn nhất lúc {0}</value>
+  </data>
+  <data name="StatsWindow_CountingSince" xml:space="preserve">
+    <value>Tính từ {0} · {1}</value>
+  </data>
+  <data name="StatsWindow_DayOfWeek" xml:space="preserve">
+    <value>Ngày trong tuần</value>
+  </data>
+  <data name="StatsWindow_Days" xml:space="preserve">
+    <value>{0} ngày</value>
+  </data>
+  <data name="StatsWindow_Destinations" xml:space="preserve">
+    <value>Đích</value>
+  </data>
+  <data name="StatsWindow_Evening" xml:space="preserve">
+    <value>Tối</value>
+  </data>
+  <data name="StatsWindow_EveryDay" xml:space="preserve">
+    <value>Mỗi ngày</value>
+  </data>
+  <data name="StatsWindow_FileTypes" xml:space="preserve">
+    <value>Loại tệp</value>
+  </data>
+  <data name="StatsWindow_Images" xml:space="preserve">
+    <value>Hình ảnh</value>
+  </data>
+  <data name="StatsWindow_Less" xml:space="preserve">
+    <value>Ít</value>
+  </data>
+  <data name="StatsWindow_LongestStreak" xml:space="preserve">
+    <value>dài nhất {0} đến {1}</value>
+  </data>
+  <data name="StatsWindow_LongestYet" xml:space="preserve">
+    <value>dài nhất từ trước đến nay</value>
+  </data>
+  <data name="StatsWindow_More" xml:space="preserve">
+    <value>Nhiều</value>
+  </data>
+  <data name="StatsWindow_Morning" xml:space="preserve">
+    <value>Sáng</value>
+  </data>
+  <data name="StatsWindow_Night" xml:space="preserve">
+    <value>Đêm</value>
+  </data>
+  <data name="StatsWindow_NoData" xml:space="preserve">
+    <value>Chưa có dữ liệu</value>
+  </data>
+  <data name="StatsWindow_NoHistory" xml:space="preserve">
+    <value>Chưa có gì để đếm. Các ảnh chụp và lượt tải lên sẽ hiển thị ở đây khi được lưu vào lịch sử.</value>
+  </data>
+  <data name="StatsWindow_NoneInPrevious7Days" xml:space="preserve">
+    <value>7 ngày trước đó chưa có</value>
+  </data>
+  <data name="StatsWindow_NonePrevious7DaysEither" xml:space="preserve">
+    <value>7 ngày trước đó cũng không có</value>
+  </data>
+  <data name="StatsWindow_NothingYet" xml:space="preserve">
+    <value>chưa có gì</value>
+  </data>
+  <data name="StatsWindow_OneDay" xml:space="preserve">
+    <value>{0} ngày</value>
+  </data>
+  <data name="StatsWindow_Other" xml:space="preserve">
+    <value>Khác</value>
+  </data>
+  <data name="StatsWindow_OtherFiles" xml:space="preserve">
+    <value>Tệp khác</value>
+  </data>
+  <data name="StatsWindow_Past7Days" xml:space="preserve">
+    <value>7 ngày qua</value>
+  </data>
+  <data name="StatsWindow_PastYear" xml:space="preserve">
+    <value>Năm qua</value>
+  </data>
+  <data name="StatsWindow_Recordings" xml:space="preserve">
+    <value>Bản ghi hình</value>
+  </data>
+  <data name="StatsWindow_Refresh" xml:space="preserve">
+    <value>Làm mới</value>
+  </data>
+  <data name="StatsWindow_Share" xml:space="preserve">
+    <value>Chia sẻ</value>
+  </data>
+  <data name="StatsWindow_ShareToolTip" xml:space="preserve">
+    <value>Chụp ảnh thống kê này và chạy các tác vụ sau khi chụp trên ảnh đó.</value>
+  </data>
+  <data name="StatsWindow_Stats" xml:space="preserve">
+    <value>Thống kê</value>
+  </data>
+  <data name="StatsWindow_Streak" xml:space="preserve">
+    <value>Chuỗi ngày</value>
+  </data>
+  <data name="StatsWindow_TimeOfDay" xml:space="preserve">
+    <value>Thời điểm trong ngày</value>
+  </data>
+  <data name="StatsWindow_Title" xml:space="preserve">
+    <value>ShareX - Thống kê</value>
+  </data>
+  <data name="StatsWindow_Today" xml:space="preserve">
+    <value>Hôm nay</value>
+  </data>
+  <data name="StatsWindow_TopApps" xml:space="preserve">
+    <value>Ứng dụng được chụp nhiều nhất</value>
+  </data>
+  <data name="StatsWindow_Total" xml:space="preserve">
+    <value>Tổng</value>
+  </data>
+  <data name="StatsWindow_TotalCount" xml:space="preserve">
+    <value>Tổng: {0}</value>
+  </data>
+  <data name="StatsWindow_VsPrevious7Days" xml:space="preserve">
+    <value>so với 7 ngày trước đó</value>
   </data>
 </root>

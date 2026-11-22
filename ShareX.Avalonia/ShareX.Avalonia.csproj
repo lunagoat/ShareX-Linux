@@ -10,7 +10,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <AvaloniaResource Include="Assets\lucide.ttf" />
     <AvaloniaResource Include="Assets\closedhand.cur" />
     <AvaloniaResource Include="Assets\Crosshair.cur" />
     <AvaloniaResource Include="Assets\openhand.cur" />
@@ -24,6 +23,10 @@
     <PackageReference Include="Avalonia.Themes.Fluent" />
     <PackageReference Include="SkiaSharp" />
     <PackageReference Include="Tmds.DBus.Protocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ShareX.Icons\ShareX.Icons.csproj" />
   </ItemGroup>
 
   <ItemGroup>

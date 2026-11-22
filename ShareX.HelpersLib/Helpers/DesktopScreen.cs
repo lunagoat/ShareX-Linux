@@ -36,12 +36,18 @@ public sealed class DesktopScreen
     public Rectangle Bounds { get; }
     public Rectangle WorkingArea { get; }
     public bool Primary { get; }
+    /// <summary>Windows device name, such as \\.\DISPLAY2; null on other platforms.</summary>
+    public string DeviceName { get; }
+    /// <summary>Monitor model name; several monitors can share it.</summary>
+    public string DisplayName { get; }
 
     private DesktopScreen(Avalonia.Platform.Screen screen)
     {
         Bounds = new Rectangle(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height);
         WorkingArea = new Rectangle(screen.WorkingArea.X, screen.WorkingArea.Y, screen.WorkingArea.Width, screen.WorkingArea.Height);
         Primary = screen.IsPrimary;
+        DeviceName = GetDeviceName(screen);
+        DisplayName = screen.DisplayName;
     }
 
     private DesktopScreen(ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor monitor)
@@ -49,6 +55,26 @@ public sealed class DesktopScreen
         Bounds = monitor.Bounds;
         WorkingArea = monitor.Bounds;
         Primary = monitor.Primary;
+        // The compositor's output name (DP-1, HDMI-A-1, ...) is stable across restarts, like \\.\DISPLAY2 on Windows.
+        DeviceName = monitor.Name;
+        DisplayName = monitor.Name;
+    }
+
+    /// <summary>Windows: the GDI device name. Linux: the compositor output name of the monitor the screen covers most.
+    /// Avalonia runs under XWayland, whose output names (XWAYLAND0, ...) do not match the compositor's, so screens are
+    /// matched by geometry; both use desktop coordinates.</summary>
+    public static string GetDeviceName(Avalonia.Platform.Screen screen)
+    {
+        if (!OperatingSystem.IsLinux())
+            return NativeMethods.GetMonitorDeviceName(screen.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
+
+        Rectangle bounds = new(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height);
+        return ShareX.AvaloniaUI.Linux.LinuxScreenCapture.GetMonitors()
+            .Select(x => (x.Name, Overlap: Rectangle.Intersect(x.Bounds, bounds)))
+            .Where(x => !x.Overlap.IsEmpty)
+            .OrderByDescending(x => (long)x.Overlap.Width * x.Overlap.Height)
+            .Select(x => x.Name)
+            .FirstOrDefault() ?? screen.DisplayName ?? "";
     }
 
     public static DesktopScreen[] AllScreens => OperatingSystem.IsLinux()

@@ -25,6 +25,7 @@
 
 using Newtonsoft.Json.Linq;
 using ShareX.HelpersLib;
+using ShareX.Localization;
 using System;
 using System.IO;
 using System.Linq;
@@ -72,6 +73,9 @@ public static class IntegrationHelpers
         if (create && !LinuxPaths.Ephemeral) File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
     }
     public static void CreateEditShellContextMenuButton(bool create) => SetService("edit", "Edit with ShareX", "-ImageEditor %f", "image/*;", create);
+    public static bool CheckPhotoEditorShellContextMenuButton() => File.Exists(Path.Combine(Services, "sharex-photoeditor.desktop"));
+    public static void CreatePhotoEditorShellContextMenuButton(bool create) =>
+        SetService("photoeditor", Strings.IntegrationHelpers_EditWithShareXPhotoEditor, "-PhotoEditor %f", "image/*;", create);
     private static string ShellQuote(string text) => "'" + text.Replace("'", "'\\''") + "'";
     private static void SetService(string id, string name, string args, string mime, bool create) =>
         SetFile(Path.Combine(Services, $"sharex-{id}.desktop"), create,
@@ -112,6 +116,7 @@ public static class IntegrationHelpers
         StartupManager.State = StartupState.Disabled;
         CreateShellContextMenuButton(false);
         CreateEditShellContextMenuButton(false);
+        CreatePhotoEditorShellContextMenuButton(false);
         CreateCustomUploaderExtension(false);
         CreateImageEffectExtension(false);
         SetBrowser(false, false);

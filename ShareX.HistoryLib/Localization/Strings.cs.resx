@@ -72,11 +72,17 @@
   <data name="HistoryWindow_NoItemsMatchCurrentFilters" xml:space="preserve">
     <value>Žádné položky neodpovídají aktuálním filtrům</value>
   </data>
+  <data name="HistoryWindow_ProcessName" xml:space="preserve">
+    <value>Název procesu</value>
+  </data>
   <data name="HistoryWindow_Rename" xml:space="preserve">
     <value>Přejmenovat</value>
   </data>
   <data name="HistoryWindow_RenameFile" xml:space="preserve">
     <value>Přejmenovat soubor</value>
+  </data>
+  <data name="HistoryWindow_ResetColumns" xml:space="preserve">
+    <value>Obnovit sloupce</value>
   </data>
   <data name="HistoryWindow_SelectFolderToImport" xml:space="preserve">
     <value>Vyberte složku k importu</value>
@@ -86,6 +92,9 @@
   </data>
   <data name="HistoryWindow_SuccessfullyImportedFilesFormat" xml:space="preserve">
     <value>Úspěšně importováno souborů: {0:N0}.</value>
+  </data>
+  <data name="HistoryWindow_Tag" xml:space="preserve">
+    <value>Štítek</value>
   </data>
   <data name="HistoryWindow_TheseFilesFormat" xml:space="preserve">
     <value>těchto {0:N0} souborů</value>
@@ -101,6 +110,9 @@
   </data>
   <data name="HistoryWindow_Unfavorite" xml:space="preserve">
     <value>Odebrat z oblíbených</value>
+  </data>
+  <data name="HistoryWindow_WindowTitle" xml:space="preserve">
+    <value>Název okna</value>
   </data>
   <data name="HistoryWindows_Advanced" xml:space="preserve">
     <value>Pokročilé</value>
@@ -149,6 +161,9 @@
   </data>
   <data name="HistoryWindows_Done" xml:space="preserve">
     <value>Hotovo</value>
+  </data>
+  <data name="HistoryWindows_EditImageInPhotoEditor" xml:space="preserve">
+    <value>Upravit v editoru fotografií...</value>
   </data>
   <data name="HistoryWindows_Edit_history_item" xml:space="preserve">
     <value>Upravit položku historie</value>
@@ -436,5 +451,146 @@
   </data>
   <data name="ImageHistoryWindow_ThisItem" xml:space="preserve">
     <value>tuto položku</value>
+  </data>
+  <data name="StatsWindow_AboutADay" xml:space="preserve">
+    <value>asi {0} denně</value>
+  </data>
+  <data name="StatsWindow_AboutAWeek" xml:space="preserve">
+    <value>asi {0} týdně</value>
+  </data>
+  <data name="StatsWindow_ActiveDays" xml:space="preserve">
+    <value>aktivních {0} z {1}</value>
+  </data>
+  <data name="StatsWindow_Afternoon" xml:space="preserve">
+    <value>Odpoledne</value>
+  </data>
+  <data name="StatsWindow_All" xml:space="preserve">
+    <value>Vše</value>
+  </data>
+  <data name="StatsWindow_AllYears" xml:space="preserve">
+    <value>Všechny roky</value>
+  </data>
+  <data name="StatsWindow_BeforeHistory" xml:space="preserve">
+    <value>Před začátkem historie</value>
+  </data>
+  <data name="StatsWindow_BusiestDay" xml:space="preserve">
+    <value>Nejrušnější den</value>
+  </data>
+  <data name="StatsWindow_BusiestOn" xml:space="preserve">
+    <value>nejvíce: {0}</value>
+  </data>
+  <data name="StatsWindow_BusiestTime" xml:space="preserve">
+    <value>nejvíce: {0}</value>
+  </data>
+  <data name="StatsWindow_CountingSince" xml:space="preserve">
+    <value>Počítáno od {0} · {1}</value>
+  </data>
+  <data name="StatsWindow_DayOfWeek" xml:space="preserve">
+    <value>Den v týdnu</value>
+  </data>
+  <data name="StatsWindow_Days" xml:space="preserve">
+    <value>{0} dní</value>
+  </data>
+  <data name="StatsWindow_Destinations" xml:space="preserve">
+    <value>Cíle</value>
+  </data>
+  <data name="StatsWindow_Evening" xml:space="preserve">
+    <value>Večer</value>
+  </data>
+  <data name="StatsWindow_EveryDay" xml:space="preserve">
+    <value>Každý den</value>
+  </data>
+  <data name="StatsWindow_FileTypes" xml:space="preserve">
+    <value>Typy souborů</value>
+  </data>
+  <data name="StatsWindow_Images" xml:space="preserve">
+    <value>Obrázky</value>
+  </data>
+  <data name="StatsWindow_Less" xml:space="preserve">
+    <value>Méně</value>
+  </data>
+  <data name="StatsWindow_LongestStreak" xml:space="preserve">
+    <value>nejdelší {0} do {1}</value>
+  </data>
+  <data name="StatsWindow_LongestYet" xml:space="preserve">
+    <value>zatím nejdelší</value>
+  </data>
+  <data name="StatsWindow_More" xml:space="preserve">
+    <value>Více</value>
+  </data>
+  <data name="StatsWindow_Morning" xml:space="preserve">
+    <value>Dopoledne</value>
+  </data>
+  <data name="StatsWindow_Night" xml:space="preserve">
+    <value>Noc</value>
+  </data>
+  <data name="StatsWindow_NoData" xml:space="preserve">
+    <value>Zatím žádná data</value>
+  </data>
+  <data name="StatsWindow_NoHistory" xml:space="preserve">
+    <value>Zatím není co počítat. Snímky a nahrané soubory se zde zobrazí, jakmile budou uloženy do historie.</value>
+  </data>
+  <data name="StatsWindow_NoneInPrevious7Days" xml:space="preserve">
+    <value>v předchozích 7 dnech nic</value>
+  </data>
+  <data name="StatsWindow_NonePrevious7DaysEither" xml:space="preserve">
+    <value>ani v předchozích 7 dnech nic</value>
+  </data>
+  <data name="StatsWindow_NothingYet" xml:space="preserve">
+    <value>zatím nic</value>
+  </data>
+  <data name="StatsWindow_OneDay" xml:space="preserve">
+    <value>{0} den</value>
+  </data>
+  <data name="StatsWindow_Other" xml:space="preserve">
+    <value>Ostatní</value>
+  </data>
+  <data name="StatsWindow_OtherFiles" xml:space="preserve">
+    <value>Ostatní soubory</value>
+  </data>
+  <data name="StatsWindow_Past7Days" xml:space="preserve">
+    <value>Posledních 7 dní</value>
+  </data>
+  <data name="StatsWindow_PastYear" xml:space="preserve">
+    <value>Poslední rok</value>
+  </data>
+  <data name="StatsWindow_Recordings" xml:space="preserve">
+    <value>Nahrávky</value>
+  </data>
+  <data name="StatsWindow_Refresh" xml:space="preserve">
+    <value>Obnovit</value>
+  </data>
+  <data name="StatsWindow_Share" xml:space="preserve">
+    <value>Sdílet</value>
+  </data>
+  <data name="StatsWindow_ShareToolTip" xml:space="preserve">
+    <value>Pořídit obrázek těchto statistik a spustit na něm úlohy po zachycení.</value>
+  </data>
+  <data name="StatsWindow_Stats" xml:space="preserve">
+    <value>Statistiky</value>
+  </data>
+  <data name="StatsWindow_Streak" xml:space="preserve">
+    <value>Série</value>
+  </data>
+  <data name="StatsWindow_TimeOfDay" xml:space="preserve">
+    <value>Denní doba</value>
+  </data>
+  <data name="StatsWindow_Title" xml:space="preserve">
+    <value>ShareX – Statistiky</value>
+  </data>
+  <data name="StatsWindow_Today" xml:space="preserve">
+    <value>Dnes</value>
+  </data>
+  <data name="StatsWindow_TopApps" xml:space="preserve">
+    <value>Nejčastěji zachycované aplikace</value>
+  </data>
+  <data name="StatsWindow_Total" xml:space="preserve">
+    <value>Celkem</value>
+  </data>
+  <data name="StatsWindow_TotalCount" xml:space="preserve">
+    <value>Celkem: {0}</value>
+  </data>
+  <data name="StatsWindow_VsPrevious7Days" xml:space="preserve">
+    <value>oproti předchozím 7 dnům</value>
   </data>
 </root>

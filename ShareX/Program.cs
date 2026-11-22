@@ -183,7 +183,7 @@ internal static class Program
         bool isSilent = StartupOptions.SilentRun || ApplicationState.Settings.SilentRun;
         bool hasActionCommands = ApplicationCommandLine.HasActionCommands;
 
-        bool showStartScreen = ApplicationState.Settings.ShowStartScreen && !isSilent && !hasActionCommands;
+        bool showStartScreen = ApplicationState.Settings.ShowStartScreen && !StartupOptions.Sandbox && !isSilent && !hasActionCommands;
         bool showMainWindow = !isSilent && !showStartScreen &&
             (!ApplicationState.Settings.ShowTray || !hasActionCommands);
 
@@ -197,6 +197,8 @@ internal static class Program
         {
             MainWindowIntegration.Activate();
         }
+
+        IconPackPromptWindow.ShowOnceWithMainWindow();
 
         DebugHelper.WriteLine("Startup time: {0} ms", _startTimer.ElapsedMilliseconds);
         await ApplicationCommandLine.ExecuteInitialAsync();

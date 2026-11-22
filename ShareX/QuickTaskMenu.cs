@@ -27,13 +27,20 @@
 
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.Controls.Primitives.PopupPositioning;
+using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Threading;
+using ShareX.AvaloniaUI.Controls;
 using ShareX.AvaloniaUI.Theming;
 using ShareX.HelpersLib;
+using ShareX.Icons;
 using ShareX.Localization;
 using System;
+using System.Linq;
 
 namespace ShareX;
 
@@ -55,8 +62,8 @@ public sealed class QuickTaskMenu
         CloseMenu();
 
         ContextMenu menu = new();
-        MenuItem continueItem = CreateActionItem(menu, Strings.QuickTaskMenu_ShowMenu_Continue,
-            LucideIcons.circle_play, () => OnTaskInfoSelected(null));
+        MenuItem continueItem = CreateActionItem(Strings.QuickTaskMenu_ShowMenu_Continue,
+            AppIcons.CirclePlay, () => OnTaskInfoSelected(null));
         menu.Items.Add(continueItem);
         menu.Items.Add(new Separator());
 
@@ -66,7 +73,8 @@ public sealed class QuickTaskMenu
             {
                 if (taskInfo.IsValid)
                 {
-                    MenuItem item = CreateActionItem(menu, taskInfo.ToString(), null,
+                    string icon = MainMenuBuilder.GetAfterCaptureTaskIcon(taskInfo.AfterCaptureTasks.GetFlags().FirstOrDefault());
+                    MenuItem item = CreateActionItem(taskInfo.ToString(), icon,
                         () => OnTaskInfoSelected(taskInfo));
                     menu.Items.Add(item);
                 }
@@ -79,14 +87,14 @@ public sealed class QuickTaskMenu
             menu.Items.Add(new Separator());
         }
 
-        menu.Items.Add(CreateActionItem(menu, Strings.QuickTaskMenu_ShowMenu_Edit_this_menu___,
-            LucideIcons.pencil, QuickTaskMenuEditorIntegration.Show));
+        menu.Items.Add(CreateActionItem(Strings.QuickTaskMenu_ShowMenu_Edit_this_menu___,
+            AppIcons.Edit, QuickTaskMenuEditorIntegration.Show));
         menu.Items.Add(new Separator());
-        menu.Items.Add(CreateActionItem(menu, Strings.QuickTaskMenu_ShowMenu_Cancel,
-            LucideIcons.x, null));
+        menu.Items.Add(CreateActionItem(Strings.QuickTaskMenu_ShowMenu_Cancel,
+            AppIcons.Close, null));
 
         System.Drawing.Point cursorPosition = CaptureHelpers.GetCursorPosition();
-        PixelPoint placementPosition = new(cursorPosition.X - 10, cursorPosition.Y - 10);
+        PixelPoint placementPosition = new(cursorPosition.X, cursorPosition.Y);
         Window placementWindow = new()
         {
             Width = 1,
@@ -107,8 +115,33 @@ public sealed class QuickTaskMenu
         _menu = menu;
         _placementWindow = placementWindow;
 
-        menu.Placement = PlacementMode.BottomEdgeAlignedLeft;
+        menu.Placement = PlacementMode.AnchorAndGravity;
+        menu.PlacementAnchor = PopupAnchor.TopLeft;
+        menu.PlacementGravity = PopupGravity.BottomRight;
+        menu.PlacementConstraintAdjustment = PopupPositionerConstraintAdjustment.SlideX |
+            PopupPositionerConstraintAdjustment.SlideY;
         menu.PlacementTarget = placementWindow;
+        // Only explicit actions may dismiss a pending capture.
+        menu.Closing += (_, e) => e.Cancel = ReferenceEquals(_menu, menu);
+        menu.AddHandler(InputElement.KeyDownEvent, (_, e) =>
+        {
+            if (e.Key == Key.Escape)
+            {
+                CloseMenu();
+                e.Handled = true;
+            }
+        }, RoutingStrategies.Tunnel);
+        menu.Loaded += (_, _) =>
+        {
+            Point? continueCenter = continueItem.TranslatePoint(
+                new Point(continueItem.Bounds.Width / 2, continueItem.Bounds.Height / 2), menu);
+
+            if (menu.Parent is Popup popup && continueCenter is Point center)
+            {
+                popup.HorizontalOffset = -center.X;
+                popup.VerticalOffset = -center.Y;
+            }
+        };
         menu.Closed += (_, _) => ClosePlacementWindow(menu, placementWindow);
         placementWindow.Closed += (_, _) => CloseContextMenu(menu, placementWindow);
         placementWindow.Show();
@@ -118,28 +151,27 @@ public sealed class QuickTaskMenu
         Dispatcher.UIThread.Post(() => continueItem.Focus(), DispatcherPriority.Input);
     }
 
-    private static MenuItem CreateActionItem(ContextMenu menu, string header, string? icon, Action? action)
+    private MenuItem CreateActionItem(string header, string? icon, Action? action)
     {
         MenuItem item = new() { Header = header };
+        item.Classes.Add("compact-menu-item");
 
         if (!string.IsNullOrEmpty(icon))
         {
-            TextBlock iconText = new()
+            IconPresenter iconPresenter = new()
             {
-                Text = icon,
+                Icon = icon,
                 FontSize = 16,
-                FontWeight = FontWeight.Normal,
                 HorizontalAlignment = HorizontalAlignment.Center,
                 VerticalAlignment = VerticalAlignment.Center
             };
-            iconText.Classes.Add("icon");
-            iconText.Classes.Add("accent-menu-icon");
-            item.Icon = iconText;
+            iconPresenter.Classes.Add("accent-menu-icon");
+            item.Icon = iconPresenter;
         }
 
         item.Click += (_, _) =>
         {
-            menu.Close();
+            CloseMenu();
             if (action != null)
             {
                 Dispatcher.UIThread.Post(action, DispatcherPriority.Background);

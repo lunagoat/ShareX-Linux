@@ -52,6 +52,9 @@ public partial class AnnotationToolbar : UserControl
     public static readonly StyledProperty<CornerRadius> MainToolbarCornerRadiusProperty =
         AvaloniaProperty.Register<AnnotationToolbar, CornerRadius>(nameof(MainToolbarCornerRadius), new CornerRadius(0, 0, 4, 4));
 
+    public static readonly StyledProperty<bool> IsCompactProperty =
+        AvaloniaProperty.Register<AnnotationToolbar, bool>(nameof(IsCompact));
+
     private IAnnotationToolbarAdapter? _toolbarAdapter;
     private ContentControl _mainToolbarLeadingContentHost = null!;
 
@@ -71,7 +74,10 @@ public partial class AnnotationToolbar : UserControl
     public event EventHandler<bool>? TextItalicChanged;
     public event EventHandler<bool>? ShadowChanged;
     public event EventHandler? ShadowSettingsChanged;
+    public event EventHandler<bool>? ArrowRoundedCornersChanged;
+    public event EventHandler<bool>? FreehandArrowChanged;
     public event EventHandler<bool>? SpeechBalloonTailChanged;
+    public event EventHandler<bool>? SpeechBalloonAutoSizeChanged;
     public event EventHandler<bool>? EffectEllipseChanged;
     public event EventHandler<Control>? FavoriteEffectsMenuRequested;
 
@@ -109,6 +115,16 @@ public partial class AnnotationToolbar : UserControl
         set => SetValue(MainToolbarCornerRadiusProperty, value);
     }
 
+    /// <summary>
+    /// Uses the dense layout of the ShareX 21 region capture toolbar:
+    /// small flat buttons, square corners and tight spacing.
+    /// </summary>
+    public bool IsCompact
+    {
+        get => GetValue(IsCompactProperty);
+        set => SetValue(IsCompactProperty, value);
+    }
+
     public Control? MainToolbarLeadingContent
     {
         get => _mainToolbarLeadingContentHost.Content as Control;
@@ -128,6 +144,16 @@ public partial class AnnotationToolbar : UserControl
         if (fileButton?.Flyout is FlyoutBase flyout)
         {
             flyout.ShowAt(fileButton);
+        }
+    }
+
+    protected override void OnPropertyChanged(AvaloniaPropertyChangedEventArgs change)
+    {
+        base.OnPropertyChanged(change);
+
+        if (change.Property == IsCompactProperty)
+        {
+            PseudoClasses.Set(":compact", change.GetNewValue<bool>());
         }
     }
 
@@ -361,12 +387,39 @@ public partial class AnnotationToolbar : UserControl
         }
     }
 
+    private void OnArrowRoundedCornersClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is IAnnotationToolbarAdapter toolbar)
+        {
+            toolbar.ArrowRoundedCorners = !toolbar.ArrowRoundedCorners;
+            ArrowRoundedCornersChanged?.Invoke(this, toolbar.ArrowRoundedCorners);
+        }
+    }
+
+    private void OnFreehandArrowClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is IAnnotationToolbarAdapter toolbar)
+        {
+            toolbar.FreehandArrow = !toolbar.FreehandArrow;
+            FreehandArrowChanged?.Invoke(this, toolbar.FreehandArrow);
+        }
+    }
+
     private void OnSpeechBalloonTailClick(object? sender, RoutedEventArgs e)
     {
         if (DataContext is IAnnotationToolbarAdapter toolbar)
         {
             toolbar.SpeechBalloonTail = !toolbar.SpeechBalloonTail;
             SpeechBalloonTailChanged?.Invoke(this, toolbar.SpeechBalloonTail);
+        }
+    }
+
+    private void OnSpeechBalloonAutoSizeClick(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is IAnnotationToolbarAdapter toolbar)
+        {
+            toolbar.SpeechBalloonAutoSize = !toolbar.SpeechBalloonAutoSize;
+            SpeechBalloonAutoSizeChanged?.Invoke(this, toolbar.SpeechBalloonAutoSize);
         }
     }
 

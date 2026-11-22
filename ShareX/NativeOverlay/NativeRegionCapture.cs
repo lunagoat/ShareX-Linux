@@ -21,6 +21,23 @@ namespace ShareX;
 
 internal static class NativeRegionCapture
 {
+    /// <summary>As <see cref="Choose(out string)"/>, but also uses the window overlay for selections the native overlay
+    /// cannot make: it draws single rectangle selections only.</summary>
+    internal static bool Choose(ShareX.ScreenCaptureLib.RegionCaptureOptions? options, out string reason)
+    {
+        if (options != null && Environment.GetEnvironmentVariable("SHAREX_OVERLAY") != "native")
+        {
+            if (options.MultiRegionMode) { reason = "multi-region mode needs the window overlay"; return false; }
+            if (options.ToolbarItems.Any(x => x.IsVisible &&
+                (x.Id == RegionCaptureToolbar.EllipseRegionItemId || x.Id == RegionCaptureToolbar.FreehandRegionItemId)))
+            {
+                reason = "ellipse/freehand region tools need the window overlay";
+                return false;
+            }
+        }
+        return Choose(out reason);
+    }
+
     internal static bool Choose(out string reason)
     {
         string? choice = Environment.GetEnvironmentVariable("SHAREX_OVERLAY");
@@ -72,7 +89,7 @@ internal static class NativeRegionCapture
         PrewarmedHelper? helper = null;
         try
         {
-            if (!Choose(out _)) return null;
+            if (!Choose(options, out _)) return null;
             string directory = OverlayPixels.CreateDirectory();
             helper = new PrewarmedHelper { Directory = directory };
             (helper.Child, helper.Identity, helper.Errors) = StartChild(directory, test);
@@ -113,7 +130,7 @@ internal static class NativeRegionCapture
 
     internal static async Task<AvaloniaRegionCaptureResult?> CaptureAsync(AvaloniaRegionCaptureRequest request, PrewarmedHelper? prewarmed = null)
     {
-        bool native = Choose(out string reason);
+        bool native = Choose(request.RegionCaptureOptions, out string reason);
         if (!native) prewarmed?.Dispose();
         return await CaptureWithFallbackAsync(request, native, reason, () => RunAsync(request, "", prewarmed), () => RegionCaptureIntegration.CaptureAsync(request));
     }
@@ -127,7 +144,7 @@ internal static class NativeRegionCapture
             {
                 var result = await run();
                 request.Screenshot.Dispose(); request.CursorBitmap?.Dispose();
-                if (result != null) RegionCaptureIntegration.LastRegionRectangle = result.ScreenRectangle;
+                if (result != null) RegionCaptureIntegration.SetLastRegion(result.ScreenRectangle, [result.ScreenRectangle]);
                 return result;
             }
             catch (Exception e) { reason = "native helper failed: " + e.Message; }

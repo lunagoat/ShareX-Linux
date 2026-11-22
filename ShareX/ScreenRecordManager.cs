@@ -66,7 +66,10 @@ namespace ShareX
         public static void StopRecording()
         {
             configurationBar?.Cancel();
-            nativeRecorder?.RequestStop();
+            // An abort or restart discards the recording, so skip the final encode.
+            if (recordForm?.Status == ScreenRecordingStatus.Aborted || recordForm?.RestartRequested == true)
+                nativeRecorder?.RequestAbort();
+            else nativeRecorder?.RequestStop();
         }
         public static void PauseScreenRecording() => recordForm?.PauseResumeRecording();
         public static void AbortRecording() { configurationBar?.Cancel(); recordForm?.AbortRecording(); }
@@ -74,7 +77,8 @@ namespace ShareX
         private static async Task StartRecording(ScreenRecordOutput outputType, TaskSettings taskSettings, ScreenRecordStartMethod startMethod)
         {
             if (!TaskHelpers.CheckFFmpeg(taskSettings)) return;
-            if (taskSettings.GeneralSettings.ToastWindowAutoHide) NotificationWindow.CloseActiveWindow();
+            // Wait for the notification to close so it is not recorded (#8901).
+            if (taskSettings.GeneralSettings.ToastWindowAutoHide) await NotificationWindow.CloseActiveWindowAsync();
             Rectangle captureRectangle = Rectangle.Empty;
             IntPtr captureWindow = IntPtr.Zero;
             TaskMetadata metadata = new();
@@ -97,6 +101,7 @@ namespace ShareX
                     break;
             }
             Rectangle screens = ShareX.ScreenRecordingLib.RecordingTargets.DesktopBounds() ?? CaptureHelpers.GetScreenBounds();
+            // Always even: the Linux engine records H.264 yuv420p segments, even for GIF output.
             captureRectangle = CaptureHelpers.EvenRectangleSize(Rectangle.Intersect(captureRectangle, screens));
             if (IsRecording || !captureRectangle.IsValid() || nativeRecorder != null) return;
             IsRecording = true;
@@ -104,7 +109,9 @@ namespace ShareX
             {
                 try
                 {
-                    configurationBar = new(taskSettings, captureRectangle, captureWindow);
+                    bool useNative = taskSettings.CaptureSettings.ScreenRecordUseNative;
+                    bool useGifFps = outputType == ScreenRecordOutput.GIF || (!useNative && taskSettings.CaptureSettings.FFmpegOptions.VideoCodec == FFmpegVideoCodec.gif);
+                    configurationBar = new(taskSettings, captureRectangle, captureWindow, useGifFps, useNative, evenSize: true);
                     bool record = await configurationBar.ShowSetupAsync();
                     configurationBar.Commit(taskSettings);
                     SettingManager.SaveApplicationConfigAsync();
@@ -187,6 +194,8 @@ namespace ShareX
 
         private static async Task<bool> RecordNativeAsync(string path, IntPtr captureWindow, TaskSettings settings, bool replaceExisting, int fps)
         {
+            // GIF, WebP and APNG cannot hold audio, so do not capture it (or fail on a missing audio device).
+            bool silent = Path.GetExtension(path).ToLowerInvariant() is ".gif" or ".webp" or ".apng";
             // HandleExistsFile has already applied the user's overwrite policy. Commit a completed
             // recording afterward so aborts, restarts and startup errors preserve an existing file.
             string recordingPath = Path.Combine(Path.GetDirectoryName(path), $"{Path.GetFileNameWithoutExtension(path)}-recording-{Guid.NewGuid():N}{Path.GetExtension(path)}");
@@ -203,10 +212,10 @@ namespace ShareX
                     ExtraArguments = GetOutputArguments(settings, fps),
                     CustomCommands = settings.CaptureSettings.FFmpegOptions.UseCustomCommands ? settings.CaptureSettings.FFmpegOptions.CustomCommands : "",
                     VideoBitrate = settings.CaptureSettings.ScreenRecordVideoBitrate * 1000,
-                    CaptureSystemAudio = settings.CaptureSettings.ScreenRecordUseNative ? settings.CaptureSettings.ScreenRecordSystemAudio : settings.CaptureSettings.FFmpegOptions.IsAudioSourceSelected,
+                    CaptureSystemAudio = !silent && (settings.CaptureSettings.ScreenRecordUseNative ? settings.CaptureSettings.ScreenRecordSystemAudio : settings.CaptureSettings.FFmpegOptions.IsAudioSourceSelected),
                     SystemAudioDeviceId = settings.CaptureSettings.ScreenRecordUseNative ? settings.CaptureSettings.ScreenRecordSystemAudioDeviceId : settings.CaptureSettings.FFmpegOptions.AudioSource,
                     SystemAudioGain = settings.CaptureSettings.ScreenRecordSystemAudioGain,
-                    CaptureMicrophone = settings.CaptureSettings.ScreenRecordUseNative && settings.CaptureSettings.ScreenRecordMicrophone,
+                    CaptureMicrophone = !silent && settings.CaptureSettings.ScreenRecordUseNative && settings.CaptureSettings.ScreenRecordMicrophone,
                     MicrophoneDeviceId = settings.CaptureSettings.ScreenRecordMicrophoneDeviceId,
                     MicrophoneGain = settings.CaptureSettings.ScreenRecordMicrophoneGain,
                     CaptureCamera = settings.CaptureSettings.ScreenRecordCamera,
@@ -252,7 +261,9 @@ namespace ShareX
                         ? await MouseHighlighterManager.BeginRecordingAsync(settings.ToolsSettings.MouseHighlighterOptions) : null)
                     {
                         await nativeRecorder.StartAsync();
-                        if (recordForm.Status == ScreenRecordingStatus.Aborted || recordForm.Status == ScreenRecordingStatus.Stopped || recordForm.RestartRequested)
+                        if (recordForm.Status == ScreenRecordingStatus.Aborted || recordForm.RestartRequested)
+                            nativeRecorder.RequestAbort();
+                        else if (recordForm.Status == ScreenRecordingStatus.Stopped)
                             nativeRecorder.RequestStop();
                         else ScreenRecorder_RecordingStarted();
                         var result = await nativeRecorder.Completion;

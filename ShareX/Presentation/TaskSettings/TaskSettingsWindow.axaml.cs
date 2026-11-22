@@ -30,12 +30,15 @@ using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Avalonia.Threading;
+using ShareX.AvaloniaUI.Controls;
 using ShareX.AvaloniaUI.Theming;
 using ShareX.HelpersLib;
 using ShareX.ImageEditor.Integration;
 using ShareX.ImageEditor.Presentation.ViewModels;
 using ShareX.ImageEditor.Presentation.Views;
 using ShareX.Localization;
+using ShareX.ScreenCaptureLib;
+using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -107,24 +110,43 @@ public partial class TaskSettingsWindow : Window
     {
         ImageEditorIntegration.Initialize();
 
-        ToolbarCustomizationDialogView view = new();
-        view.DataContext = new ToolbarCustomizationDialogViewModel(
-            ToolbarCustomizationItemViewModel.CreateFromOptions(options.ToolbarItems),
-            items =>
-            {
-                options.ToolbarItems = items.Select(item => item.ToOptions()).ToList();
-                HideImageEditorToolbarEditor();
-            },
-            HideImageEditorToolbarEditor);
-
-        ImageEditorToolbarEditor.Content = view;
-        ImageEditorToolbarEditorOverlay.IsVisible = true;
+        ShowToolbarEditor(ToolbarCustomizationItemViewModel.CreateFromOptions(options.ToolbarItems),
+            items => options.ToolbarItems = items);
     }
 
-    private void HideImageEditorToolbarEditor()
+    internal void ShowRegionCaptureToolbarEditor(RegionCaptureOptions options)
     {
-        ImageEditorToolbarEditorOverlay.IsVisible = false;
-        ImageEditorToolbarEditor.Content = null;
+        ImageEditorIntegration.Initialize();
+
+        ShowToolbarEditor(RegionCaptureToolbar.CreateItems(options.ToolbarItems),
+            items => options.ToolbarItems = items,
+            () => RegionCaptureToolbar.CreateItems());
+    }
+
+    private void ShowToolbarEditor(
+        IReadOnlyList<ToolbarCustomizationItemViewModel> sourceItems,
+        Action<List<ImageEditorToolbarItemOptions>> saved,
+        Func<IReadOnlyList<ToolbarCustomizationItemViewModel>>? createDefaultItems = null)
+    {
+        ToolbarCustomizationDialogView view = new();
+        view.DataContext = new ToolbarCustomizationDialogViewModel(
+            sourceItems,
+            items =>
+            {
+                saved(items.Select(item => item.ToOptions()).ToList());
+                HideToolbarEditor();
+            },
+            HideToolbarEditor,
+            createDefaultItems);
+
+        ToolbarEditor.Content = view;
+        ToolbarEditorOverlay.IsVisible = true;
+    }
+
+    private void HideToolbarEditor()
+    {
+        ToolbarEditorOverlay.IsVisible = false;
+        ToolbarEditor.Content = null;
     }
 
     internal void ShowActionEditor(ExternalProgram? action, Action<ExternalProgram> saved)
@@ -231,9 +253,9 @@ public partial class TaskSettingsWindow : Window
             return;
         }
 
-        if (ImageEditorToolbarEditorOverlay.IsVisible)
+        if (ToolbarEditorOverlay.IsVisible)
         {
-            HideImageEditorToolbarEditor();
+            HideToolbarEditor();
             e.Handled = true;
         }
         else if (NotificationButtonsEditorOverlay.IsVisible)
@@ -251,6 +273,43 @@ public partial class TaskSettingsWindow : Window
             HideActionEditor();
             e.Handled = true;
         }
+        else
+        {
+            Close();
+            e.Handled = true;
+        }
+    }
+
+    private void OnEditorOverlayPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        // Only clicks on the dimmed backdrop itself, not inside the dialog, cancel it.
+        if (!ReferenceEquals(e.Source, sender) || !e.GetCurrentPoint(this).Properties.IsLeftButtonPressed)
+        {
+            return;
+        }
+
+        if (sender == ToolbarEditorOverlay)
+        {
+            HideToolbarEditor();
+        }
+        else if (sender == NotificationButtonsEditorOverlay)
+        {
+            HideNotificationButtonsEditor();
+        }
+        else if (sender == WatchFolderEditorOverlay)
+        {
+            HideWatchFolderEditor();
+        }
+        else if (sender == ActionEditorOverlay)
+        {
+            HideActionEditor();
+        }
+        else
+        {
+            return;
+        }
+
+        e.Handled = true;
     }
 
     private void AttachActionArgumentsMenu()
@@ -374,13 +433,11 @@ public partial class TaskSettingsWindow : Window
             MenuItem item = new()
             {
                 Header = action.GetLocalizedDescription(),
-                Icon = new TextBlock
+                Icon = new IconPresenter
                 {
-                    Classes = { "icon" },
-                    Text = NotificationActionButton.GetDefaultIcon(action),
+                    Icon = NotificationActionButton.GetDefaultIcon(action),
                     FontSize = 15,
-                    Width = 18,
-                    TextAlignment = Avalonia.Media.TextAlignment.Center
+                    Width = 18
                 }
             };
             item.Click += (_, _) => AddNotificationButton(action);

@@ -52,6 +52,8 @@ public sealed class ShareXAvaloniaApplication : Application
         {
             Source = new Uri("avares://ShareX.Avalonia/Theming/ToolStyles.axaml")
         });
+
+        MenuItem.SubmenuOpenedEvent.AddClassHandler<MenuItem>((item, _) => item.Resources["FlyoutThemeMaxWidth"] = double.PositiveInfinity);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -91,7 +93,7 @@ public static class AvaloniaBootstrapper
             Args = args,
             ShutdownMode = ShutdownMode.OnExplicitShutdown
         };
-        desktop.Startup += async (_, _) => await startup();
+        desktop.Startup += (_, _) => Dispatcher.UIThread.Post(async () => await startup());
         desktop.Exit += (_, _) =>
         {
             Interlocked.Exchange(ref _shutdownStarted, 1);

@@ -340,7 +340,8 @@ public class EditorZoomController
         }
     }
 
-    public bool ZoomToFit()
+    /// <param name="maxZoom">Upper limit for the fitted zoom, e.g. 1.0 to only shrink images that do not fit.</param>
+    public bool ZoomToFit(double maxZoom = MaxZoom)
     {
         if (_view.DataContext is not MainViewModel vm || !vm.HasPreviewImage)
         {
@@ -384,7 +385,7 @@ public class EditorZoomController
         // logical-pixel to the Zoom unit (image pixels per physical screen pixel).
         double dpiScale = vm.DpiScale;
         double fitZoom = Math.Min(availableWidth / contentWidth, availableHeight / contentHeight) * dpiScale;
-        fitZoom = Math.Clamp(fitZoom, MinZoom, MaxZoom);
+        fitZoom = Math.Clamp(Math.Min(fitZoom, maxZoom), MinZoom, MaxZoom);
 
         _lastZoom = vm.Zoom;
         vm.Zoom = fitZoom;

@@ -73,14 +73,37 @@ public static partial class SkiaImageHelpers
         return false;
     }
 
+    // Every format ShareX can save images in, in the same order as SaveImageFilter.
+    private static readonly EImageFormat[] SaveImageFormats = [EImageFormat.PNG, EImageFormat.JPEG, EImageFormat.WEBP, EImageFormat.GIF, EImageFormat.BMP];
+
+    public const string SaveImageFilter = "PNG (*.png)|*.png|JPEG (*.jpg, *.jpeg, *.jpe, *.jfif)|*.jpg;*.jpeg;*.jpe;*.jfif|" +
+        "WebP (*.webp)|*.webp|GIF (*.gif)|*.gif|BMP (*.bmp)|*.bmp";
+
+    // The 1-based position of the format in SaveImageFilter, to preselect it in a save dialog.
+    public static int GetSaveImageFilterIndex(EImageFormat format) => Math.Max(Array.IndexOf(SaveImageFormats, format), 0) + 1;
+
+    public static bool TryGetImageFormat(string filePath, out EImageFormat format)
+    {
+        EImageFormat? imageFormat = Path.GetExtension(filePath)?.ToLowerInvariant() switch
+        {
+            ".png" => EImageFormat.PNG,
+            ".jpg" or ".jpeg" or ".jpe" or ".jfif" => EImageFormat.JPEG,
+            ".webp" => EImageFormat.WEBP,
+            ".gif" => EImageFormat.GIF,
+            ".bmp" => EImageFormat.BMP,
+            _ => null
+        };
+
+        format = imageFormat ?? EImageFormat.PNG;
+        return imageFormat != null;
+    }
+
     public static string SaveImageFileDialog(SKBitmap img, string filePath = "", bool useLastDirectory = true)
     {
         string initialDirectory = useLastDirectory && Directory.Exists(HelpersOptions.LastSaveDirectory)
             ? HelpersOptions.LastSaveDirectory : Path.GetDirectoryName(filePath);
-        string extension = Path.GetExtension(filePath).TrimStart('.').ToLowerInvariant();
-        int filterIndex = extension switch { "jpg" or "jpeg" or "jpe" or "jfif" => 2, "gif" => 3, "bmp" => 4, _ => 1 };
-        string selectedPath = FileDialogHelpers.SaveFile(filter:
-            "PNG (*.png)|*.png|JPEG (*.jpg, *.jpeg, *.jpe, *.jfif)|*.jpg;*.jpeg;*.jpe;*.jfif|GIF (*.gif)|*.gif|BMP (*.bmp)|*.bmp",
+        int filterIndex = TryGetImageFormat(filePath, out EImageFormat imageFormat) ? GetSaveImageFilterIndex(imageFormat) : 1;
+        string selectedPath = FileDialogHelpers.SaveFile(filter: SaveImageFilter,
             fileName: Path.GetFileName(filePath), initialDirectory: initialDirectory, defaultExtension: "png", filterIndex: filterIndex);
         if (!string.IsNullOrEmpty(selectedPath) && SaveImage(img, selectedPath))
         {
@@ -206,5 +229,43 @@ public static partial class SkiaImageHelpers
             writer.Write((int)png.Length); writer.Write(22); writer.Write(png.ToArray());
         }
         return stream.ToArray();
+    }
+
+    /// <summary>
+    /// Decodes the smallest ICO frame that covers <paramref name="size"/> and scales it to exactly that size.
+    /// The general decoder always returns the largest frame, which loses detail when shrunk to icon sizes.
+    /// </summary>
+    public static SKBitmap DecodeIcon(byte[] icon, int size)
+    {
+        const int headerSize = 6, entrySize = 16;
+
+        int bestEntry = -1, bestWidth = 0;
+        int count = BitConverter.ToUInt16(icon, 4);
+
+        for (int i = 0; i < count; i++)
+        {
+            int entry = headerSize + i * entrySize;
+            int width = icon[entry] == 0 ? 256 : icon[entry];
+
+            if (width >= size ? bestWidth < size || width < bestWidth : width > bestWidth)
+            {
+                bestEntry = entry;
+                bestWidth = width;
+            }
+        }
+
+        if (bestEntry < 0) throw new InvalidDataException("The icon has no frames.");
+
+        // Skia can't pick a frame by exact size, so hand it a copy of the icon containing only the chosen one.
+        int length = BitConverter.ToInt32(icon, bestEntry + 8);
+        int offset = BitConverter.ToInt32(icon, bestEntry + 12);
+        byte[] frame = new byte[headerSize + entrySize + length];
+        icon.AsSpan(0, headerSize).CopyTo(frame);
+        icon.AsSpan(bestEntry, entrySize).CopyTo(frame.AsSpan(headerSize));
+        icon.AsSpan(offset, length).CopyTo(frame.AsSpan(headerSize + entrySize));
+        BitConverter.TryWriteBytes(frame.AsSpan(4), (ushort)1);
+        BitConverter.TryWriteBytes(frame.AsSpan(headerSize + 12), headerSize + entrySize);
+
+        return ResizeImage(ByteArrayToBitmap(frame), size, size);
     }
 }

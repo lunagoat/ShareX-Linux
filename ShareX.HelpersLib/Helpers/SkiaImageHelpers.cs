@@ -165,7 +165,7 @@ public static partial class SkiaImageHelpers
     {
         if (quality == GIFQuality.Adaptive)
         {
-            return GifFrameQuantizer.Quantize(bitmap);
+            return new AdaptiveGifQuantizer().Quantize(bitmap);
         }
 
         SkiaQuantizer quantizer = quality switch
@@ -251,6 +251,16 @@ public static partial class SkiaImageHelpers
     public static void DrawImage(this SKCanvas canvas, SKBitmap bitmap, SKRect source, SKRect destination,
         SKPaint paint = null)
     {
+        if (source.Width == destination.Width && source.Height == destination.Height &&
+            canvas.TotalMatrix.IsIdentity &&
+            source.Left == MathF.Truncate(source.Left) && source.Top == MathF.Truncate(source.Top) &&
+            destination.Left == MathF.Truncate(destination.Left) && destination.Top == MathF.Truncate(destination.Top))
+        {
+            // Mitchell sampling blends neighboring pixels even at the original size.
+            canvas.DrawBitmap(bitmap, source, destination, paint);
+            return;
+        }
+
         using SKImage image = SKImage.FromBitmap(bitmap);
         canvas.DrawImage(image, source, destination, HighQualitySampling, paint);
     }
@@ -388,6 +398,18 @@ public static partial class SkiaImageHelpers
     {
         using FileStream stream = new(path, FileMode.Create, FileAccess.Write, FileShare.Read);
         SaveJPEG(bitmap, stream, quality, subsampling);
+    }
+
+    public static SKWebpEncoderOptions GetWebPEncoderOptions(int quality, bool lossless, int compressionEffort)
+        => lossless
+            ? new(SKWebpEncoderCompression.Lossless, Math.Clamp(compressionEffort, 0, 100))
+            : new(SKWebpEncoderCompression.Lossy, Math.Clamp(quality, 0, 100));
+
+    public static void SaveWebP(SKBitmap bitmap, Stream stream, SKWebpEncoderOptions options)
+    {
+        using SKPixmap pixels = bitmap.PeekPixels();
+        if (!pixels.Encode(stream, options))
+            throw new InvalidDataException("Image encoding failed: Webp.");
     }
     public static MemoryStream SavePNG(SKBitmap bitmap, PNGBitDepth depth)
     {

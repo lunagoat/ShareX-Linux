@@ -36,6 +36,11 @@ namespace ShareX
 {
     public class CaptureRegion : CaptureBase
     {
+        // Lets the region capture window disappear and the window's title bar finish fading to its active color, which
+        // Windows starts when the region capture window closes. Shorter waits failed on Windows 11 because the two white
+        // background captures differed.
+        private const int TransparentCaptureDelay = 300;
+
         protected override TaskMetadata Execute(TaskSettings taskSettings)
         {
             return null;
@@ -61,7 +66,7 @@ namespace ShareX
                 taskSettings.CaptureSettings.RegionCaptureOptions.ActiveMonitorMode,
                 System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.KdeCapture.IsSession,
                 System.OperatingSystem.IsLinux() && ShareX.AvaloniaUI.Linux.NiriIpc.IsAvailable);
-            if (NativeRegionCapture.Choose(out _)) activeMonitorMode = false;
+            if (NativeRegionCapture.Choose(taskSettings.CaptureSettings.RegionCaptureOptions, out _)) activeMonitorMode = false;
             Rectangle screenBounds = activeMonitorMode
                 ? CaptureHelpers.GetActiveScreenBounds()
                 : CaptureHelpers.GetScreenBounds();
@@ -81,8 +86,7 @@ namespace ShareX
                 CursorData cursorData = new CursorData();
                 if (cursorData.IsVisible)
                 {
-                    using Bitmap cursor = cursorData.ToBitmap(frozenScreenshot, screenBounds.Location);
-                    cursorBitmap = cursor.Copy();
+                    cursorBitmap = cursorData.ToBitmap(frozenScreenshot, screenBounds.Location);
                     cursorPosition = new Point(
                         cursorData.DrawPosition.X - screenBounds.X,
                         cursorData.DrawPosition.Y - screenBounds.Y);
@@ -92,10 +96,13 @@ namespace ShareX
             AvaloniaRegionCaptureRequest request = new AvaloniaRegionCaptureRequest
             {
                 Screenshot = frozenScreenshot,
+                // Screen captures are opaque: WindowsImageInterop.Capture and HDR correction set alpha to 255.
+                ScreenshotIsOpaque = true,
                 ScreenBounds = screenBounds,
                 RegionCaptureOptions = taskSettings.CaptureSettingsReference.RegionCaptureOptions,
                 ImageEditorOptions = taskSettings.ToolsSettingsReference.ImageEditorOptions,
                 EnableAnnotations = !taskSettings.AdvancedSettings.RegionCaptureDisableAnnotation,
+                AllowMultipleRegions = true,
                 CursorBitmap = cursorBitmap,
                 CursorPosition = cursorPosition
             };
@@ -108,7 +115,15 @@ namespace ShareX
 
             using (result.Image)
             {
-                Bitmap output = result.Image.Copy();
+                Bitmap output = null;
+
+                // Linux: compositors do not expose window shapes or shadows, so a second capture would add nothing.
+                if (!OperatingSystem.IsLinux() && result.WindowHandle != IntPtr.Zero && taskSettings.CaptureSettings.CaptureTransparent)
+                {
+                    output = await CaptureWindowTransparentAsync(taskSettings, result);
+                }
+
+                output ??= result.Image.Copy();
                 TaskMetadata metadata = new TaskMetadata(output);
 
                 if (result.ImageModified)
@@ -122,6 +137,28 @@ namespace ShareX
                 }
 
                 return metadata;
+            }
+        }
+
+        /// <summary>
+        /// When a detected window was captured whole, gives it the rounded corners and, with "Capture window with
+        /// shadow", the shadow that window capture has with "Capture window with transparency". The pixels inside the
+        /// window, annotations included, still come from the region capture. Returns null if that isn't possible.
+        /// </summary>
+        private static async Task<Bitmap> CaptureWindowTransparentAsync(TaskSettings taskSettings, AvaloniaRegionCaptureResult result)
+        {
+            await Task.Delay(TransparentCaptureDelay);
+
+            try
+            {
+                Screenshot screenshot = TaskHelpers.GetScreenshot(taskSettings);
+                screenshot.CaptureCursor = false;
+                return screenshot.CaptureWindowTransparent(result.WindowHandle, result.Image, result.ScreenRectangle);
+            }
+            catch (Exception e)
+            {
+                DebugHelper.WriteException(e, "Transparent window capture failed.");
+                return null;
             }
         }
     }

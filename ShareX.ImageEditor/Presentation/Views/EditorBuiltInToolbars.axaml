@@ -1,21 +1,56 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:iconControls="using:ShareX.AvaloniaUI.Controls"
              xmlns:res="using:ShareX.ImageEditor.Localization"
              xmlns:vm="using:ShareX.ImageEditor.Presentation.ViewModels"
              xmlns:editorTheming="using:ShareX.ImageEditor.Presentation.Theming"
              xmlns:controls="using:ShareX.ImageEditor.Presentation.Controls"
              x:Class="ShareX.ImageEditor.Presentation.Views.EditorBuiltInToolbars"
              x:DataType="vm:MainViewModel">
+    <UserControl.Styles>
+        <Style Selector="Border.toolbar-drag-handle">
+            <Setter Property="Width" Value="14"/>
+            <Setter Property="Background" Value="Transparent"/>
+        </Style>
+
+        <Style Selector="Border.toolbar-drag-handle > Path">
+            <Setter Property="Fill" Value="{DynamicResource ShareX.Brush.Text.Secondary}"/>
+        </Style>
+
+        <Style Selector="Border.toolbar-drag-handle:pointerover > Path">
+            <Setter Property="Fill" Value="{DynamicResource ShareX.Brush.Text}"/>
+        </Style>
+    </UserControl.Styles>
+
     <Grid>
-        <Border Classes="editor-toolbar-host top"
+        <Border x:Name="TopToolbarHost"
+                Classes="editor-toolbar-host top"
                 Classes.hidden="{Binding AreToolbarsHidden}"
                 VerticalAlignment="Top"
                 HorizontalAlignment="Center"
+                ZIndex="1"
                 IsHitTestVisible="{Binding ShowToolbars}">
+            <!-- The hide animation uses the host's RenderTransform, so a drag moves the toolbar inside it instead. -->
             <controls:AnnotationToolbar x:Name="AnnotationToolbarControl"
                                         DataContext="{Binding ToolbarAdapter}"
                                         ShowEditingActions="False"
-                                        MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                                        MaxWidth="{Binding Bounds.Width, RelativeSource={RelativeSource AncestorType=UserControl}}">
+                <controls:AnnotationToolbar.MainToolbarLeadingContent>
+                    <Border x:Name="TopToolbarDragHandle"
+                            Classes="toolbar-drag-handle"
+                            Cursor="SizeAll"
+                            PointerPressed="OnTopToolbarDragHandlePointerPressed"
+                            PointerMoved="OnTopToolbarDragHandlePointerMoved"
+                            PointerReleased="OnTopToolbarDragHandlePointerReleased"
+                            PointerCaptureLost="OnTopToolbarDragHandlePointerCaptureLost"
+                            ToolTip.Tip="{x:Static res:Strings.EditorBuiltInToolbars_MoveToolbar}"
+                            AutomationProperties.Name="{x:Static res:Strings.EditorBuiltInToolbars_MoveToolbar}">
+                        <Path Data="M0,0h2v2h-2z M4,0h2v2h-2z M0,4h2v2h-2z M4,4h2v2h-2z M0,8h2v2h-2z M4,8h2v2h-2z M0,12h2v2h-2z M4,12h2v2h-2z"
+                              HorizontalAlignment="Center"
+                              VerticalAlignment="Center"/>
+                    </Border>
+                </controls:AnnotationToolbar.MainToolbarLeadingContent>
+            </controls:AnnotationToolbar>
         </Border>
 
         <Border Classes="editor-toolbar-host bottom"
@@ -64,11 +99,9 @@
                             ToolTip.Placement="Top"
                             ToolTip.VerticalOffset="-5"
                             ZIndex="0">
-                        <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionCancel}"
-                                   FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                                   FontSize="18"
-                                   FontWeight="Normal"
-                                   VerticalAlignment="Center"/>
+                        <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionCancel}"
+                                                    FontSize="20"
+                                                    VerticalAlignment="Center"/>
                     </Button>
 
                     <Button Command="{Binding ContinueCommand}"
@@ -84,13 +117,11 @@
                             ToolTip.Placement="Top"
                             ToolTip.VerticalOffset="-5"
                             ZIndex="20">
-                        <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionContinue}"
-                                   FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                                   FontSize="22"
-                                   FontWeight="Normal"
-                                   HorizontalAlignment="Center"
-                                   VerticalAlignment="Center"
-                                   Margin="4,0,0,0"/>
+                        <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionContinue}"
+                                                    FontSize="20"
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    Margin="4,0,0,0"/>
                     </Button>
                 </Grid>
 
@@ -101,10 +132,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_CopyimagetoclipboardCtrlC}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionCopy}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionCopy}"
+                                                FontSize="20"/>
                 </Button>
 
                 <Button Command="{Binding SaveCommand}"
@@ -114,10 +143,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_SaveimageCtrlS}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionSave}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionSave}"
+                                                FontSize="20"/>
                 </Button>
 
                 <Button Command="{Binding SaveAsCommand}"
@@ -127,10 +154,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_SaveimageasEllipsisCtrlShiftS}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionSaveAs}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionSaveAs}"
+                                                FontSize="20"/>
                 </Button>
 
                 <Button Command="{Binding PinToScreenCommand}"
@@ -141,10 +166,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_PinimagetoscreenCtrlP}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionPinToScreen}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionPinToScreen}"
+                                                FontSize="20"/>
                 </Button>
 
                 <Button Command="{Binding PrintCommand}"
@@ -155,10 +178,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_PrintimageEllipsisCtrlShiftP}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionPrint}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionPrint}"
+                                                FontSize="20"/>
                 </Button>
 
                 <Button Command="{Binding UploadCommand}"
@@ -169,10 +190,8 @@
                         ToolTip.Tip="{x:Static res:Strings.EditorView_UploadimageCtrlU}"
                         ToolTip.Placement="Top"
                         ToolTip.VerticalOffset="-5">
-                    <TextBlock Text="{x:Static editorTheming:EditorIcons.ActionUpload}"
-                               FontSize="18"
-                               FontFamily="{DynamicResource ShareX.FontFamily.Icon}"
-                               FontWeight="Normal"/>
+                    <iconControls:IconPresenter Icon="{x:Static editorTheming:EditorIcons.ActionUpload}"
+                                                FontSize="20"/>
                 </Button>
             </StackPanel>
         </Border>
