@@ -16,6 +16,7 @@ Commits:
 | `32c2b7977` | Desktop fonts for Windows font names (monospace views were proportional); README file locations |
 | `f113de468` | .NET 11 |
 | `7d75f428d` | install-user.sh always publishes from a checkout (it had installed a stale build); monitors matched by output name (XWayland lays them out differently from Hyprland) |
+| `6ede8176d` | Found in live testing (Hyprland 0.57 Lua config, FFmpeg 9.1, mixed 1x/1.5x monitors): recording failed with FFmpeg 9 (`-thread_queue_size` is output-only now); recording windows were tiled (legacy hyprctl dispatchers rejected by a Lua config); OCR/recording/pin region selection now uses the native overlay; the window overlay no longer snaps to its own window; `%pn` uses the kernel process name for Chromium/Electron apps |
 
 ## Decisions
 
