@@ -309,14 +309,22 @@ public partial class MainWindow : Window, INotifyPropertyChanged
         try
         {
             CaptureHelpers.GetScreenBounds();
-            WindowsImageInterop.Capture(new System.Drawing.Rectangle(0, 0, 1, 1))?.Dispose();
+            // GDI capture only exists on Windows; Linux captures through grim, portals or X11.
+            if (OperatingSystem.IsWindows())
+            {
+                WindowsImageInterop.Capture(new System.Drawing.Rectangle(0, 0, 1, 1))?.Dispose();
+            }
         }
         catch (Exception e)
         {
             DebugHelper.WriteException(e, "Screen capture warm-up failed.");
         }
 
-        ScreenCaptureLib.Presentation.RegionCapture.RegionCaptureIntegration.WarmUp();
+        // With the native layer-shell overlay the window overlay is only a fallback, so warming it would just hold memory.
+        if (!NativeRegionCapture.Choose(ApplicationState.DefaultTaskSettings.CaptureSettings.RegionCaptureOptions, out _))
+        {
+            ScreenCaptureLib.Presentation.RegionCapture.RegionCaptureIntegration.WarmUp();
+        }
 
         DebugHelper.WriteLine($"Region capture warm-up: {System.Diagnostics.Stopwatch.GetElapsedTime(start).TotalMilliseconds:0} ms");
     }

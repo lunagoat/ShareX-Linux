@@ -353,7 +353,9 @@ public sealed class AnnotationLayerHost : IDisposable
         double monitorCenterX = monitor.X + monitor.Width / 2d;
         double monitorTop = monitor.Y + _topInset;
 
-        Canvas.SetLeft(_captureToolbar, monitorCenterX - toolbarWidth / 2d);
+        // Keep the whole toolbar inside the overlay, as RegionCaptureWindow does: on a monitor narrower than the
+        // toolbar, centring alone would push buttons off the desktop.
+        Canvas.SetLeft(_captureToolbar, Math.Clamp(monitorCenterX - toolbarWidth / 2d, 0, Math.Max(0, _desktopBounds.Width - toolbarWidth)));
         Canvas.SetTop(_captureToolbar, monitorTop);
     }
 

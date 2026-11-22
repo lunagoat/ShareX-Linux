@@ -28,11 +28,11 @@ Recommended packages by session:
 
 | Session | Install |
 | --- | --- |
-| Hyprland | `grim wl-clipboard ffmpeg gpu-screen-recorder tesseract xdg-desktop-portal xdg-desktop-portal-hyprland libnotify xdg-utils` |
-| sway / wlroots | `grim wl-clipboard ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-wlr libnotify xdg-utils` |
-| GNOME | `ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-gnome libnotify xdg-utils` (+ the AppIndicator extension for the tray) |
-| KDE Plasma | `ffmpeg tesseract xdg-desktop-portal xdg-desktop-portal-kde libnotify xdg-utils` |
-| X11 | `ffmpeg tesseract xclip xdotool libnotify xdg-utils` |
+| Hyprland | `grim wl-clipboard ffmpeg gpu-screen-recorder xdg-desktop-portal xdg-desktop-portal-hyprland libnotify xdg-utils` |
+| sway / wlroots | `grim wl-clipboard ffmpeg xdg-desktop-portal xdg-desktop-portal-wlr libnotify xdg-utils` |
+| GNOME | `ffmpeg xdg-desktop-portal xdg-desktop-portal-gnome libnotify xdg-utils` (+ the AppIndicator extension for the tray) |
+| KDE Plasma | `ffmpeg xdg-desktop-portal xdg-desktop-portal-kde libnotify xdg-utils` |
+| X11 | `ffmpeg xclip xdotool libnotify xdg-utils` |
 
 Everything that shells out to an external tool checks for it and reports a clear message
 when it is missing; nothing crashes because `grim` or `ffmpeg` is absent.
@@ -70,7 +70,7 @@ makepkg -f -i        # add --nodeps if you use the user-local SDK in ~/.dotnet
 ```
 
 `packaging/arch/PKGBUILD` builds from the checkout with `dotnet publish` and installs to
-`/usr`. Optional dependencies (ffmpeg, grim, wl-clipboard, portals, tesseract, …)
+`/usr`. Optional dependencies (ffmpeg, grim, wl-clipboard, portals, …)
 are listed there and in the package metadata.
 
 ### Flatpak (draft)
@@ -236,7 +236,7 @@ exercised on that session · ⚠️ works with caveats/permissions/extra package
 | Watch folders | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
 | Uploaders (.sxcu, FTP/SFTP/WebDAV/S3/…) | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
 | History (SQLite) | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
-| OCR (`tesseract`) | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
+| OCR (built-in PaddleOCR) | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
 | QR code generate / scan region | ✅ | 🟢 | 🟢 | 🟢 | 🟢 |
 | Screen colour picker | ✅ screenshot-based | 🟢 | 🟢 | 🟢 | 🟢 |
 | Ruler overlay | ⚠️ overlay window limits | ⚠️ | ⚠️ | ⚠️ | 🟢 |

@@ -69,7 +69,7 @@ public sealed class DesktopScreen
             return NativeMethods.GetMonitorDeviceName(screen.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
 
         Rectangle bounds = new(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height);
-        return ShareX.AvaloniaUI.Linux.LinuxScreenCapture.GetMonitors()
+        return (TryGetLinuxMonitors() ?? [])
             .Select(x => (x.Name, Overlap: Rectangle.Intersect(x.Bounds, bounds)))
             .Where(x => !x.Overlap.IsEmpty)
             .OrderByDescending(x => (long)x.Overlap.Width * x.Overlap.Height)
@@ -77,10 +77,25 @@ public sealed class DesktopScreen
             .FirstOrDefault() ?? screen.DisplayName ?? "";
     }
 
-    public static DesktopScreen[] AllScreens => OperatingSystem.IsLinux()
-        ? ShareX.AvaloniaUI.Linux.LinuxScreenCapture.GetMonitors().Select(x => new DesktopScreen(x)).ToArray()
+    /// <summary>Linux: the compositor's monitors, or Avalonia's (XWayland/X11) screens when they cannot be read,
+    /// for example on a desktop without compositor IPC and without xrandr, so callers such as settings pages keep working.</summary>
+    public static DesktopScreen[] AllScreens => OperatingSystem.IsLinux() && TryGetLinuxMonitors() is { Length: > 0 } monitors
+        ? monitors.Select(x => new DesktopScreen(x)).ToArray()
         : DesktopServices.Run(() =>
         DesktopServices.GetWindow().Screens.All.Select(x => new DesktopScreen(x)).ToArray());
+
+    private static ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor[]? TryGetLinuxMonitors()
+    {
+        try
+        {
+            return ShareX.AvaloniaUI.Linux.LinuxScreenCapture.GetMonitors();
+        }
+        catch (PlatformNotSupportedException e)
+        {
+            DebugHelper.WriteLine("Monitor discovery failed, using the toolkit's screens: " + e.Message);
+            return null;
+        }
+    }
 
     public static DesktopScreen PrimaryScreen => AllScreens.FirstOrDefault(x => x.Primary) ?? AllScreens.FirstOrDefault();
 

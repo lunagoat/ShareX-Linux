@@ -93,7 +93,10 @@ public partial class ClassicRulerWindow : Window
         int bottom = screens.Max(screen => screen.Bounds.Bottom);
         _screenBounds = new PixelRect(left, top, right - left, bottom - top);
 
-        using (SKBitmap capture = WindowsImageInterop.Capture(new DrawingRectangle(left, top, _screenBounds.Width, _screenBounds.Height)))
+        // Linux: grim (Wayland) or x11grab, as the ruler does; GDI capture only exists on Windows.
+        using (SKBitmap capture = OperatingSystem.IsLinux()
+            ? Linux.DesktopTools.Capture(_screenBounds)
+            : WindowsImageInterop.Capture(new DrawingRectangle(left, top, _screenBounds.Width, _screenBounds.Height)))
         {
             _screenshot = BitmapConversionHelpers.ToAvaloniBitmap(capture);
         }

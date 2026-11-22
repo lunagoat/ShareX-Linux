@@ -68,8 +68,6 @@ optdepends=(
     'xdg-desktop-portal-hyprland: portal backend for Hyprland'
     'xdg-desktop-portal-gtk: portal backend for GTK/GNOME sessions'
     'xdg-desktop-portal-kde: portal backend for KDE Plasma'
-    'tesseract: OCR text recognition'
-    'tesseract-data-eng: English OCR language data'
     'libnotify: desktop notifications'
     'xdg-utils: open files, folders and URLs with xdg-open'
     'xclip: clipboard support on X11'
@@ -138,8 +136,13 @@ package() {
         "$pkgdir/usr/share/mime/packages" \
         "$pkgdir/usr/share/licenses/$pkgname"
 
-    # Application files (runtime + native messaging host manifests + file icon).
+    # Application files (runtime + native messaging host manifests + file icon + OCR models).
     for f in "$srcdir/publish"/*; do
+        if [ -d "$f" ]; then
+            cp -r --no-preserve=ownership -- "$f" "$pkgdir/usr/lib/sharex/"
+            find "$pkgdir/usr/lib/sharex/$(basename "$f")" -type d -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
+            continue
+        fi
         [ -f "$f" ] || continue
         install -m644 "$f" "$pkgdir/usr/lib/sharex/$(basename "$f")"
     done

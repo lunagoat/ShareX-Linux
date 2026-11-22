@@ -15,7 +15,7 @@ curl -fsSL https://raw.githubusercontent.com/lunagoat/ShareX-Linux/main/install.
 ```
 
 Per-user (`~/.local`), no sudo, no .NET needed (the release is self-contained), x86-64. The installer verifies a
-SHA-256 checksum and prints which optional helpers (`grim`, `wl-clipboard`, `ffmpeg`, `tesseract`, …) are
+SHA-256 checksum and prints which optional helpers (`grim`, `wl-clipboard`, `ffmpeg`, …) are
 missing for your distribution. Then run `sharex`.
 
 ```bash
@@ -67,7 +67,7 @@ for the complete matrix and how each item was checked:
   scrolling capture, auto capture, screen colour picker
 * screen recording: MP4/WebM/GIF, region/window/screen, pause/resume, system + microphone audio, camera overlay,
   hardware encoders (NVENC/VAAPI) with software fallback, custom FFmpeg arguments
-* image editor, 51 image effects, OCR (tesseract), QR codes, ruler, pin to screen, video converter/thumbnailer/player, and the other tools
+* image editor, 51 image effects, OCR (built-in PaddleOCR, offline), QR codes, ruler, pin to screen, video converter/thumbnailer/player, and the other tools
 * uploads: custom uploaders, clipboard/text/URL uploads, URL shorteners, watch folders, FTP/SFTP/WebDAV/S3, after-capture and after-upload tasks, history
 * desktop integration: tray icon, notifications with actions, autostart, `.sxcu`/`.sxie` file associations, CUPS printing, encrypted settings
 

@@ -21,7 +21,7 @@ unit tests, but nobody has run it on the real desktop yet. **Hyprland is tested 
 
 ## What each desktop needs
 
-* **All Wayland desktops:** `wl-clipboard`, `ffmpeg`, `tesseract` (optional OCR), `xdg-desktop-portal` + your desktop's portal backend
+* **All Wayland desktops:** `wl-clipboard`, `ffmpeg`, `xdg-desktop-portal` + your desktop's portal backend
   (`-hyprland`, `-wlr`, `-kde`, `-gnome`). `grim` on wlroots-style compositors (Hyprland, sway, niri).
 * **niri:** install **xwayland-satellite**. niri 25.08+ starts it automatically; on older versions add `spawn-at-startup "xwayland-satellite"`.
   Without it ShareX prints a clear message and exits instead of crashing. Key binds go in the `binds { }` block of `~/.config/niri/config.kdl`.

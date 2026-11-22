@@ -139,8 +139,14 @@ stop_running_instances
 install -d "$libdir" "$bindir" "$appsdir" "$mimedir" "$metainfodir"
 
 # Application files (everything the publish produced, including the native
-# messaging host manifests and the file icon).
+# messaging host manifests, the file icon and data folders such as the OCR models).
 for f in "$from"/*; do
+    if [ -d "$f" ]; then
+        rm -rf "${libdir:?}/$(basename "$f")"
+        cp -r -- "$f" "$libdir/"
+        find "$libdir/$(basename "$f")" -type d -exec chmod 755 {} + -o -type f -exec chmod 644 {} +
+        continue
+    fi
     [ -f "$f" ] || continue
     install -m644 "$f" "$libdir/$(basename "$f")"
 done

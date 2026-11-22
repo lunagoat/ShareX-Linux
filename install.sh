@@ -88,7 +88,7 @@ report_missing_tools() {
     local missing=() tool
     command -v grim >/dev/null 2>&1 || command -v gnome-screenshot >/dev/null 2>&1 || [ "${XDG_SESSION_TYPE:-}" = "x11" ] || missing+=(grim)
     [ "${XDG_SESSION_TYPE:-}" != "wayland" ] || command -v wl-copy >/dev/null 2>&1 || missing+=(wl-clipboard)
-    for tool in ffmpeg tesseract notify-send xdg-open; do
+    for tool in ffmpeg notify-send xdg-open; do
         command -v "$tool" >/dev/null 2>&1 || missing+=("$tool")
     done
     [ "${#missing[@]}" -gt 0 ] || return 0

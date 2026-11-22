@@ -72,7 +72,7 @@ internal static class Program
         await Check("combiner splitter thumbnailer", CombinerSplitterThumbnailer);
         await Check("directory indexer all formats", DirectoryIndex);
         await Check("animated GIF maker and trimmer", GifOperations);
-        await Check("OCR tesseract language list and auto-copy", Ocr);
+        await Check("OCR (PaddleOCR) recognition and auto-copy", Ocr);
         await Check("hash algorithms", Hashes);
         await Check("QR generation and scan", Qr);
         await Check("background remover CPU ONNX inference and cache", Onnx);
@@ -144,20 +144,21 @@ internal static class Program
         using var doc = AnimatedGifTrimmerDocument.Open(path, default);
         Require(doc.FrameCount == 3 && Math.Abs(doc.Duration - .6) < .02, "GIF timing mismatch");
         Require(doc.RenderFrame(1, default).Length > 100, "No GIF preview");
-        Require(doc.Export(Path.Combine(Root, "trimmed.gif"), 1, 3, true, null, default), "GIF export failed");
+        Require(doc.Export(Path.Combine(Root, "trimmed.gif"), 1, 3, true, SKRectI.Create(doc.Width, doc.Height),
+            new SKSizeI(doc.Width, doc.Height), null, default), "GIF export failed");
         using var trimmed = AnimatedGifTrimmerDocument.Open(Path.Combine(Root, "trimmed.gif"), default);
         Require(trimmed.FrameCount == 2, "GIF trim did not cut frames");
         return Task.CompletedTask;
     }
     private static async Task Ocr()
     {
-        Require(OCRHelper.AvailableLanguages.Any(l => l.LanguageTag == "en"), "English OCR pack unavailable");
+        // PaddleOCR (ONNX Runtime, CPU) with the models copied next to the test binary.
         string? copied = null;
-        using var vm = new OCRViewModel(File.ReadAllBytes(ImagePath), OCRHelper.AvailableLanguages,
-            new OCROptions { Language = "en", AutoCopy = true, SingleLine = true }, async (data, language, scale, line) =>
+        using var vm = new OCRViewModel(File.ReadAllBytes(ImagePath), new OCROptions { AutoCopy = true, SingleLine = true },
+            async data =>
             {
                 using SKBitmap bitmap = SKBitmap.Decode(data);
-                return await OCRHelper.OCR(bitmap, language, scale, line);
+                return await OCRHelper.Recognize(bitmap);
             });
         vm.CopyTextRequested = text => { copied = text; return Task.CompletedTask; };
         await vm.StartAsync();
@@ -505,9 +506,9 @@ internal static class Program
         }
         catch (Exception ex) { Failures.Add("PinToScreenWindow-Active: " + ex); }
 
-        // A real OCR image validates source preview, languages and result layout.
-        var ocr = new OCRWindow(File.ReadAllBytes(ImagePath), OCRHelper.AvailableLanguages, new OCROptions { SingleLine = true },
-            async (data, language, scale, line) => { using var b = SKBitmap.Decode(data); return await OCRHelper.OCR(b, language, scale, line); },
+        // A real OCR image validates source preview, text outlines and result layout.
+        var ocr = new OCRWindow(File.ReadAllBytes(ImagePath), new OCROptions { SingleLine = true },
+            async data => { using var b = SKBitmap.Decode(data); return await OCRHelper.Recognize(b); },
             () => Task.FromResult<byte[]?>(null));
         ocr.Show();
         await Task.Delay(Live ? 600 : 200);

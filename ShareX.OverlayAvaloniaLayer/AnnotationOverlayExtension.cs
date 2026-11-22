@@ -40,6 +40,9 @@ public sealed class AnnotationOverlayExtension : IOverlayExtension, IDisposable
         Layer = AnnotationLayerHost.Create(new(0, 0, desktop.Width, desktop.Height), options);
         Prepare(default, default);
     }
+    // As in RegionCaptureWindow, the toolbar follows the pointer to other monitors only until the user starts
+    // interacting. Afterwards it stays put, so it cannot move out from under a pointer heading for it.
+    private bool toolbarFollowsPointer = true, toolbarPlaced;
     private Point Local(double x, double y) => new(x - desktop.X, y - desktop.Y);
     public bool HandlesPointer(LogicalPoint point) => Layer.HitTest(Local(point.X, point.Y));
     public void SetAnnotationMode(bool active)
@@ -52,6 +55,7 @@ public sealed class AnnotationOverlayExtension : IOverlayExtension, IDisposable
         {
             case PointerMoved m: Layer.SendPointerMove(Local(m.X, m.Y), Modifiers(m.Modifiers)); break;
             case PointerButton b:
+                if (b.Pressed) toolbarFollowsPointer = false;
                 Layer.SendPointer(b.Pressed ? PointerAction.Down : PointerAction.Up, Local(b.X, b.Y),
                     b.Button switch { 1 => MouseButton.Left, 2 => MouseButton.Middle, 3 => MouseButton.Right, _ => MouseButton.None }, Modifiers(b.Modifiers));
                 break;
@@ -78,6 +82,8 @@ public sealed class AnnotationOverlayExtension : IOverlayExtension, IDisposable
             >= 0x30 and <= 0x39 => Key.D0 + (int)(input.Keysym - 0x30),
             0x20 => Key.Space, _ => Key.None
         };
+        if (input.Pressed && key is not (Key.LeftShift or Key.RightShift or Key.LeftCtrl or Key.RightCtrl or Key.LeftAlt or Key.RightAlt))
+            toolbarFollowsPointer = false;
         Layer.SendKey(key, Modifiers(input.Modifiers), input.Pressed);
         if (input.Pressed && !string.IsNullOrEmpty(input.Text) &&
             (input.Modifiers & (OverlayModifiers.Control | OverlayModifiers.Alt | OverlayModifiers.Super)) == 0)
@@ -90,9 +96,14 @@ public sealed class AnnotationOverlayExtension : IOverlayExtension, IDisposable
             Layer.SetSelection(new(selection.X - desktop.X, selection.Y - desktop.Y, Math.Max(0, selection.Width), Math.Max(0, selection.Height)));
             lastSelection = selection;
         }
-        var output = outputs.FirstOrDefault(o => pointer.X >= o.Logical.X && pointer.X < o.Logical.Right && pointer.Y >= o.Logical.Y && pointer.Y < o.Logical.Bottom) ?? outputs[0];
-        var r = output.Logical;
-        Layer.SetActiveMonitor(new(r.X - desktop.X, r.Y - desktop.Y, r.Width, r.Height));
+        if (selection.Width > 0 && selection.Height > 0) toolbarFollowsPointer = false;
+        if (toolbarFollowsPointer || !toolbarPlaced)
+        {
+            var output = outputs.FirstOrDefault(o => pointer.X >= o.Logical.X && pointer.X < o.Logical.Right && pointer.Y >= o.Logical.Y && pointer.Y < o.Logical.Bottom) ?? outputs[0];
+            var r = output.Logical;
+            Layer.SetActiveMonitor(new(r.X - desktop.X, r.Y - desktop.Y, r.Width, r.Height));
+            toolbarPlaced = true;
+        }
         var rendered = Layer.Render();
         if (!rendered.HasChanges) return;
         var frame = rendered.Frame;
