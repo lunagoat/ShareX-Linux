@@ -1,6 +1,6 @@
 # Shared core regression tests
 
-Standalone .NET 10 console project; deliberately excluded from the solution.
+Standalone .NET console project; deliberately excluded from the solution.
 
 ```bash
 source scripts/linux/env.sh

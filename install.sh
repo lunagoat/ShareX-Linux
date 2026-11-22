@@ -6,7 +6,7 @@
 # Options (pass after `bash -s --` when piping):
 #   --version TAG    install a specific release tag (default: the latest release)
 #   --from-source    build from source instead of downloading a release (needs git; fetches a
-#                    user-local .NET 10 SDK into ~/.dotnet when no suitable SDK is found)
+#                    user-local .NET 11 SDK into ~/.dotnet when no suitable SDK is found)
 #   --ref REF        git branch/tag used with --from-source (default: main)
 #   --tarball FILE   install from a local release tarball (offline / testing)
 #   --uninstall      remove ShareX from ~/.local again (settings are kept)
@@ -127,10 +127,13 @@ install_from_dir() {
 build_from_source() {
     need git
     need curl
-    if ! { command -v dotnet >/dev/null 2>&1 && dotnet --list-sdks 2>/dev/null | grep -q '^10\.'; } && [ ! -x "$HOME/.dotnet/dotnet" ]; then
-        log "No .NET 10 SDK found; installing a user-local one into ~/.dotnet ..."
+    # scripts/linux/env.sh prefers ~/.dotnet whenever it exists, so that is the SDK that must be 11.
+    local sdk=dotnet
+    [ -x "$HOME/.dotnet/dotnet" ] && sdk="$HOME/.dotnet/dotnet"
+    if ! "$sdk" --list-sdks 2>/dev/null | grep -q '^11\.'; then
+        log "No .NET 11 SDK found; installing a user-local one into ~/.dotnet ..."
         curl -fsSL https://dot.net/v1/dotnet-install.sh -o "$work/dotnet-install.sh"
-        bash "$work/dotnet-install.sh" --channel 10.0 --install-dir "$HOME/.dotnet" >/dev/null
+        bash "$work/dotnet-install.sh" --channel 11.0 --install-dir "$HOME/.dotnet" >/dev/null
     fi
     log "Cloning https://github.com/$REPO ($ref) ..."
     git clone --quiet --depth 1 --branch "$ref" "https://github.com/$REPO.git" "$work/src"

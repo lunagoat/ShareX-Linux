@@ -12,13 +12,15 @@ Commits:
 | `79b62a460` | Linux follow-ups: classic ruler capture, warm-up, monitor fallback, native overlay toolbar, OCR models in packages, docs |
 | `d19d5467f` | Fixes in merged features: HiDPI last-region mask, hidden region-tool shortcuts, transparent region window placement, HDR option, editor path comparison, package versions |
 | `f2a7c4834` | Bugs found in review (several predate the merge): CLI file arguments, IPC fallback folder, Escape in the overlay, `$output$` splitting, process timeouts |
-| (this commit) | Playback check waits for progress; this status page |
+| `faa4bd2bf` | Playback check waits for progress; this status page |
+| `32c2b7977` | Desktop fonts for Windows font names (monospace views were proportional); README file locations |
+| (this commit) | .NET 11 |
 
 ## Decisions
 
 | Topic | Decision | Why |
 | --- | --- | --- |
-| Target framework | Stay on `net10.0` (upstream moved to `net11.0` on 2026-11-16) | Only the .NET 10 SDK is installed; .NET 10 is the LTS; upstream's change was the TFM only and no .NET 11 API is used. Revisit when the build machine and the PKGBUILD/Flatpak move to SDK 11. |
+| Target framework | `net11.0`, like upstream (first kept on `net10.0`, then moved once verified with SDK 11.0.100) | All headless harnesses and the overlay `run.sh` harnesses give the same results on .NET 10 and 11; no new build warnings; the release publish has the same layout (262 MB -> 285 MB binary). .NET 11 needs an x86-64-v2 CPU and precompiles for x86-64-v3, so CPUs without AVX2 may start a little slower. Building needs SDK 11 (Arch only packages SDK 10 so far: install it into `~/.dotnet`). |
 | OCR | Upstream's PaddleOCR (`ShareX.OCR`, ONNX Runtime CPU) replaces the tesseract implementation | The redesigned OCR window needs text geometry; PaddleOCR runs offline on Linux. The models (30 MB) ship in `Models/` next to the executable. tesseract is no longer a dependency. |
 | ReadyToRun | Upstream's "do not precompile third-party assemblies" target only runs for Windows runtimes | It exists for Authenticode signing; the Linux publish precompiles Avalonia/Skia for startup speed. |
 | Region capture window | Upstream's rewrite plus the port's coordinate model (image pixels / Wayland logical desktop units / DIPs) on every new conversion | HiDPI Wayland screenshots have more pixels than their desktop area. |
@@ -67,13 +69,13 @@ Bugs found and fixed (with how they were found):
 * Nothing was run on the live desktop: region capture, the native overlay, recording, the Photo and Pixel
   editors, the transparent region capture and notifications were checked by code review and headless
   harnesses only. These need a manual pass on Hyprland (and ideally KDE/GNOME) before a release.
-* Photo/Pixel editors: fonts default to "Segoe UI" (falls back to the system font on Linux); AltGr may act as
-  Alt for the eyedropper spring shortcut; saved window positions are ignored by Wayland compositors.
-  Cosmetic; reported, not changed.
+* Photo/Pixel editors: saved window positions are ignored by Wayland compositors (cosmetic). The fonts are
+  fixed (see `32c2b7977`); AltGr does not trigger the eyedropper on Linux (Avalonia's X11 backend maps only
+  `Alt_R` to `RightAlt`, AltGr layouts send `ISO_Level3_Shift`).
+* Browser extension (native messaging) still needs a manually installed host: the self-contained publish cannot
+  run the separate framework-dependent host, so its files are left out of Linux publishes.
 * Photo editor TIFF open/save runs ffmpeg on the UI thread (bounded to 60 s); fine for normal images.
 * GIF/WebP/APNG recordings no longer capture audio; the recorder still captures H.264 segments and converts
   at the end, so very long GIF recordings take a while to finish (abort now skips that step).
 * The second instance does not pass a Wayland activation token to the running instance (upstream added the
   Windows equivalent, `AllowSetForegroundWindow`).
-* `README.linux.md` still says the personal folder is not redirected by `$HOME`/`XDG_*`; the code uses XDG
-  folders now.

@@ -5,7 +5,7 @@ annotation, OCR, uploaders (custom `.sxcu` included), history, workflows and the
 running on Wayland and X11 through the desktop's own facilities (portals, `grim`, PipeWire, ffmpeg,
 compositor IPC) instead of Win32.
 
-It is built from upstream ShareX's current Avalonia/.NET 10 code base; the Linux work is the platform layer
+It is built from upstream ShareX's current Avalonia/.NET 11 code base; the Linux work is the platform layer
 underneath it (capture, hotkeys, recording, clipboard, notifications, packaging).
 
 ## Install
@@ -82,7 +82,7 @@ sessions**, using each desktop's own interfaces. The app itself needs XWayland o
 
 ```bash
 git clone https://github.com/lunagoat/ShareX-Linux && cd ShareX-Linux
-source scripts/linux/env.sh        # uses ~/.dotnet if present, otherwise your `dotnet` (SDK 10 required)
+source scripts/linux/env.sh        # uses ~/.dotnet if present, otherwise your `dotnet` (SDK 11 required)
 scripts/linux/build.sh             # build
 scripts/linux/install-user.sh      # publish a self-contained build and install it into ~/.local
 ```

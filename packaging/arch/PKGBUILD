@@ -58,7 +58,7 @@ depends=(
     'libdrm'
     'libglvnd'
 )
-makedepends=('dotnet-sdk')
+makedepends=('dotnet-sdk>=11.0')
 optdepends=(
     'ffmpeg: screen recording, video conversion and GIF encoding'
     'grim: screen capture on wlroots compositors (Hyprland, sway)'
@@ -103,8 +103,8 @@ build() {
         export PATH="$DOTNET_ROOT:$PATH"
     fi
 
-    if ! dotnet --list-sdks >/dev/null 2>&1; then
-        echo "error: no .NET SDK found; install dotnet-sdk or provide ~/.dotnet" >&2
+    if ! dotnet --list-sdks 2>/dev/null | grep -q '^11\.'; then
+        echo "error: the .NET 11 SDK is required; install dotnet-sdk 11 or provide it in ~/.dotnet" >&2
         exit 1
     fi
 

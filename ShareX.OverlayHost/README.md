@@ -1,6 +1,6 @@
 # ShareX.OverlayHost
 
-.NET 10 interaction/hosting library referencing only OverlayRender and NativeOverlay
+.NET interaction/hosting library referencing only OverlayRender and NativeOverlay
 (no resolved Avalonia dependencies). No display is opened by constructing a controller.
 
 `OverlayController.Handle` consumes native events on one owner thread. `Scene`,

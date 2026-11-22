@@ -23,7 +23,7 @@ jobs:
           fetch-depth: 0   # tags are needed so the archive can carry its exact release name
       - uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: 10.0.x
+          dotnet-version: 11.0.x
       - name: Build release archive
         run: scripts/linux/make-release.sh
       - name: Publish release

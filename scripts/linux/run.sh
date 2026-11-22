@@ -9,4 +9,4 @@ source "$root/scripts/linux/env.sh"
 sb="${SX_SANDBOX:-/tmp/sx-sandbox}"
 mkdir -p "$sb"/{home,config,data,cache,state}
 export HOME="$sb/home" XDG_CONFIG_HOME="$sb/config" XDG_DATA_HOME="$sb/data" XDG_CACHE_HOME="$sb/cache" XDG_STATE_HOME="$sb/state"
-exec "$root/ShareX/bin/Debug/net10.0/ShareX" "$@"
+exec "$root/ShareX/bin/Debug/net11.0/ShareX" "$@"

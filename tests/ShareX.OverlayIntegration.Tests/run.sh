@@ -20,7 +20,7 @@ else
 fi
 dotnet build tests/ShareX.OverlayIntegration.Tests -c Release -nologo -v q -p:NuGetAudit=false --disable-build-servers -m:1 -p:UseSharedCompilation=false
 if [[ "$mode" == --headless ]]; then
-    dotnet tests/ShareX.OverlayIntegration.Tests/bin/Release/net10.0/ShareX.OverlayIntegration.Tests.dll --headless
+    dotnet tests/ShareX.OverlayIntegration.Tests/bin/Release/net11.0/ShareX.OverlayIntegration.Tests.dll --headless
 else
-    dotnet tests/ShareX.OverlayIntegration.Tests/bin/Release/net10.0/ShareX.OverlayIntegration.Tests.dll
+    dotnet tests/ShareX.OverlayIntegration.Tests/bin/Release/net11.0/ShareX.OverlayIntegration.Tests.dll
 fi

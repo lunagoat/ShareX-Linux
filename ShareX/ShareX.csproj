@@ -1,6 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <TargetFramework>net11.0</TargetFramework>
     <OutputType>WinExe</OutputType>
     <ApplicationIcon>ShareX_Icon.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -28,6 +28,24 @@
                                      Condition="'%(ResolvedFileToPublish.PostprocessAssembly)' == 'true' and !$([System.String]::Copy('%(ResolvedFileToPublish.Filename)').StartsWith('ShareX', StringComparison.OrdinalIgnoreCase))" />
       <PublishReadyToRunExclude Include="@(_ThirdPartyReadyToRunAssembly->'%(Filename)%(Extension)')" />
     </ItemGroup>
+  </Target>
+  <!--
+    Linux: the browser native-messaging host is a separate framework-dependent program that the self-contained
+    single-file publish cannot run. The .NET 10 SDK published only its .deps.json/.runtimeconfig.json and the
+    .NET 11 SDK publishes only its launcher; leave all of it out, so enabling browser support reports the missing
+    host instead of registering one that cannot start.
+  -->
+  <Target Name="ExcludeNativeMessagingHostFromLinuxPublish" AfterTargets="ComputeResolvedFilesToPublishList"
+          Condition="$(RuntimeIdentifier.StartsWith('linux'))">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)"
+                             Condition="$([System.String]::Copy('%(Filename)').StartsWith('ShareX_NativeMessagingHost'))" />
+    </ItemGroup>
+  </Target>
+  <!-- The referenced program's launcher is copied outside ResolvedFileToPublish, so remove it once publishing is done. -->
+  <Target Name="DeleteNativeMessagingHostFromLinuxPublish" AfterTargets="Publish"
+          Condition="$(RuntimeIdentifier.StartsWith('linux'))">
+    <Delete Files="$(PublishDir)ShareX_NativeMessagingHost" />
   </Target>
   <ItemGroup>
     <InternalsVisibleTo Include="ShareX.Integration.Tests" />

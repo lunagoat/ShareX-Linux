@@ -29,7 +29,7 @@ if Path(sys.argv[0]).name == 'secret-tool':
 for command in ['xdg-open', 'lp', 'secret-tool']:
     path = commands / command; path.write_text(mock); path.chmod(0o700)
 os.environ['PATH'] = str(commands) + ':' + os.environ['PATH']
-exe = here / 'bin/Debug/net10.0/ShareX.Platform.Tests'
+exe = here / 'bin/Debug/net11.0/ShareX.Platform.Tests'
 def run(arguments, **kwargs):
     result = subprocess.run([str(exe), *arguments], timeout=30, check=True, **kwargs)
     return result
@@ -85,7 +85,7 @@ config = profile/'config/ShareX'; config.mkdir(parents=True, exist_ok=True)
 (config/'ApplicationConfig.json').write_text(json.dumps({'ShowStartScreen': False, 'ShowTray': True, 'AutoCheckUpdate': False, 'FirstTimeMinimizeToTray': False}))
 appenv = os.environ.copy(); appenv['SX_SANDBOX'] = str(profile)
 appenv['DBUS_SESSION_BUS_ADDRESS'] = os.environ['SX_LIVE_DBUS']
-app = repo/'ShareX/bin/Debug/net10.0/ShareX'
+app = repo/'ShareX/bin/Debug/net11.0/ShareX'
 log = profile/'data/ShareX/Logs'/time.strftime('ShareX-Log-%Y-%m.txt')
 with (root/'app-output.log').open('w') as output:
     first = subprocess.Popen(['timeout','-k','5','20',str(app),'-silent','-NoHotkeys'],env=appenv,stdout=output,stderr=output)

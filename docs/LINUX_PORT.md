@@ -30,12 +30,12 @@ No decompiling is needed — the source is the spec. Read the C# for intended be
 ## Build / run / test
 
 ```bash
-source scripts/linux/env.sh                 # user-local .NET 10 SDK at ~/.dotnet (no system SDK)
+source scripts/linux/env.sh                 # user-local .NET 11 SDK at ~/.dotnet (no system SDK)
 scripts/linux/build.sh                      # full build, prints only errors
 SX_SANDBOX=/tmp/sx-$USER-mytest timeout 60 scripts/linux/run.sh [args]   # isolated HOME/XDG dirs
 ```
 
-* Output binary: `ShareX/bin/Debug/net10.0/ShareX` (apphost). Settings land under the sandbox, **never test against the real `~`**.
+* Output binary: `ShareX/bin/Debug/net11.0/ShareX` (apphost). Settings land under the sandbox, **never test against the real `~`**.
 * Windows appear on the **user's live Hyprland desktop** (a nested headless compositor does not work here). So:
   always wrap runs in `timeout`, close what you open (`pkill -x ShareX`), move test windows off the way with
   `hyprctl dispatch movetoworkspacesilent special:test,class:ShareX`, never leave fullscreen/region overlays up, and never

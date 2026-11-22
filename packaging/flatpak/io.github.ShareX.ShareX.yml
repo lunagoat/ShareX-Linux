@@ -53,8 +53,8 @@ modules:
       - cp -a . /app/lib/dotnet
     sources:
       - type: archive
-        url: https://builds.dotnet.microsoft.com/dotnet/Sdk/10.0.402/dotnet-sdk-10.0.402-linux-x64.tar.gz
-        sha256: 0000000000000000000000000000000000000000000000000000000000000000
+        url: https://builds.dotnet.microsoft.com/dotnet/Sdk/11.0.100/dotnet-sdk-11.0.100-linux-x64.tar.gz
+        sha512: 1bec9cca2ec689b1e80245b84f2b53c9441d1aa6daccf2ceb27490768bffa95954fa585bd275def31069d874d543d9ba9e6591fe9ade2dbd9f34ec5c0fd0050c
         only-arches: [x86_64]
 
   - name: sharex

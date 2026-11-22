@@ -24,7 +24,7 @@ internal static class BrowserChecks
         Console.WriteLine("PASS Chromium, Chrome and Firefox native messaging manifest registration/removal");
 
         string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
-        string binaries = Path.Combine(root, "ShareX/bin/Debug/net10.0");
+        string binaries = Path.Combine(root, "ShareX/bin/Debug/net11.0");
         string fixture = Path.Combine(sandbox, "native-host"); Directory.CreateDirectory(fixture);
         foreach (string source in Directory.EnumerateFiles(binaries))
         {

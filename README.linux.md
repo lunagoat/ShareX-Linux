@@ -20,9 +20,9 @@ on Wayland and X11, using the desktop's own facilities (portals, `grim`, PipeWir
 
 | | |
 | --- | --- |
-| Runtime | x86-64 (or aarch64) Linux, glibc, a Wayland or X11 session |
+| Runtime | x86-64 (x86-64-v2 or newer, which .NET 11 requires; CPUs with AVX2 start fastest) or aarch64 Linux, glibc, a Wayland or X11 session |
 | Framework | none — the published build is self-contained (.NET is bundled) |
-| Build | .NET 10 SDK (`scripts/linux/env.sh` expects a user-local SDK in `~/.dotnet`) |
+| Build | .NET 11 SDK (`scripts/linux/env.sh` expects a user-local SDK in `~/.dotnet`) |
 
 Recommended packages by session:
 

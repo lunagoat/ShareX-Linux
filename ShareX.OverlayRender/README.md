@@ -1,6 +1,6 @@
 # ShareX.OverlayRender
 
-Display-independent .NET 10 CPU scene renderer. Its only package reference is
+Display-independent .NET CPU scene renderer. Its only package reference is
 SkiaSharp. The executable tests supply Skia's Linux native assets. It does not
 reference Avalonia, platform interop, input APIs, or a compositor.
 
