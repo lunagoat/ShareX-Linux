@@ -5,7 +5,8 @@
 #   scripts/linux/install-user.sh [--from DIR] [--no-publish] [--uninstall] [--quiet]
 #
 #   --from DIR     install a previously published directory (default dist/linux-x64)
-#   --no-publish   do not run scripts/linux/publish.sh when the build is missing
+#   --no-publish   install dist/linux-x64 as it is; from a source checkout the default is to
+#                  publish it first, so a stale build is never installed under the current version
 #   --uninstall    remove everything this script installed
 #   --quiet        only print errors
 #
@@ -79,6 +80,12 @@ fi
 
 if [ -z "$from" ]; then
     from="$root/dist/linux-x64"
+    # In a source checkout, publish first: an older build left in dist/ would otherwise be installed and
+    # labelled with the checkout's version. Release archives have no sources and install their dist/ as is.
+    if [ "$do_publish" -eq 1 ] && [ -f "$root/ShareX/ShareX.csproj" ] && [ -x "$root/scripts/linux/publish.sh" ]; then
+        log "Publishing ShareX from this checkout (a few minutes)..."
+        "$root/scripts/linux/publish.sh" >/dev/null
+    fi
 fi
 
 if [ ! -x "$from/ShareX" ]; then
@@ -140,6 +147,12 @@ install -d "$libdir" "$bindir" "$appsdir" "$mimedir" "$metainfodir"
 
 # Application files (everything the publish produced, including the native
 # messaging host manifests, the file icon and data folders such as the OCR models).
+# Remove what a previous version installed that this build no longer has.
+for f in "$libdir"/*; do
+    [ -e "$f" ] || continue
+    case "$(basename "$f")" in version|uninstall.sh) continue ;; esac
+    [ -e "$from/$(basename "$f")" ] || rm -rf -- "$f"
+done
 for f in "$from"/*; do
     if [ -d "$f" ]; then
         rm -rf "${libdir:?}/$(basename "$f")"

@@ -121,7 +121,12 @@ public partial class PinToScreenWindow : Window
 
     private System.Drawing.Rectangle GetWorkingArea()
     {
-        var screen = Screens.ScreenFromPoint(Linux.DesktopTools.CursorPosition() ?? Position) ?? Screens.Primary;
+        // The cursor position comes from the compositor, and XWayland can lay monitors out differently from Avalonia's
+        // screens, so take the compositor's monitor under the cursor and Avalonia's screen with the same output name.
+        PixelPoint? cursor = Linux.DesktopTools.CursorPosition();
+        string? monitorName = cursor is { } point ? DesktopScreen.FromPoint(new System.Drawing.Point(point.X, point.Y))?.DeviceName : null;
+        var screen = Screens.All.FirstOrDefault(x => monitorName != null && x.DisplayName == monitorName)
+            ?? Screens.ScreenFromPoint(cursor ?? Position) ?? Screens.Primary;
         var area = screen?.WorkingArea ?? new PixelRect(0, 0, 1920, 1080);
         return new(area.X, area.Y, area.Width, area.Height);
     }

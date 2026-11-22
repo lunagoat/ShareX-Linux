@@ -654,11 +654,26 @@ public partial class ScreenRecordWindow : Window, IDisposable
 
             // Put the toolbar above the region when it would not fit below it on the screen.
             bool toolbarAbove = false;
-            Avalonia.Platform.Screen? screen = Screens.ScreenFromPoint(new PixelPoint(recordingLeft, recordingTop));
-            if (screen != null)
+            PixelRect? workingAreaOrNull;
+            int regionTop = recordingTop;
+            if (OperatingSystem.IsLinux())
             {
-                PixelRect workingArea = screen.WorkingArea;
-                int frameTop = recordingTop - BorderPixels;
+                // The recorded region is in compositor coordinates, and XWayland can lay monitors out differently from
+                // Avalonia's screens (Hyprland's force_zero_scaling), so use the compositor's monitor, minus a top bar.
+                DesktopScreen monitor = DesktopScreen.FromRectangle(_recordingRegion);
+                DrawingRectangle bounds = monitor?.Bounds ?? DrawingRectangle.Empty;
+                int topInset = bounds.IsEmpty ? 0 : ShareX.AvaloniaUI.Linux.LayerShellInsets.TopInset(bounds);
+                workingAreaOrNull = bounds.IsEmpty ? null : new PixelRect(bounds.X, bounds.Y + topInset, bounds.Width, bounds.Height - topInset);
+                regionTop = _recordingRegion.Y;
+            }
+            else
+            {
+                workingAreaOrNull = Screens.ScreenFromPoint(new PixelPoint(recordingLeft, recordingTop))?.WorkingArea;
+            }
+
+            if (workingAreaOrNull is PixelRect workingArea)
+            {
+                int frameTop = regionTop - BorderPixels;
                 int frameBottom = frameTop + frameHeightPixels;
                 bool fitsBelow = frameBottom + ToolbarGapPixels + toolbarHeightPixels <= workingArea.Bottom;
                 bool fitsAbove = frameTop - ToolbarGapPixels - toolbarHeightPixels >= workingArea.Y;

@@ -60,16 +60,23 @@ public sealed class DesktopScreen
         DisplayName = monitor.Name;
     }
 
-    /// <summary>Windows: the GDI device name. Linux: the compositor output name of the monitor the screen covers most.
-    /// Avalonia runs under XWayland, whose output names (XWAYLAND0, ...) do not match the compositor's, so screens are
-    /// matched by geometry; both use desktop coordinates.</summary>
+    /// <summary>Windows: the GDI device name. Linux: the compositor's output name for the screen. Avalonia runs under
+    /// XWayland: Hyprland's XWayland uses the compositor's output names (DP-1, ...) but may lay outputs out differently
+    /// (native pixels with force_zero_scaling), so names are matched first; other XWayland servers name outputs
+    /// XWAYLAND0, ..., which falls back to the monitor the screen overlaps most.</summary>
     public static string GetDeviceName(Avalonia.Platform.Screen screen)
     {
         if (!OperatingSystem.IsLinux())
             return NativeMethods.GetMonitorDeviceName(screen.TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
 
+        ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor[] monitors = TryGetLinuxMonitors() ?? [];
+        if (monitors.FirstOrDefault(x => string.Equals(x.Name, screen.DisplayName, StringComparison.Ordinal)) is { } named)
+        {
+            return named.Name;
+        }
+
         Rectangle bounds = new(screen.Bounds.X, screen.Bounds.Y, screen.Bounds.Width, screen.Bounds.Height);
-        return (TryGetLinuxMonitors() ?? [])
+        return monitors
             .Select(x => (x.Name, Overlap: Rectangle.Intersect(x.Bounds, bounds)))
             .Where(x => !x.Overlap.IsEmpty)
             .OrderByDescending(x => (long)x.Overlap.Width * x.Overlap.Height)

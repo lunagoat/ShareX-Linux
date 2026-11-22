@@ -30,7 +30,12 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-out="${out:-$root/dist/$rid}"
+if [ -z "$out" ]; then
+    out="$root/dist/$rid"
+    # dotnet publish never deletes files, so clear the generated default folder: files an older build
+    # published would otherwise be installed with this one.
+    rm -rf "${out:?}"
+fi
 mkdir -p "$out"
 
 publish_args=(
