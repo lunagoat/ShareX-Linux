@@ -54,6 +54,12 @@
   </screenshots>
 
   <releases>
+    <release version="22.4.0" date="2026-11-21">
+      <description>
+        <p>Based on ShareX 22.4: Photo editor (beta), Pixel editor, offline OCR with PaddleOCR, a
+           customizable region capture toolbar and adaptive GIF recording. Runs on .NET 11.</p>
+      </description>
+    </release>
     <release version="21.0.0" date="2026-10-19">
       <description>
         <p>First natively packaged Linux build: Wayland/X11 screen capture and recording, Linux
