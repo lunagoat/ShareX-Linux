@@ -84,7 +84,7 @@ public sealed class DesktopScreen
         : DesktopServices.Run(() =>
         DesktopServices.GetWindow().Screens.All.Select(x => new DesktopScreen(x)).ToArray());
 
-    private static ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor[]? TryGetLinuxMonitors()
+    private static ShareX.AvaloniaUI.Linux.LinuxCaptureMonitor[] TryGetLinuxMonitors()
     {
         try
         {

@@ -583,6 +583,8 @@ internal sealed class TaskSettingsPageBuilder
         bitrateControl.Width = 160;
         Control bitrate = Row(Strings.TaskSettingsWindow_NativeRecorderBitrate, bitrateControl);
         Control hdrToneMapping = Check(Strings.TaskSettingsWindow_NativeRecorderHDRToneMapping, () => capture.ScreenRecordHDRToneMapping, value => capture.ScreenRecordHDRToneMapping = value);
+        // The Linux recorder captures SDR frames through grim, portals or x11grab; there is no HDR tone mapping to turn on.
+        hdrToneMapping.IsVisible = !OperatingSystem.IsLinux();
         BoundValue<bool> recordCamera = new(capture.ScreenRecordCamera, value => capture.ScreenRecordCamera = value);
         Control cameraEnabled = Check(Strings.TaskSettingsWindow_NativeRecorderCamera_Enabled, recordCamera);
         ComboBox cameras = CaptureDeviceCombo(() => CameraCaptureDevices.GetCameras().Select(device => (device.Id, device.Name)).ToArray(),

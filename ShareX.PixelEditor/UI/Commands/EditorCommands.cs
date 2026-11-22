@@ -253,7 +253,7 @@ public static partial class EditorCommands
 
     public static void OpenFile(PixelEditorWindow w, string path)
     {
-        SpriteView? open = w.Views.FirstOrDefault(v => string.Equals(v.Sprite.FilePath, path, StringComparison.OrdinalIgnoreCase));
+        SpriteView? open = w.Views.FirstOrDefault(v => string.Equals(v.Sprite.FilePath, path, ShareX.HelpersLib.FileHelpers.PathComparison));
         if (open != null)
         {
             w.ActivateView(open);

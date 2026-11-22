@@ -71,7 +71,7 @@ modules:
             -p:PublishDir=/app/lib/sharex/ \
             -p:DebugType=none -p:DebugSymbols=false -nologo
       - install -Dm755 packaging/linux/sharex /app/bin/sharex
-      - printf '21.0.0\n' > /app/lib/sharex/version
+      - printf '22.4.0\n' > /app/lib/sharex/version
       - install -d /app/share/applications /app/share/metainfo
       - |
         sed -e 's/^Icon=sharex$/Icon=io.github.ShareX.ShareX/' \

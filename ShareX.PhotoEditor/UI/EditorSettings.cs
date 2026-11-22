@@ -175,7 +175,7 @@ public sealed class EditorSettings
 
     public void AddRecentFile(string path)
     {
-        RecentFiles.RemoveAll(p => string.Equals(p, path, StringComparison.OrdinalIgnoreCase));
+        RecentFiles.RemoveAll(p => string.Equals(p, path, ShareX.HelpersLib.FileHelpers.PathComparison));
         RecentFiles.Insert(0, path);
         if (RecentFiles.Count > 15) RecentFiles.RemoveRange(15, RecentFiles.Count - 15);
     }

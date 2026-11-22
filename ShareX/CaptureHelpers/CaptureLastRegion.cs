@@ -25,6 +25,7 @@
 
 using ShareX.ScreenCaptureLib;
 using ShareX.ScreenCaptureLib.Presentation.RegionCapture;
+using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
@@ -70,8 +71,12 @@ namespace ShareX
 
                 if (bmp != null && regions.Count > 1)
                 {
+                    // Regions are desktop units; on HiDPI Wayland the capture has more pixels than its desktop area.
+                    double scaleX = (double)bmp.Width / bounds.Width, scaleY = (double)bmp.Height / bounds.Height;
                     List<Rectangle> localRegions = regions
-                        .Select(region => new Rectangle(region.X - bounds.X, region.Y - bounds.Y, region.Width, region.Height))
+                        .Select(region => Rectangle.FromLTRB(
+                            (int)Math.Floor((region.Left - bounds.X) * scaleX), (int)Math.Floor((region.Top - bounds.Y) * scaleY),
+                            (int)Math.Ceiling((region.Right - bounds.X) * scaleX), (int)Math.Ceiling((region.Bottom - bounds.Y) * scaleY)))
                         .ToList();
 
                     Bitmap masked = RegionCaptureTasks.ApplyRegionMask(bmp, localRegions);

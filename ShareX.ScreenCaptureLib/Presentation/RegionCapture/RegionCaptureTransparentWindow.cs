@@ -96,6 +96,8 @@ public sealed class RegionCaptureTransparentWindow : Window
         RegionCaptureFixedScale.Apply(TryGetPlatformHandle()?.Handle ?? IntPtr.Zero);
         ApplyPixelSize();
         Helpers.EnsureWindowPosition(this, _screenBounds.X, _screenBounds.Y);
+        // Linux: LinuxCaptureOverlay.PlaceAsync finds this window by its title in the compositor's window list.
+        if (OperatingSystem.IsLinux()) Title += " [" + Guid.NewGuid().ToString("N") + "]";
         Show();
         return _completionSource.Task;
     }
@@ -209,10 +211,24 @@ public sealed class RegionCaptureTransparentWindow : Window
         return true;
     }
 
-    private void OnOpened(object? sender, EventArgs e)
+    private async void OnOpened(object? sender, EventArgs e)
     {
         ApplyPixelSize();
         Helpers.EnsureWindowPosition(this, _screenBounds.X, _screenBounds.Y);
+        // Wayland compositors place client windows themselves (Hyprland would tile this one); move it over the desktop
+        // the same way as the region capture overlay.
+        if (OperatingSystem.IsLinux())
+        {
+            try
+            {
+                await ShareX.AvaloniaUI.Linux.LinuxCaptureOverlay.PlaceAsync(this, _screenBounds);
+            }
+            catch (Exception ex)
+            {
+                DebugHelper.WriteException(ex, "Placing the transparent region window failed.");
+            }
+        }
+
         WindowGeometryLog.Record(this, "Region selection (transparent)", _screenBounds, trackDpiChanges: true);
         DisableWindowTransitions();
         Cursor = CursorAssetLoader.GetCrosshairCursor(GetScaling());
@@ -224,7 +240,7 @@ public sealed class RegionCaptureTransparentWindow : Window
     private void UpdateSelection(DrawingPoint position)
     {
         DrawingRectangle selection = GetSelectionRectangle(position);
-        double scaling = GetScaling();
+        double scaling = GetDesktopScale();
 
         _surface.Scaling = scaling;
         _surface.Selection = IsValidSelection(selection)
@@ -250,7 +266,7 @@ public sealed class RegionCaptureTransparentWindow : Window
     /// <summary>Converts a window position to the screen pixel under it, clamped to the screen bounds.</summary>
     private DrawingPoint ToScreenPixel(Point position)
     {
-        double scaling = GetScaling();
+        double scaling = GetDesktopScale();
         int x = _screenBounds.X + (int)Math.Floor(position.X * scaling + 0.001);
         int y = _screenBounds.Y + (int)Math.Floor(position.Y * scaling + 0.001);
         return new DrawingPoint(
@@ -284,6 +300,13 @@ public sealed class RegionCaptureTransparentWindow : Window
         double scaling = GetScaling();
         Width = _screenBounds.Width / scaling;
         Height = _screenBounds.Height / scaling;
+    }
+
+    /// <summary>Desktop units per DIP. Linux: follows the size the compositor gave the window (native pixels with
+    /// Hyprland's force_zero_scaling), as in RegionCaptureWindow.</summary>
+    private double GetDesktopScale()
+    {
+        return OperatingSystem.IsLinux() && Bounds.Width > 0 ? _screenBounds.Width / Bounds.Width : GetScaling();
     }
 
     private double GetScaling()

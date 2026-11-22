@@ -39,6 +39,11 @@ namespace ShareX.HelpersLib
 {
     public static class FileHelpers
     {
+        /// <summary>How file paths compare on this platform: case-sensitive on Linux file systems, case-insensitive on
+        /// Windows (and macOS by default).</summary>
+        public static StringComparison PathComparison =>
+            OperatingSystem.IsLinux() ? StringComparison.Ordinal : StringComparison.OrdinalIgnoreCase;
+
         public static readonly string[] ImageFileExtensions = new string[] { "jpg", "jpeg", "png", "gif", "bmp", "ico", "webp" };
         public static readonly string[] TextFileExtensions = new string[] { "txt", "log", "nfo", "c", "cpp", "cc", "cxx", "h", "hpp", "hxx", "cs", "vb",
             "html", "htm", "xhtml", "xht", "xml", "css", "js", "php", "bat", "java", "lua", "py", "pl", "cfg", "ini", "dart", "go", "gohtml" };

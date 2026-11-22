@@ -105,7 +105,7 @@ public static partial class EditorCommands
 
     public static void OpenFile(PhotoEditorWindow w, string path)
     {
-        DocumentView? existing = w.Views.FirstOrDefault(v => string.Equals(v.Document.FilePath, path, StringComparison.OrdinalIgnoreCase));
+        DocumentView? existing = w.Views.FirstOrDefault(v => string.Equals(v.Document.FilePath, path, ShareX.HelpersLib.FileHelpers.PathComparison));
         if (existing != null)
         {
             w.ActivateView(existing);

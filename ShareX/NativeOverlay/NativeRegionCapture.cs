@@ -28,8 +28,10 @@ internal static class NativeRegionCapture
         if (options != null && Environment.GetEnvironmentVariable("SHAREX_OVERLAY") != "native")
         {
             if (options.MultiRegionMode) { reason = "multi-region mode needs the window overlay"; return false; }
-            if (options.ToolbarItems.Any(x => x.IsVisible &&
-                (x.Id == RegionCaptureToolbar.EllipseRegionItemId || x.Id == RegionCaptureToolbar.FreehandRegionItemId)))
+            // Hidden toolbar items keep their shortcuts, so a shortcut also counts as using the tool.
+            if (options.ToolbarItems.Any(x =>
+                (x.Id == RegionCaptureToolbar.EllipseRegionItemId || x.Id == RegionCaptureToolbar.FreehandRegionItemId) &&
+                (x.IsVisible || !string.IsNullOrEmpty(x.Hotkey) || !string.IsNullOrEmpty(x.SecondaryHotkey))))
             {
                 reason = "ellipse/freehand region tools need the window overlay";
                 return false;
